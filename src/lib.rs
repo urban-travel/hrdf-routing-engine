@@ -6,7 +6,7 @@ mod utils;
 
 pub use isochrone::compute_isochrones;
 pub use routing::find_reachable_stops_within_time_limit;
-pub use routing::plan_journey;
+pub use routing::{plan_journey, RouteResult};
 
 use std::{env, error::Error};
 
