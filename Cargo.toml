@@ -12,7 +12,8 @@ authors = ["Florian Burgener"]
 axum = "0.7.5"
 chrono = { version = "0.4.31", features = ["serde"] }
 contour = "0.13.1"
-hrdf-parser = "0.1.0"
+# hrdf-parser = "0.1.0"
+hrdf-parser = {path = "../hrdf-parser"}
 kd-tree = "0.6.0"
 log = "0.4.22"
 rayon = "1.10.0"

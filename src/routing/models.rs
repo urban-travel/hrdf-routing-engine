@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, TimeDelta};
 use hrdf_parser::{Coordinates, DataStorage, Journey};
 use rustc_hash::FxHashSet;
 use serde::Serialize;
@@ -206,12 +206,59 @@ impl RouteResult {
 
     // Getters/Setters
 
+    pub fn departure_at(&self) -> NaiveDateTime {
+        self.departure_at
+    }
+
     pub fn arrival_at(&self) -> NaiveDateTime {
         self.arrival_at
     }
 
     pub fn sections(&self) -> &Vec<RouteSectionResult> {
         &self.sections
+    }
+
+    pub fn number_changes(&self) -> usize {
+        if !self.sections().is_empty() {
+            self.sections()
+                .iter()
+                .filter(|s| !s.is_walking_trip())
+                .count()
+                - 1
+        } else {
+            0
+        }
+    }
+
+    pub fn total_walking_time(&self) -> TimeDelta {
+        self.sections()
+            .iter()
+            .filter(|s| s.is_walking_trip())
+            .fold(TimeDelta::minutes(0), |total, d| {
+                total + TimeDelta::minutes(d.duration().unwrap_or(0i16) as i64)
+            })
+    }
+
+    pub fn total_time(&self) -> TimeDelta {
+        self.arrival_at - self.departure_at
+    }
+
+    pub fn departure_stop_id(&self) -> Option<i32> {
+        self.sections().first().map(|s| s.departure_stop_id)
+    }
+
+    pub fn arrival_stop_id(&self) -> Option<i32> {
+        self.sections().last().map(|s| s.arrival_stop_id())
+    }
+
+    pub fn departure_stop_name(&self, data_storage: &DataStorage) -> Option<String> {
+        self.departure_stop_id()
+            .map(|id| String::from(data_storage.stops().find(id).name()))
+    }
+
+    pub fn arrival_stop_name(&self, data_storage: &DataStorage) -> Option<String> {
+        self.arrival_stop_id()
+            .map(|id| String::from(data_storage.stops().find(id).name()))
     }
 }
 
