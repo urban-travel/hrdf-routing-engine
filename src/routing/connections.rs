@@ -21,6 +21,7 @@ pub fn get_connections(
         route.last_section().journey_id(),
     )
     .into_iter()
+    // A journey is removed if it has already been explored at a lower connection level.
     .filter(|(journey, _)| !journeys_to_ignore.contains(&journey.id()))
     .filter_map(|(journey, journey_departure_at)| {
         route.extend(
@@ -91,10 +92,12 @@ pub fn next_departures<'a>(
         .concat()
         .into_iter()
         .filter(|&(_, journey_departure_at)| {
+            // Journeys that depart too early or too late are ignored.
             journey_departure_at >= departure_at && journey_departure_at <= max_departure_at
         })
         .collect();
 
+    // Journeys are sorted by ascending departure time, allowing them to be filtered correctly afterwards.
     journeys.sort_by_key(|(_, journey_departure_at)| *journey_departure_at);
 
     let mut routes_to_ignore = routes_to_ignore.unwrap_or_else(FxHashSet::default);
@@ -105,13 +108,17 @@ pub fn next_departures<'a>(
             let hash = journey.hash_route(departure_stop_id).unwrap();
 
             if !routes_to_ignore.contains(&hash) {
+                // The journey is the first to have this destination (terminus).
                 routes_to_ignore.insert(hash);
                 true
             } else {
+                // The journey has the same destination as another journey, but arrives later.
+                // It's ignored.
                 false
             }
         })
         .filter(|&(journey, journey_departure_at)| {
+            // It is checked that there is enough time to embark on the journey (exchange time).
             previous_journey_id.map_or(true, |id| {
                 let exchange_time = get_exchange_time(
                     data_storage,

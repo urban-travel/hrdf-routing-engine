@@ -26,6 +26,9 @@ use utils::lv95_to_wgs84;
 use utils::time_to_distance;
 use utils::wgs84_to_lv95;
 
+/// Computes the isochrones.
+/// The point of origin is used to find the departure stop (the nearest stop).
+/// The departure date and time must be within the timetable period.
 pub fn compute_isochrones(
     hrdf: &Hrdf,
     origin_point_latitude: f64,
@@ -43,6 +46,7 @@ pub fn compute_isochrones(
     );
     let departure_stop_coord = departure_stop.wgs84_coordinates().unwrap();
 
+    // The departure time is calculated according to the time it takes to walk to the departure stop.
     let (adjusted_departure_at, adjusted_time_limit) = adjust_departure_at(
         departure_at,
         time_limit,
@@ -66,6 +70,7 @@ pub fn compute_isochrones(
     })
     .collect();
 
+    // A false route is created to represent the point of origin in the results.
     let (easting, northing) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
     let route = RouteResult::new(
         NaiveDateTime::default(),
@@ -116,8 +121,6 @@ pub fn compute_isochrones(
 
         isochrones.push(Isochrone::new(polygons, time_limit.num_minutes() as u32));
     }
-
-    println!("Done");
 
     IsochroneMap::new(
         isochrones,

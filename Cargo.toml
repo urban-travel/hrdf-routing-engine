@@ -3,11 +3,18 @@ name = "hrdf-routing-engine"
 version = "0.1.0"
 edition = "2021"
 
+license-file = "LICENSE"
+description = "Public transport routing engine based on Swiss HRDF data."
+repository = "https://github.com/florianburgener/hrdf-routing-engine"
+authors = ["Florian Burgener"]
+
 [dependencies]
 axum = "0.7.5"
 chrono = { version = "0.4.31", features = ["serde"] }
 contour = "0.13.1"
-hrdf-parser = { path = "../hrdf-parser" }
+hrdf-parser = "0.1.0"
+kd-tree = "0.6.0"
+log = "0.4.22"
 rayon = "1.10.0"
 rustc-hash = "2.0.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -16,6 +23,7 @@ strum = "0.26.3"
 strum_macros = "0.25.3"
 tokio = { version = "1.38.0", features = ["rt", "rt-multi-thread"] }
 tower-http = { version = "0.5.2", features = ["cors"] }
+typenum = "1.17.0"
 
 [profile.dev]
 opt-level=3

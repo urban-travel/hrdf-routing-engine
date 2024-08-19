@@ -9,7 +9,7 @@ use tower_http::cors::{Any, CorsLayer};
 use crate::isochrone::{self, IsochroneDisplayMode, IsochroneMap};
 
 pub async fn run_service(hrdf: Hrdf) {
-    println!("Starting the server...");
+    log::info!("Starting the server...");
 
     let hrdf = Arc::new(hrdf);
     let hrdf_1 = Arc::clone(&hrdf);
@@ -29,7 +29,7 @@ pub async fn run_service(hrdf: Hrdf) {
         .layer(cors);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8100").await.unwrap();
 
-    println!("Listening on 0.0.0.0:8100...");
+    log::info!("Listening on 0.0.0.0:8100...");
 
     axum::serve(listener, app).await.unwrap();
 }
@@ -82,8 +82,6 @@ async fn compute_isochrones(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    use std::time::Instant;
-    let now = Instant::now();
     let result = isochrone::compute_isochrones(
         &hrdf,
         params.origin_point_latitude,
@@ -94,7 +92,5 @@ async fn compute_isochrones(
         IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
         false,
     );
-    let elapsed = now.elapsed();
-    println!("Elapsed: {:.2?}", elapsed);
     Ok(Json(result))
 }

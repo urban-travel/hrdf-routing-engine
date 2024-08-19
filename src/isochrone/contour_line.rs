@@ -1,6 +1,7 @@
 use chrono::Duration;
 use contour::ContourBuilder;
 use hrdf_parser::{CoordinateSystem, Coordinates};
+use kd_tree::{KdPoint, KdTree};
 
 use super::{
     constants::{GRID_SPACING_IN_METERS, WALKING_SPEED_IN_KILOMETERS_PER_HOUR},
@@ -13,46 +14,55 @@ pub fn create_grid(
     data: &Vec<(Coordinates, Duration)>,
     bounding_box: ((f64, f64), (f64, f64)),
 ) -> (Vec<(Coordinates, Duration)>, usize, usize) {
-    let mut grid = Vec::new();
+    // let mut grid = Vec::new();
 
     let num_points_x =
         ((bounding_box.1 .0 - bounding_box.0 .0) / GRID_SPACING_IN_METERS).ceil() as usize;
     let num_points_y =
         ((bounding_box.1 .1 - bounding_box.0 .1) / GRID_SPACING_IN_METERS).ceil() as usize;
 
-    println!("A");
+    let tree = KdTree::build_by_ordered_float(
+        data.iter()
+            .map(|&(coord, duration)| MyPoint {
+                point: [coord.easting(), coord.northing()],
+                coord,
+                duration,
+            })
+            .collect(),
+    );
 
-    let mut y = bounding_box.0 .1;
-    for _ in 0..num_points_y {
-        let mut x = bounding_box.0 .0;
+    let grid = (0..num_points_y)
+        .into_par_iter()
+        .map(|y| {
+            let mut result = Vec::new();
+            let y = bounding_box.0 .1 + GRID_SPACING_IN_METERS * y as f64;
 
-        for _ in 0..num_points_x {
-            grid.push(Coordinates::new(CoordinateSystem::LV95, x, y));
-            x += GRID_SPACING_IN_METERS;
-        }
+            for x in 0..num_points_x {
+                let x = bounding_box.0 .0 + GRID_SPACING_IN_METERS * x as f64;
 
-        y += GRID_SPACING_IN_METERS;
-    }
+                let coord = Coordinates::new(CoordinateSystem::LV95, x, y);
 
-    println!("B");
+                let points = tree.nearests(&[coord.easting(), coord.northing()], 10);
 
-    let grid = grid
-        .par_iter()
-        .map(|&coord1| {
-            let duration = data
-                .iter()
-                .map(|&(coord2, duration)| {
-                    let distance = distance_between_2_points(coord1, coord2);
+                let duration = points
+                    .iter()
+                    .map(|p| p.item)
+                    .map(|point| {
+                        let distance = distance_between_2_points(coord, point.coord());
 
-                    duration + distance_to_time(distance, WALKING_SPEED_IN_KILOMETERS_PER_HOUR)
-                })
-                .min()
-                .unwrap();
-            (coord1, duration)
+                        point.duration()
+                            + distance_to_time(distance, WALKING_SPEED_IN_KILOMETERS_PER_HOUR)
+                    })
+                    .min()
+                    .unwrap();
+
+                result.push((coord, duration));
+            }
+
+            result
         })
-        .collect();
-
-    println!("C");
+        .flatten()
+        .collect::<Vec<(Coordinates, Duration)>>();
 
     (grid, num_points_x, num_points_y)
 }
@@ -99,4 +109,30 @@ pub fn get_polygons(
                 .collect()
         })
         .collect()
+}
+
+#[derive(Debug)]
+struct MyPoint {
+    point: [f64; 2],
+    coord: Coordinates,
+    duration: Duration,
+}
+
+impl KdPoint for MyPoint {
+    type Scalar = f64;
+    type Dim = typenum::U2;
+
+    fn at(&self, k: usize) -> f64 {
+        self.point[k]
+    }
+}
+
+impl MyPoint {
+    pub fn coord(&self) -> Coordinates {
+        self.coord
+    }
+
+    pub fn duration(&self) -> Duration {
+        self.duration
+    }
 }

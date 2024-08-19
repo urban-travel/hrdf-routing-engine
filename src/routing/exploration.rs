@@ -45,6 +45,7 @@ where
         explore_connections(data_storage, &route, &journeys_to_ignore, &mut new_routes);
     }
 
+    // All new journeys are recorded as not available for the next connection level.
     new_routes.iter().for_each(|route| {
         if let Some(journey_id) = route.last_section().journey_id() {
             journeys_to_ignore.insert(journey_id);
@@ -64,6 +65,7 @@ fn explore_last_route_section_more_if_possible(
         return;
     };
 
+    // The next section (tronçon dans ce cas) is visited if possible.
     let new_route = route.extend(data_storage, journey_id, route.arrival_at().date(), false);
 
     if let Some(rou) = new_route {
@@ -88,12 +90,15 @@ fn can_explore_connections(
 
     if let Some(&earliest_arrival) = earliest_arrival_by_stop_id.get(&stop_id) {
         if arrival_at < earliest_arrival {
+            // The route arrived even earlier than the last route recorded for the stop.
             earliest_arrival_by_stop_id.insert(stop_id, arrival_at);
             true
         } else {
+            // Another route reached the stop faster.
             false
         }
     } else {
+        // This is the first time the stop has been found.
         earliest_arrival_by_stop_id.insert(stop_id, arrival_at);
         true
     }
@@ -119,12 +124,14 @@ fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut 
         None => return,
     }
     .into_iter()
+    // Sometimes certain stop identifiers don't exist for unknown reasons.
     .filter(|stop_connection| {
         data_storage
             .stops()
             .data()
             .contains_key(&stop_connection.stop_id_2())
     })
+    // No return to a previously visited stop.
     .filter(|stop_connection| !route.visited_stops().contains(&stop_connection.stop_id_2()))
     .map(|stop_connection| {
         clone_update_route(route, |cloned_sections, cloned_visited_stops| {
