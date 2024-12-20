@@ -79,7 +79,10 @@ fn can_explore_connections(
     earliest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
 ) -> bool {
     let stop_id = route.arrival_stop_id();
-    let stop = data_storage.stops().find(stop_id);
+    let stop = data_storage
+        .stops()
+        .find(stop_id)
+        .expect(format!("Exchange times journey {stop_id} not found").as_str());
 
     if !stop.can_be_used_as_exchange_point() {
         // The arrival stop of the last RouteSection of a journey is not necessarily usable for exchange, hence the check.

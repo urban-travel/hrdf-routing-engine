@@ -8,8 +8,8 @@ mod route_impl;
 mod utils;
 
 use hrdf_parser::Hrdf;
-pub use models::RouteResult;
-pub use models::RouteSectionResult;
+pub use models::RouteResult as Route;
+pub use models::RouteSectionResult as RouteSection;
 
 use core::compute_routing;
 
@@ -24,7 +24,7 @@ pub fn plan_journey(
     arrival_stop_id: i32,
     departure_at: NaiveDateTime,
     verbose: bool,
-) -> Option<RouteResult> {
+) -> Option<Route> {
     let result = compute_routing(
         hrdf.data_storage(),
         departure_stop_id,
@@ -53,7 +53,7 @@ pub fn find_reachable_stops_within_time_limit(
     departure_at: NaiveDateTime,
     time_limit: Duration,
     verbose: bool,
-) -> Vec<RouteResult> {
+) -> Vec<Route> {
     let routes = compute_routing(
         hrdf.data_storage(),
         departure_stop_id,

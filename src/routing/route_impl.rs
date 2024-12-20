@@ -15,7 +15,10 @@ impl Route {
         date: NaiveDate,
         is_departure_date: bool,
     ) -> Option<Route> {
-        let journey = data_storage.journeys().find(journey_id);
+        let journey = data_storage
+            .journeys()
+            .find(journey_id)
+            .expect(format!("Jounrey {journey_id} not found").as_str());
 
         if journey.is_last_stop(self.arrival_stop_id(), false) {
             return None;
@@ -127,8 +130,14 @@ impl RouteSection {
     }
 
     pub fn to_route_section_result(&self, data_storage: &DataStorage) -> RouteSectionResult {
-        let departure_stop = data_storage.stops().find(self.departure_stop_id());
-        let arrival_stop = data_storage.stops().find(self.arrival_stop_id());
+        let departure_stop = data_storage
+            .stops()
+            .find(self.departure_stop_id())
+            .expect(format!("Departure stop {} not found.", self.departure_stop_id()).as_str());
+        let arrival_stop = data_storage
+            .stops()
+            .find(self.arrival_stop_id())
+            .expect(format!("Arrival stop {} not found.", self.arrival_stop_id()).as_str());
 
         let (departure_at, arrival_at) = if self.journey_id().is_some() {
             let departure_at = self

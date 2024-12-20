@@ -62,7 +62,7 @@ impl RouteSection {
     // Functions
 
     pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
-        self.journey_id.map(|id| data_storage.journeys().find(id))
+        self.journey_id.map(|id| data_storage.journeys().find(id))?
     }
 }
 
@@ -184,7 +184,7 @@ impl RoutingAlgorithmArgs {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RouteResult {
     departure_at: NaiveDateTime,
     arrival_at: NaiveDateTime,
@@ -252,17 +252,31 @@ impl RouteResult {
     }
 
     pub fn departure_stop_name(&self, data_storage: &DataStorage) -> Option<String> {
-        self.departure_stop_id()
-            .map(|id| String::from(data_storage.stops().find(id).name()))
+        self.departure_stop_id().map(|id| {
+            String::from(
+                data_storage
+                    .stops()
+                    .find(id)
+                    .expect(format!("stop {id} not found").as_str())
+                    .name(),
+            )
+        })
     }
 
     pub fn arrival_stop_name(&self, data_storage: &DataStorage) -> Option<String> {
-        self.arrival_stop_id()
-            .map(|id| String::from(data_storage.stops().find(id).name()))
+        self.arrival_stop_id().map(|id| {
+            String::from(
+                data_storage
+                    .stops()
+                    .find(id)
+                    .expect(format!("stop {id} not found").as_str())
+                    .name(),
+            )
+        })
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RouteSectionResult {
     journey_id: Option<i32>,
     departure_stop_id: i32,
@@ -336,7 +350,7 @@ impl RouteSectionResult {
     // Functions
 
     pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
-        self.journey_id.map(|id| data_storage.journeys().find(id))
+        self.journey_id.map(|id| data_storage.journeys().find(id))?
     }
 
     pub fn is_walking_trip(&self) -> bool {

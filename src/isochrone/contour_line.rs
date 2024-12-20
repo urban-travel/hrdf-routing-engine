@@ -5,7 +5,7 @@ use kd_tree::{KdPoint, KdTree};
 
 use super::{
     constants::{GRID_SPACING_IN_METERS, WALKING_SPEED_IN_KILOMETERS_PER_HOUR},
-    utils::{distance_between_2_points, distance_to_time, lv95_to_wgs84},
+    utils::{distance_between_2_points, distance_to_time, lv95_to_wgs84, time_to_distance},
 };
 
 use rayon::prelude::*;
@@ -13,9 +13,8 @@ use rayon::prelude::*;
 pub fn create_grid(
     data: &Vec<(Coordinates, Duration)>,
     bounding_box: ((f64, f64), (f64, f64)),
+    time_limit: Duration,
 ) -> (Vec<(Coordinates, Duration)>, usize, usize) {
-    // let mut grid = Vec::new();
-
     let num_points_x =
         ((bounding_box.1 .0 - bounding_box.0 .0) / GRID_SPACING_IN_METERS).ceil() as usize;
     let num_points_y =
@@ -42,11 +41,15 @@ pub fn create_grid(
 
                 let coord = Coordinates::new(CoordinateSystem::LV95, x, y);
 
-                let points = tree.nearests(&[coord.easting(), coord.northing()], 10);
+                let points = tree.within_radius(&[coord.easting(), coord.northing()], time_to_distance(time_limit, WALKING_SPEED_IN_KILOMETERS_PER_HOUR));
+
+                if points.len() == 0 {
+                    result.push((coord, time_limit * 2));
+                    continue;
+                }
 
                 let duration = points
                     .iter()
-                    .map(|p| p.item)
                     .map(|point| {
                         let distance = distance_between_2_points(coord, point.coord());
 
@@ -87,7 +90,7 @@ pub fn get_polygons(
         )
         .collect();
 
-    let contour_builder = ContourBuilder::new(num_points_x, num_points_y, false);
+    let contour_builder = ContourBuilder::new(num_points_x, num_points_y, true);
     let contours = contour_builder.contours(&values, &[0.5]).unwrap();
 
     contours[0]

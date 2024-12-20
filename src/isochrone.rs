@@ -6,8 +6,8 @@ mod utils;
 
 use crate::isochrone::utils::haversine_distance;
 use crate::routing::find_reachable_stops_within_time_limit;
-use crate::routing::RouteResult;
-use crate::routing::RouteSectionResult;
+use crate::routing::Route;
+use crate::routing::RouteSection;
 use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
 use hrdf_parser::CoordinateSystem;
 use hrdf_parser::Coordinates;
@@ -72,10 +72,10 @@ pub fn compute_isochrones(
 
     // A false route is created to represent the point of origin in the results.
     let (easting, northing) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
-    let route = RouteResult::new(
+    let route = Route::new(
         NaiveDateTime::default(),
         departure_at,
-        vec![RouteSectionResult::new(
+        vec![RouteSection::new(
             None,
             0,
             Some(Coordinates::default()),
@@ -94,7 +94,7 @@ pub fn compute_isochrones(
     let bounding_box = get_bounding_box(&data, time_limit);
 
     let grid = if display_mode == models::DisplayMode::ContourLine {
-        Some(contour_line::create_grid(&data, bounding_box))
+        Some(contour_line::create_grid(&data, bounding_box, time_limit))
     } else {
         None
     };
@@ -190,7 +190,7 @@ fn adjust_departure_at(
     (adjusted_departure_at, adjusted_time_limit)
 }
 
-fn get_data(routes: Vec<RouteResult>, departure_at: NaiveDateTime) -> Vec<(Coordinates, Duration)> {
+fn get_data(routes: Vec<Route>, departure_at: NaiveDateTime) -> Vec<(Coordinates, Duration)> {
     routes
         .iter()
         .filter_map(|route| {

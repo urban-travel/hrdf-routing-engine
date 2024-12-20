@@ -9,7 +9,10 @@ impl RouteResult {
             let journey = section.journey(data_storage);
 
             if journey.is_none() {
-                let stop = data_storage.stops().find(section.arrival_stop_id());
+                let stop = data_storage
+                    .stops()
+                    .find(section.arrival_stop_id())
+                    .expect(format!("Exchange times journey {} not found", section.arrival_stop_id()).as_str());
                 println!("Approx. {}-minute walk to {}", section.duration().unwrap(), stop.name());
                 continue;
             }
