@@ -17,7 +17,7 @@ impl RouteResult {
             let journey = journey.unwrap();
             println!("Journey #{}", journey.id());
 
-            let mut route_iter = journey.route().into_iter().peekable();
+            let mut route_iter = journey.route().iter().peekable();
 
             while route_iter.peek().unwrap().stop_id() != section.departure_stop_id() {
                 route_iter.next();

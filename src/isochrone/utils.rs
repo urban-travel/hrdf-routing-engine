@@ -65,7 +65,7 @@ fn deg_to_sex(angle: f64) -> f64 {
     let min = ((angle - deg as f64) * 60.0) as i64;
     let sec = (((angle - deg as f64) * 60.0) - min as f64) * 60.0;
 
-    return deg as f64 + min as f64 / 100.0 + sec / 10000.0;
+    deg as f64 + min as f64 / 100.0 + sec / 10000.0
 }
 
 /// https://github.com/antistatique/swisstopo
@@ -74,7 +74,7 @@ fn deg_to_sec(angle: f64) -> f64 {
     let min = ((angle - deg as f64) * 100.0) as i64;
     let sec = (((angle - deg as f64) * 100.0) - min as f64) * 100.0;
 
-    return sec + min as f64 * 60.0 + deg as f64 * 3600.0;
+    sec + min as f64 * 60.0 + deg as f64 * 3600.0
 }
 
 pub fn distance_between_2_points(point1: Coordinates, point2: Coordinates) -> f64 {

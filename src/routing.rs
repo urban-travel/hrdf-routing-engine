@@ -63,5 +63,5 @@ pub fn find_reachable_stops_within_time_limit(
             departure_at.checked_add_signed(time_limit).unwrap(),
         ),
     );
-    routes.into_iter().map(|(_, v)| v).collect()
+    routes.into_values().collect()
 }

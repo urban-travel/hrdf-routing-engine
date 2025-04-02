@@ -17,7 +17,7 @@ pub fn get_connections(
         data_storage,
         route.arrival_stop_id(),
         route.arrival_at(),
-        Some(get_routes_to_ignore(data_storage, &route)),
+        Some(get_routes_to_ignore(data_storage, route)),
         route.last_section().journey_id(),
     )
     .into_iter()
@@ -34,13 +34,13 @@ pub fn get_connections(
     .collect()
 }
 
-pub fn next_departures<'a>(
-    data_storage: &'a DataStorage,
+pub fn next_departures(
+    data_storage: &DataStorage,
     departure_stop_id: i32,
     departure_at: NaiveDateTime,
     routes_to_ignore: Option<FxHashSet<u64>>,
     previous_journey_id: Option<i32>,
-) -> Vec<(&'a Journey, NaiveDateTime)> {
+) -> Vec<(&Journey, NaiveDateTime)> {
     fn get_journeys(
         data_storage: &DataStorage,
         date: NaiveDate,
@@ -100,7 +100,7 @@ pub fn next_departures<'a>(
     // Journeys are sorted by ascending departure time, allowing them to be filtered correctly afterwards.
     journeys.sort_by_key(|(_, journey_departure_at)| *journey_departure_at);
 
-    let mut routes_to_ignore = routes_to_ignore.unwrap_or_else(FxHashSet::default);
+    let mut routes_to_ignore = routes_to_ignore.unwrap_or_default();
 
     journeys
         .into_iter()
@@ -119,7 +119,7 @@ pub fn next_departures<'a>(
         })
         .filter(|&(journey, journey_departure_at)| {
             // It is checked that there is enough time to embark on the journey (exchange time).
-            previous_journey_id.map_or(true, |id| {
+            previous_journey_id.is_none_or(|id| {
                 let exchange_time = get_exchange_time(
                     data_storage,
                     departure_stop_id,
@@ -143,17 +143,16 @@ pub fn get_operating_journeys(
         .get(&stop_id)
         .map_or(Vec::new(), |bit_fields_1| {
             let bit_fields_2 = data_storage.bit_fields_by_day().get(&date).unwrap();
-            let bit_fields: Vec<_> = bit_fields_1.intersection(&bit_fields_2).collect();
+            let bit_fields: Vec<_> = bit_fields_1.intersection(bit_fields_2).collect();
 
             bit_fields
                 .into_iter()
-                .map(|&bit_field_id| {
+                .flat_map(|&bit_field_id| {
                     data_storage
                         .journeys_by_stop_id_and_bit_field_id()
                         .get(&(stop_id, bit_field_id))
                         .unwrap()
                 })
-                .flatten()
                 .map(|&journey_id| {
                     data_storage
                         .journeys()
@@ -249,13 +248,10 @@ fn exchange_time_journey_pair(
     journey_id_2: i32,
     departure_at: NaiveDateTime,
 ) -> Option<i16> {
-    let Some(exchange_times) =
+    let exchange_times =
         data_storage
             .exchange_times_journey_map()
-            .get(&(stop_id, journey_id_1, journey_id_2))
-    else {
-        return None;
-    };
+            .get(&(stop_id, journey_id_1, journey_id_2))?;
 
     // "2 +" because a 2-bit offset is mandatory.
     // "- 1" to obtain an index.

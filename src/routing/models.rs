@@ -61,7 +61,7 @@ impl RouteSection {
 
     // Functions
 
-    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
+    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
         self.journey_id.map(|id| {
             data_storage
                 .journeys()
@@ -201,9 +201,8 @@ impl Clone for RouteResult {
         RouteResult {
             departure_at: self.departure_at,
             arrival_at: self.arrival_at,
-            sections: self.sections.clone()
+            sections: self.sections.clone(),
         }
-
     }
 }
 
@@ -306,7 +305,7 @@ impl RouteSectionResult {
 
     // Functions
 
-    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
+    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
         self.journey_id.map(|id| {
             data_storage
                 .journeys()

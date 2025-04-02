@@ -213,7 +213,7 @@ fn update_arrival_stop(
 fn can_improve_solution(route: &Route, solution: &Option<&Route>) -> bool {
     solution
         .as_ref()
-        .map_or(true, |sol| route.arrival_at() <= sol.arrival_at())
+        .is_none_or(|sol| route.arrival_at() <= sol.arrival_at())
 }
 
 fn is_improving_solution(

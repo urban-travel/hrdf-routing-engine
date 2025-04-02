@@ -24,10 +24,7 @@ impl Route {
             return None;
         }
 
-        let is_same_journey = self
-            .last_section()
-            .journey_id()
-            .map_or(false, |id| id == journey_id);
+        let is_same_journey = self.last_section().journey_id() == Some(journey_id);
 
         RouteSection::find_next(
             data_storage,
@@ -93,7 +90,7 @@ impl RouteSection {
     ) -> Option<(RouteSection, FxHashSet<i32>)> {
         let mut route_iter = journey.route().iter();
 
-        while let Some(route_entry) = route_iter.next() {
+        for route_entry in route_iter.by_ref() {
             if route_entry.stop_id() == departure_stop_id {
                 break;
             }
@@ -101,7 +98,7 @@ impl RouteSection {
 
         let mut visited_stops = FxHashSet::default();
 
-        while let Some(route_entry) = route_iter.next() {
+        for route_entry in route_iter.by_ref() {
             let stop = route_entry.stop(data_storage);
             visited_stops.insert(stop.id());
 

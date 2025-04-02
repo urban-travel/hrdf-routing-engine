@@ -42,7 +42,7 @@ where
         }
 
         explore_nearby_stops(data_storage, &route, &mut routes);
-        explore_connections(data_storage, &route, &journeys_to_ignore, &mut new_routes);
+        explore_connections(data_storage, &route, journeys_to_ignore, &mut new_routes);
     }
 
     // All new journeys are recorded as not available for the next connection level.
@@ -116,7 +116,7 @@ fn explore_connections(
     journeys_to_ignore: &FxHashSet<i32>,
     new_routes: &mut Vec<Route>,
 ) {
-    new_routes.extend(get_connections(data_storage, &route, journeys_to_ignore));
+    new_routes.extend(get_connections(data_storage, route, journeys_to_ignore));
 }
 
 fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut Vec<Route>) {

@@ -39,7 +39,6 @@ pub fn compute_isochrones(
     display_mode: models::DisplayMode,
     verbose: bool,
 ) -> IsochroneMap {
-
     // Create a list of stops close enough to be of interest
     let departure_stops = find_stops_in_time_range(
         hrdf.data_storage(),
@@ -49,10 +48,14 @@ pub fn compute_isochrones(
         time_limit,
     );
 
-    let mut departure_stop_coord = departure_stops.first().unwrap().wgs84_coordinates().unwrap();
+    let mut departure_stop_coord = departure_stops
+        .first()
+        .unwrap()
+        .wgs84_coordinates()
+        .unwrap();
     let mut routes: Vec<_> = vec![];
     let mut isochrones = Vec::new();
-    
+
     // then go over all these stops to compute each attainable route
     for departure_stop in departure_stops {
         departure_stop_coord = departure_stop.wgs84_coordinates().unwrap();
@@ -62,23 +65,23 @@ pub fn compute_isochrones(
             time_limit,
             origin_point_latitude,
             origin_point_longitude,
-            &departure_stop,
+            departure_stop,
         );
 
-        let mut local_routes : Vec<_> = find_reachable_stops_within_time_limit(
+        let mut local_routes: Vec<_> = find_reachable_stops_within_time_limit(
             hrdf,
             departure_stop.id(),
             adjusted_departure_at,
             adjusted_time_limit,
             verbose,
         )
-            .into_iter()
-            .filter(|route| {
-                // Keeps only stops in Switzerland.
-                let stop_id = route.sections().last().unwrap().arrival_stop_id();
-                stop_id.to_string().starts_with("85")
-            })
-            .collect();
+        .into_iter()
+        .filter(|route| {
+            // Keeps only stops in Switzerland.
+            let stop_id = route.sections().last().unwrap().arrival_stop_id();
+            stop_id.to_string().starts_with("85")
+        })
+        .collect();
 
         // A false route is created to represent the point of origin in the results.
         let (easting, northing) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
@@ -102,7 +105,6 @@ pub fn compute_isochrones(
 
         // Then merge de found routes
         routes.append(&mut local_routes);
-
     }
 
     let data = get_data(routes.into_iter(), departure_at);
@@ -125,7 +127,7 @@ pub fn compute_isochrones(
             IsochroneDisplayMode::ContourLine => {
                 let (grid, num_points_x, num_points_y) = grid.as_ref().unwrap();
                 contour_line::get_polygons(
-                    &grid,
+                    grid,
                     *num_points_x,
                     *num_points_y,
                     bounding_box.0,
@@ -135,7 +137,6 @@ pub fn compute_isochrones(
         };
 
         isochrones.push(Isochrone::new(polygons, time_limit.num_minutes() as u32));
-
     }
     let bounding_box = get_bounding_box(&data, time_limit);
     IsochroneMap::new(
@@ -159,7 +160,18 @@ fn find_stops_in_time_range(
         // Only considers stops in Switzerland.
         .filter(|stop| stop.id().to_string().starts_with("85"))
         .filter(|stop| stop.wgs84_coordinates().is_some())
-        .filter(|stop| adjust_departure_at(departure_at, time_limit, origin_point_latitude, origin_point_longitude, stop).1.num_minutes() > 0)
+        .filter(|stop| {
+            adjust_departure_at(
+                departure_at,
+                time_limit,
+                origin_point_latitude,
+                origin_point_longitude,
+                stop,
+            )
+            .1
+            .num_minutes()
+                > 0
+        })
         // The stop list cannot be empty.
         .collect()
 }
@@ -224,7 +236,10 @@ fn adjust_departure_at(
     (adjusted_departure_at, adjusted_time_limit)
 }
 
-fn get_data(routes: impl Iterator<Item=Route>, departure_at: NaiveDateTime) -> Vec<(Coordinates, Duration)> {
+fn get_data(
+    routes: impl Iterator<Item = Route>,
+    departure_at: NaiveDateTime,
+) -> Vec<(Coordinates, Duration)> {
     routes
         .filter_map(|route| {
             let coord = route
@@ -240,7 +255,7 @@ fn get_data(routes: impl Iterator<Item=Route>, departure_at: NaiveDateTime) -> V
 }
 
 fn get_bounding_box(
-    data: &Vec<(Coordinates, Duration)>,
+    data: &[(Coordinates, Duration)],
     time_limit: Duration,
 ) -> ((f64, f64), (f64, f64)) {
     let min_x = data

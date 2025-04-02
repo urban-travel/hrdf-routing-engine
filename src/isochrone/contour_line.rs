@@ -11,7 +11,7 @@ use super::{
 use rayon::prelude::*;
 
 pub fn create_grid(
-    data: &Vec<(Coordinates, Duration)>,
+    data: &[(Coordinates, Duration)],
     bounding_box: ((f64, f64), (f64, f64)),
     time_limit: Duration,
 ) -> (Vec<(Coordinates, Duration)>, usize, usize) {
@@ -41,9 +41,12 @@ pub fn create_grid(
 
                 let coord = Coordinates::new(CoordinateSystem::LV95, x, y);
 
-                let points = tree.within_radius(&[coord.easting(), coord.northing()], time_to_distance(time_limit, WALKING_SPEED_IN_KILOMETERS_PER_HOUR));
+                let points = tree.within_radius(
+                    &[coord.easting(), coord.northing()],
+                    time_to_distance(time_limit, WALKING_SPEED_IN_KILOMETERS_PER_HOUR),
+                );
 
-                if points.len() == 0 {
+                if points.is_empty() {
                     result.push((coord, time_limit * 2));
                     continue;
                 }
@@ -71,7 +74,7 @@ pub fn create_grid(
 }
 
 pub fn get_polygons(
-    grid: &Vec<(Coordinates, Duration)>,
+    grid: &[(Coordinates, Duration)],
     num_points_x: usize,
     num_points_y: usize,
     min_point: (f64, f64),

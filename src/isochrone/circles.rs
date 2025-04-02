@@ -9,7 +9,7 @@ use super::{
 };
 
 pub fn get_polygons(
-    data: &Vec<(Coordinates, Duration)>,
+    data: &[(Coordinates, Duration)],
     time_limit: Duration,
 ) -> Vec<Vec<Coordinates>> {
     data.iter()
