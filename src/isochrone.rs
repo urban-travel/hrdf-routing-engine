@@ -192,16 +192,16 @@ fn find_nearest_stop(
             let distance_1 = haversine_distance(
                 origin_point_latitude,
                 origin_point_longitude,
-                coord_1.latitude(),
-                coord_1.longitude(),
+                coord_1.latitude().expect("Wrong coordinate system"),
+                coord_1.longitude().expect("Wrong coordinate system"),
             );
 
             let coord_2 = b.wgs84_coordinates().unwrap();
             let distance_2 = haversine_distance(
                 origin_point_latitude,
                 origin_point_longitude,
-                coord_2.latitude(),
-                coord_2.longitude(),
+                coord_2.latitude().expect("Wrong coordinate system"),
+                coord_2.longitude().expect("Wrong coordinate system"),
             );
 
             distance_1.partial_cmp(&distance_2).unwrap()
@@ -261,7 +261,7 @@ fn get_bounding_box(
     let min_x = data
         .iter()
         .fold(f64::INFINITY, |result, &(coord, duration)| {
-            let candidate = coord.easting()
+            let candidate = coord.easting().expect("Wrong coordinate system")
                 - time_to_distance(time_limit - duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
             f64::min(result, candidate)
         });
@@ -269,7 +269,7 @@ fn get_bounding_box(
     let max_x = data
         .iter()
         .fold(f64::NEG_INFINITY, |result, &(coord, duration)| {
-            let candidate = coord.easting()
+            let candidate = coord.easting().expect("Wrong coordinate system")
                 + time_to_distance(time_limit - duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
             f64::max(result, candidate)
         });
@@ -277,7 +277,7 @@ fn get_bounding_box(
     let min_y = data
         .iter()
         .fold(f64::INFINITY, |result, &(coord, duration)| {
-            let candidate = coord.northing()
+            let candidate = coord.northing().expect("Wrong coordinate system")
                 - time_to_distance(time_limit - duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
             f64::min(result, candidate)
         });
@@ -285,7 +285,7 @@ fn get_bounding_box(
     let max_y = data
         .iter()
         .fold(f64::NEG_INFINITY, |result, &(coord, duration)| {
-            let candidate = coord.northing()
+            let candidate = coord.northing().expect("Wrong coordinate system")
                 + time_to_distance(time_limit - duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
             f64::max(result, candidate)
         });
