@@ -175,6 +175,8 @@ fn find_stops_in_time_range(
         // The stop list cannot be empty.
         .collect()
 }
+
+#[allow(dead_code)]
 fn find_nearest_stop(
     data_storage: &DataStorage,
     origin_point_latitude: f64,

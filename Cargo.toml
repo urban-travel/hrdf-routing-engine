@@ -11,6 +11,7 @@ authors = ["Florian Burgener"]
 [dependencies]
 axum = "0.7.5"
 chrono = { version = "0.4.31", features = ["serde"] }
+clap = { version = "4.5.35", features = ["derive"] }
 contour = "0.13.1"
 hrdf-parser = { git = "https://github.com/florianburgener/hrdf-parser" }
 # hrdf-parser = "0.1.2"
@@ -22,9 +23,13 @@ serde = { version = "1.0", features = ["derive"] }
 simple_logger = "5.0.0"
 strum = "0.26.3"
 strum_macros = "0.25.3"
+test-log = "0.2.16"
 tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread"] }
 tower-http = { version = "0.5.2", features = ["cors"] }
 typenum = "1.17.0"
 
 [profile.dev]
 opt-level=3
+
+[profile.release]
+lto = true

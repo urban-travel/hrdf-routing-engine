@@ -10,34 +10,29 @@ pub use routing::plan_journey;
 pub use routing::Route;
 pub use routing::RouteSection;
 
-use std::{env, error::Error};
+pub use debug::run_debug;
+pub use service::run_service;
 
-use debug::run_debug;
-use hrdf_parser::{Hrdf, Version};
-use service::run_service;
+#[cfg(test)]
+mod tests {
+    use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
 
-pub async fn run() -> Result<(), Box<dyn Error>> {
-    //let hrdf = Hrdf::new(
-    //    Version::V_5_40_41_2_0_5,
-    //    "https://data.opentransportdata.swiss/en/dataset/timetable-54-2024-hrdf/permalink",
-    //    false,
-    //)
-    //.await?;
+    use super::*;
+    use hrdf_parser::{Hrdf, Version};
+    use test_log::test;
 
-    let hrdf = Hrdf::new(
-        Version::V_5_40_41_2_0_7,
-        "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
-        false,
-    )
-    .await?;
+    #[test(tokio::test)]
+    async fn debug() {
+        let hrdf = Hrdf::new(
+            Version::V_5_40_41_2_0_7,
+            "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
+            false,
+            None,
+        )
+        .await
+        .unwrap();
 
-    let args: Vec<String> = env::args().collect();
-
-    if args.get(1).map(|s| s.as_str()) == Some("serve") {
-        run_service(hrdf).await;
-    } else {
-        run_debug(hrdf);
+        test_plan_journey(&hrdf);
+        test_find_reachable_stops_within_time_limit(&hrdf);
     }
-
-    Ok(())
 }

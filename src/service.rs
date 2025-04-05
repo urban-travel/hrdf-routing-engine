@@ -1,4 +1,8 @@
-use std::{str::FromStr, sync::Arc};
+use std::{
+    net::{Ipv4Addr, SocketAddr},
+    str::FromStr,
+    sync::Arc,
+};
 
 use axum::{extract::Query, http::StatusCode, routing::get, Json, Router};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
@@ -8,7 +12,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::isochrone::{self, IsochroneDisplayMode, IsochroneMap};
 
-pub async fn run_service(hrdf: Hrdf) {
+pub async fn run_service(hrdf: Hrdf, ip_addr: Ipv4Addr, port: u16) {
     log::info!("Starting the server...");
 
     let hrdf = Arc::new(hrdf);
@@ -27,9 +31,10 @@ pub async fn run_service(hrdf: Hrdf) {
             get(move |params| compute_isochrones(Arc::clone(&hrdf_2), params)),
         )
         .layer(cors);
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8300").await.unwrap();
+    let address = SocketAddr::from((ip_addr, port));
+    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
 
-    log::info!("Listening on 0.0.0.0:8300...");
+    log::info!("Listening on {ip_addr}:{port}...");
 
     axum::serve(listener, app).await.unwrap();
 }
