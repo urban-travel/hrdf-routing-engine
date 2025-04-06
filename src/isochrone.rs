@@ -4,6 +4,8 @@ mod contour_line;
 mod models;
 mod utils;
 
+use std::time::Instant;
+
 use crate::isochrone::utils::haversine_distance;
 use crate::routing::find_reachable_stops_within_time_limit;
 use crate::routing::Route;
@@ -39,6 +41,8 @@ pub fn compute_isochrones(
     display_mode: models::DisplayMode,
     verbose: bool,
 ) -> IsochroneMap {
+    let start_time = Instant::now();
+
     // Create a list of stops close enough to be of interest
     let departure_stops = find_stops_in_time_range(
         hrdf.data_storage(),
@@ -47,6 +51,7 @@ pub fn compute_isochrones(
         departure_at,
         time_limit,
     );
+    // departure_stops.sort_by(|lhs, rhs| lhs.);
 
     let mut departure_stop_coord = departure_stops
         .first()
@@ -56,6 +61,12 @@ pub fn compute_isochrones(
     let mut routes: Vec<_> = vec![];
     let mut isochrones = Vec::new();
 
+    println!(
+        "\nTime for findind the departure_stops : {:.2?}",
+        start_time.elapsed()
+    );
+
+    let start_time = Instant::now();
     // then go over all these stops to compute each attainable route
     for departure_stop in departure_stops {
         departure_stop_coord = departure_stop.wgs84_coordinates().unwrap();
@@ -107,12 +118,25 @@ pub fn compute_isochrones(
         routes.append(&mut local_routes);
     }
 
+    println!(
+        "\nTime for findind the routes : {:.2?}",
+        start_time.elapsed()
+    );
+
+    let start_time = Instant::now();
+
     let data = get_data(routes.into_iter(), departure_at);
 
     let bounding_box = get_bounding_box(&data, time_limit);
+    let num_points = 1000;
 
     let grid = if display_mode == models::DisplayMode::ContourLine {
-        Some(contour_line::create_grid(&data, bounding_box, time_limit))
+        Some(contour_line::create_grid(
+            &data,
+            bounding_box,
+            time_limit,
+            num_points,
+        ))
     } else {
         None
     };
@@ -125,20 +149,27 @@ pub fn compute_isochrones(
         let polygons = match display_mode {
             IsochroneDisplayMode::Circles => circles::get_polygons(&data, time_limit),
             IsochroneDisplayMode::ContourLine => {
-                let (grid, num_points_x, num_points_y) = grid.as_ref().unwrap();
+                let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
+                println!("{num_points_x}, {num_points_y}");
                 contour_line::get_polygons(
                     grid,
                     *num_points_x,
                     *num_points_y,
                     bounding_box.0,
                     time_limit,
+                    *dx,
                 )
             }
         };
 
         isochrones.push(Isochrone::new(polygons, time_limit.num_minutes() as u32));
     }
-    let bounding_box = get_bounding_box(&data, time_limit);
+
+    println!(
+        "\nTime for findind the isochrones : {:.2?}",
+        start_time.elapsed()
+    );
+    println!("{:?}", bounding_box);
     IsochroneMap::new(
         isochrones,
         departure_stop_coord,

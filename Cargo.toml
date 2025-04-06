@@ -33,4 +33,4 @@ typenum = "1.17.0"
 opt-level=3
 
 [profile.release]
-lto = true
+# lto = true

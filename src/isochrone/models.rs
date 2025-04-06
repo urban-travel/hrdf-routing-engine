@@ -1,7 +1,9 @@
-use geo::{LineString, Polygon};
+use geo::{Area, Contains, LineString, MultiPolygon, Polygon};
 use hrdf_parser::Coordinates;
 use serde::Serialize;
 use strum_macros::EnumString;
+
+use super::utils::wgs84_to_lv95;
 
 #[derive(Debug, Serialize)]
 pub struct IsochroneMap {
@@ -23,8 +25,30 @@ impl IsochroneMap {
         }
     }
 
-    pub fn isochrones(&self) -> &Vec<Isochrone> {
-        &self.isochrones
+    pub fn compute_areas(&self) -> Vec<f64> {
+        self.isochrones.iter().map(|i| i.compute_area()).collect()
+    }
+
+    pub fn get_polygons(&self) -> Vec<MultiPolygon> {
+        let mut polygons = self
+            .isochrones
+            .iter()
+            .map(|i| i.to_polygons())
+            .collect::<Vec<_>>();
+
+        let polygons_original = polygons.clone();
+
+        for i in 0..polygons.len() - 1 {
+            for p_ext in &mut polygons[i + 1] {
+                for p_int in &polygons_original[i] {
+                    if p_ext.contains(p_int) {
+                        p_ext.interiors_push(p_int.exterior().clone());
+                    }
+                }
+            }
+        }
+
+        polygons
     }
 }
 
@@ -42,41 +66,33 @@ impl Isochrone {
         }
     }
 
-    // Geo polygons are a line which is its exterior part and can have holes in them.
-    // Each isochrone also has this information encoded and is the isochrone of level
-    // i with "holes" from isochrones of level i-1.
-    // Therefore the isocrhone[i-i] will be the interior line of the line of interior[i].
-    pub fn to_polygons(&self) -> Vec<Polygon> {
-        let exterior_only = self
-            .polygons
+    /// Transforms the isochrone polygons into geo::MultiPolygons to be able to use various
+    /// functionalities of the crate
+    pub fn to_polygons(&self) -> MultiPolygon {
+        self.polygons
             .iter()
             .map(|p| {
                 Polygon::new(
                     LineString::from(
                         p.iter()
                             .map(|c| {
-                                (
-                                    c.easting().expect("Wrong coordinate system"),
-                                    c.northing().expect("Wrong coordinate system"),
-                                )
+                                if let (Some(x), Some(y)) = (c.easting(), c.northing()) {
+                                    (x, y)
+                                } else {
+                                    wgs84_to_lv95(c.latitude().unwrap(), c.longitude().unwrap())
+                                }
                             })
                             .collect::<Vec<_>>(),
                     ),
                     vec![],
                 )
             })
-            .collect::<Vec<_>>();
-        // for i in 0..exterior_only.len() - 1 {
-        //     let interior = exterior_only[i].exterior().clone();
-        //     exterior_only[i + 1].interiors_push(interior);
-        // }
-
-        exterior_only
+            .collect()
     }
 
-    // pub fn compute_area(&self) -> Vec<f64> {
-    //     self.to_polygons().map(|p| p)
-    // }
+    pub fn compute_area(&self) -> f64 {
+        self.to_polygons().iter().map(|p| p.unsigned_area()).sum()
+    }
 }
 
 #[derive(Debug, EnumString, PartialEq)]

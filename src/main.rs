@@ -3,6 +3,7 @@ use std::{error::Error, net::Ipv4Addr};
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
 use hrdf_routing_engine::{run_debug, run_service, run_test};
+use log::LevelFilter;
 
 #[derive(Subcommand)]
 enum Mode {
@@ -36,7 +37,12 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    simple_logger::SimpleLogger::new().env().init().unwrap();
+    simple_logger::SimpleLogger::new()
+        .with_level(LevelFilter::Off)
+        .with_module_level("hrdf_routing_engine", LevelFilter::Info)
+        .env()
+        .init()
+        .unwrap();
 
     let cli = Cli::parse();
 
