@@ -44,14 +44,18 @@ pub fn compute_isochrones(
     let start_time = Instant::now();
 
     // Create a list of stops close enough to be of interest
+    // We limit ourselves to the 10 closest. It may not be the best choice but otherwise the
+    // computation becomes very slow due to the combinatory nature of the problem
     let departure_stops = find_stops_in_time_range(
         hrdf.data_storage(),
         origin_point_latitude,
         origin_point_longitude,
         departure_at,
         time_limit,
-    );
-    // departure_stops.sort_by(|lhs, rhs| lhs.);
+    )
+    .into_iter()
+    .take(10)
+    .collect::<Vec<_>>();
 
     let mut departure_stop_coord = departure_stops
         .first()
@@ -177,6 +181,7 @@ pub fn compute_isochrones(
     )
 }
 
+// Find the stop in walking range. The stops are sorted by time to destination
 fn find_stops_in_time_range(
     data_storage: &DataStorage,
     origin_point_latitude: f64,
@@ -184,7 +189,7 @@ fn find_stops_in_time_range(
     departure_at: NaiveDateTime,
     time_limit: Duration,
 ) -> Vec<&Stop> {
-    data_storage
+    let mut stops = data_storage
         .stops()
         .entries()
         .into_iter()
@@ -204,7 +209,30 @@ fn find_stops_in_time_range(
                 > 0
         })
         // The stop list cannot be empty.
-        .collect()
+        .collect::<Vec<_>>();
+    stops.sort_by(|lhs, rhs| {
+        adjust_departure_at(
+            departure_at,
+            time_limit,
+            origin_point_latitude,
+            origin_point_longitude,
+            rhs,
+        )
+        .1
+        .num_minutes()
+        .cmp(
+            &adjust_departure_at(
+                departure_at,
+                time_limit,
+                origin_point_latitude,
+                origin_point_longitude,
+                lhs,
+            )
+            .1
+            .num_minutes(),
+        )
+    });
+    stops
 }
 
 #[allow(dead_code)]
