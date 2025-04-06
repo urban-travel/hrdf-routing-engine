@@ -175,6 +175,8 @@ fn find_stops_in_time_range(
         // The stop list cannot be empty.
         .collect()
 }
+
+#[allow(dead_code)]
 fn find_nearest_stop(
     data_storage: &DataStorage,
     origin_point_latitude: f64,
@@ -223,8 +225,8 @@ fn adjust_departure_at(
         haversine_distance(
             origin_point_latitude,
             origin_point_longitude,
-            coord.latitude(),
-            coord.longitude(),
+            coord.latitude().expect("Wrong coordinate system"),
+            coord.longitude().expect("Wrong coordinate system"),
         ) * 1000.0
     };
 

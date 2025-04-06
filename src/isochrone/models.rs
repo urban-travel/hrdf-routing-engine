@@ -1,9 +1,7 @@
 use geo::{LineString, Polygon};
-use hrdf_parser::{CoordinateSystem, Coordinates};
+use hrdf_parser::Coordinates;
 use serde::Serialize;
 use strum_macros::EnumString;
-
-use super::utils::wgs84_to_lv95;
 
 #[derive(Debug, Serialize)]
 pub struct IsochroneMap {
@@ -49,18 +47,18 @@ impl Isochrone {
     // i with "holes" from isochrones of level i-1.
     // Therefore the isocrhone[i-i] will be the interior line of the line of interior[i].
     pub fn to_polygons(&self) -> Vec<Polygon> {
-        let mut exterior_only = self
+        let exterior_only = self
             .polygons
             .iter()
             .map(|p| {
                 Polygon::new(
                     LineString::from(
                         p.iter()
-                            .map(|c| match c.coordinate_system() {
-                                CoordinateSystem::LV95 => (c.easting(), c.northing()),
-                                CoordinateSystem::WGS84 => {
-                                    wgs84_to_lv95(c.latitude(), c.longitude())
-                                }
+                            .map(|c| {
+                                (
+                                    c.easting().expect("Wrong coordinate system"),
+                                    c.northing().expect("Wrong coordinate system"),
+                                )
                             })
                             .collect::<Vec<_>>(),
                     ),

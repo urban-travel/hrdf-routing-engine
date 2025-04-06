@@ -4,9 +4,11 @@ mod routing;
 mod service;
 mod utils;
 
+use std::error::Error;
+
 use chrono::Duration;
-use chrono::TimeDelta;
 use geo::Area;
+use hrdf_parser::Hrdf;
 pub use isochrone::compute_isochrones;
 pub use routing::find_reachable_stops_within_time_limit;
 pub use routing::plan_journey;
@@ -17,27 +19,10 @@ use svg::Document;
 use svg::Node;
 use utils::create_date_time;
 
-use std::{env, error::Error};
+pub use debug::run_debug;
+pub use service::run_service;
 
-use debug::run_debug;
-use hrdf_parser::{Hrdf, Version};
-use service::run_service;
-
-pub async fn run() -> Result<(), Box<dyn Error>> {
-    //let hrdf = Hrdf::new(
-    //    Version::V_5_40_41_2_0_5,
-    //    "https://data.opentransportdata.swiss/en/dataset/timetable-54-2024-hrdf/permalink",
-    //    false,
-    //)
-    //.await?;
-
-    let hrdf = Hrdf::new(
-        Version::V_5_40_41_2_0_7,
-        "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
-        false,
-    )
-    .await?;
-
+pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
     let origin_point_latitude = 46.183870262988584;
     let origin_point_longitude = 6.12213134765625;
     let departure_at = create_date_time(2025, 04, 1, 19, 3);
@@ -121,15 +106,28 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
                 .collect::<Vec<_>>())
             .collect::<Vec<_>>()
     );
-    return Ok(());
+    Ok(())
+}
 
-    // let args: Vec<String> = env::args().collect();
-    //
-    // if args.get(1).map(|s| s.as_str()) == Some("serve") {
-    //     run_service(hrdf).await;
-    // } else {
-    //     run_debug(hrdf);
-    // }
-    //
-    // Ok(())
+#[cfg(test)]
+mod tests {
+    use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
+
+    use hrdf_parser::{Hrdf, Version};
+    use test_log::test;
+
+    #[test(tokio::test)]
+    async fn debug() {
+        let hrdf = Hrdf::new(
+            Version::V_5_40_41_2_0_7,
+            "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
+            false,
+            None,
+        )
+        .await
+        .unwrap();
+
+        test_plan_journey(&hrdf);
+        test_find_reachable_stops_within_time_limit(&hrdf);
+    }
 }

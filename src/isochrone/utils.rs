@@ -78,8 +78,12 @@ fn deg_to_sec(angle: f64) -> f64 {
 }
 
 pub fn distance_between_2_points(point1: Coordinates, point2: Coordinates) -> f64 {
-    let x_sqr = (point2.easting() - point1.easting()).powi(2);
-    let y_sqr = (point2.northing() - point1.northing()).powi(2);
+    let x_sqr = (point2.easting().expect("Wrong coordinate system")
+        - point1.easting().expect("Wrong coordinate system"))
+    .powi(2);
+    let y_sqr = (point2.northing().expect("Wrong coordinate system")
+        - point1.northing().expect("Wrong coordinate system"))
+    .powi(2);
     (x_sqr + y_sqr).sqrt()
 }
 
