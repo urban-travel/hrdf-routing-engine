@@ -23,7 +23,10 @@ pub fn create_grid(
     let tree = KdTree::build_by_ordered_float(
         data.iter()
             .map(|&(coord, duration)| MyPoint {
-                point: [coord.easting(), coord.northing()],
+                point: [
+                    coord.easting().expect("Wrong coordinate system"),
+                    coord.northing().expect("Wrong coordinate system"),
+                ],
                 coord,
                 duration,
             })
@@ -42,7 +45,10 @@ pub fn create_grid(
                 let coord = Coordinates::new(CoordinateSystem::LV95, x, y);
 
                 let points = tree.within_radius(
-                    &[coord.easting(), coord.northing()],
+                    &[
+                        coord.easting().expect("Wrong coordinate system"),
+                        coord.northing().expect("Wrong coordinate system"),
+                    ],
                     time_to_distance(time_limit, WALKING_SPEED_IN_KILOMETERS_PER_HOUR),
                 );
 
