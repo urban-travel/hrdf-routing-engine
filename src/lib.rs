@@ -26,10 +26,10 @@ pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
     let origin_point_latitude = 46.183870262988584;
     let origin_point_longitude = 6.12213134765625;
     let departure_at = create_date_time(2025, 4, 1, 8, 3);
-    let time_limit = Duration::minutes(20);
-    let isochrone_interval = Duration::minutes(5);
-    //let display_mode = isochrone::IsochroneDisplayMode::ContourLine;
-    let display_mode = isochrone::IsochroneDisplayMode::Circles;
+    let time_limit = Duration::minutes(480);
+    let isochrone_interval = Duration::minutes(80);
+    let display_mode = isochrone::IsochroneDisplayMode::ContourLine;
+    //let display_mode = isochrone::IsochroneDisplayMode::Circles;
     let verbose = true;
 
     let iso = compute_isochrones(
