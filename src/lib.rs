@@ -26,7 +26,7 @@ pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
     let origin_point_latitude = 46.183870262988584;
     let origin_point_longitude = 6.12213134765625;
     let departure_at = create_date_time(2025, 4, 1, 8, 3);
-    let time_limit = Duration::minutes(10);
+    let time_limit = Duration::minutes(20);
     let isochrone_interval = Duration::minutes(5);
     //let display_mode = isochrone::IsochroneDisplayMode::ContourLine;
     let display_mode = isochrone::IsochroneDisplayMode::Circles;
@@ -62,6 +62,7 @@ pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
                         SvgPolygon::new()
                             .set("fill", "black")
                             .set("stroke", "black")
+                            .set("stroke-width", 1)
                             .set("points", points_int.join(" ")),
                     );
                 }
@@ -75,7 +76,7 @@ pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
                     SvgPolygon::new()
                         .set("fill", "none")
                         .set("stroke", "black")
-                        .set("stroke-width", 30)
+                        .set("stroke-width", 5)
                         .set("points", points_ext.join(" ")),
                 )
             },

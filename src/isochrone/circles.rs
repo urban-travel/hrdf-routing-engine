@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use chrono::Duration;
-use geo::{unary_union, LineString, MultiPolygon, Polygon};
+use geo::{unary_union, LineString, Polygon};
 use hrdf_parser::{CoordinateSystem, Coordinates};
 
 use super::{

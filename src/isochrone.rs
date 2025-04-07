@@ -148,7 +148,7 @@ pub fn compute_isochrones(
         let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
 
         let polygons = match display_mode {
-            IsochroneDisplayMode::Circles => circles::get_polygons(&data, time_limit),
+            IsochroneDisplayMode::Circles => circles::get_polygons(&data, current_time_limit),
             IsochroneDisplayMode::ContourLine => {
                 let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
                 contour_line::get_polygons(
