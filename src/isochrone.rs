@@ -145,7 +145,7 @@ pub fn compute_isochrones(
     let isochrone_count = time_limit.num_minutes() / isochrone_interval.num_minutes();
 
     for i in 0..isochrone_count {
-        let time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
+        let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
 
         let polygons = match display_mode {
             IsochroneDisplayMode::Circles => circles::get_polygons(&data, time_limit),
@@ -156,13 +156,16 @@ pub fn compute_isochrones(
                     *num_points_x,
                     *num_points_y,
                     bounding_box.0,
-                    time_limit,
+                    current_time_limit,
                     *dx,
                 )
             }
         };
 
-        isochrones.push(Isochrone::new(polygons, time_limit.num_minutes() as u32));
+        isochrones.push(Isochrone::new(
+            polygons,
+            current_time_limit.num_minutes() as u32,
+        ));
     }
 
     log::info!(

@@ -1,6 +1,7 @@
 use std::f64::consts::PI;
 
 use chrono::Duration;
+use geo::{unary_union, LineString, MultiPolygon, Polygon};
 use hrdf_parser::{CoordinateSystem, Coordinates};
 
 use super::{
@@ -12,17 +13,18 @@ pub fn get_polygons(
     data: &[(Coordinates, Duration)],
     time_limit: Duration,
 ) -> Vec<Vec<Coordinates>> {
-    data.iter()
+    let polygons = data
+        .iter()
         .filter(|(_, duration)| *duration <= time_limit)
         .map(|(center_lv95, duration)| {
             let distance =
                 time_to_distance(time_limit - *duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
 
-            generate_lv95_circle_points(
+            let polygon = generate_lv95_circle_points(
                 center_lv95.easting().expect("Wrong coordinate system"),
                 center_lv95.northing().expect("Wrong coordinate system"),
                 distance,
-                18,
+                8,
             )
             .into_iter()
             .map(|lv95| {
@@ -30,9 +32,22 @@ pub fn get_polygons(
                     lv95.easting().expect("Wrong coordinate system"),
                     lv95.northing().expect("Wrong coordinate system"),
                 );
-                Coordinates::new(CoordinateSystem::WGS84, wgs84.0, wgs84.1)
+                (wgs84.0, wgs84.1)
             })
-            .collect()
+            .collect::<Vec<_>>();
+            Polygon::new(LineString::from(polygon), vec![])
+        })
+        .collect::<Vec<_>>();
+
+    let multi_polygon = unary_union(&polygons);
+
+    multi_polygon
+        .into_iter()
+        .map(|p| {
+            p.exterior()
+                .coords()
+                .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
+                .collect()
         })
         .collect()
 }
