@@ -28,8 +28,8 @@ pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
     let departure_at = create_date_time(2025, 4, 1, 8, 3);
     let time_limit = Duration::minutes(480);
     let isochrone_interval = Duration::minutes(80);
-    let display_mode = isochrone::IsochroneDisplayMode::ContourLine;
-    //let display_mode = isochrone::IsochroneDisplayMode::Circles;
+    //let display_mode = isochrone::IsochroneDisplayMode::ContourLine;
+    let display_mode = isochrone::IsochroneDisplayMode::Circles;
     let verbose = true;
 
     let iso = compute_isochrones(
@@ -51,37 +51,43 @@ pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
         let (max_x, max_y) = bounding_rect.max().x_y();
 
         let document = p.iter().fold(
-            Document::new().set("viewBox", (min_x, min_y, max_x - min_x, max_y - min_y)),
+            Document::new().set(
+                "viewBox",
+                (
+                    min_x / 1000.0,
+                    min_y / 1000.0,
+                    max_x / 1000.0 - min_x / 1000.0,
+                    max_y / 1000.0 - min_y / 1000.0,
+                ),
+            ),
             |mut doc, pi| {
                 for int in pi.interiors() {
                     let points_int = int
                         .coords()
-                        .map(|coord| format!("{},{}", coord.x, coord.y))
+                        .map(|coord| format!("{},{}", coord.x / 1000.0, coord.y / 1000.0))
                         .collect::<Vec<_>>();
                     doc.append(
                         SvgPolygon::new()
                             .set("fill", "black")
                             .set("stroke", "black")
-                            .set("stroke-width", 1)
                             .set("points", points_int.join(" ")),
                     );
                 }
                 let points_ext = pi
                     .exterior()
                     .coords()
-                    .map(|coord| format!("{},{}", coord.x, coord.y))
+                    .map(|coord| format!("{},{}", coord.x / 1000.0, coord.y / 1000.0))
                     .collect::<Vec<_>>();
 
                 doc.add(
                     SvgPolygon::new()
                         .set("fill", "none")
-                        .set("stroke", "black")
-                        .set("stroke-width", 5)
+                        .set("stroke", "red")
                         .set("points", points_ext.join(" ")),
                 )
             },
         );
-        svg::save(format!("polygon_{num}.svg"), &document).unwrap();
+        svg::save(format!("polygon_{display_mode:?}_{num}.svg"), &document).unwrap();
     });
     Ok(())
 }

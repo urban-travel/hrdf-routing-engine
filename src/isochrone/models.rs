@@ -95,7 +95,7 @@ impl Isochrone {
     }
 }
 
-#[derive(Debug, EnumString, PartialEq)]
+#[derive(Debug, EnumString, PartialEq, Clone, Copy)]
 pub enum DisplayMode {
     #[strum(serialize = "circles")]
     Circles,

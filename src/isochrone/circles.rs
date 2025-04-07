@@ -25,7 +25,7 @@ pub fn get_polygons(
                 center_lv95.easting().expect("Wrong coordinate system"),
                 center_lv95.northing().expect("Wrong coordinate system"),
                 distance,
-                8,
+                18,
             )
             .into_iter()
             .map(|lv95| {
