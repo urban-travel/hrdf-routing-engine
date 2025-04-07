@@ -54,7 +54,7 @@ pub fn compute_isochrones(
         time_limit,
     )
     .into_iter()
-    .take(10)
+    .take(5)
     .collect::<Vec<_>>();
 
     let mut departure_stop_coord = departure_stops
@@ -65,8 +65,8 @@ pub fn compute_isochrones(
     let mut routes: Vec<_> = vec![];
     let mut isochrones = Vec::new();
 
-    println!(
-        "\nTime for findind the departure_stops : {:.2?}",
+    log::info!(
+        "Time for findind the departure_stops : {:.2?}",
         start_time.elapsed()
     );
 
@@ -122,17 +122,14 @@ pub fn compute_isochrones(
         routes.append(&mut local_routes);
     }
 
-    println!(
-        "\nTime for findind the routes : {:.2?}",
-        start_time.elapsed()
-    );
+    log::info!("Time for findind the routes : {:.2?}", start_time.elapsed());
 
     let start_time = Instant::now();
 
     let data = get_data(routes.into_iter(), departure_at);
 
     let bounding_box = get_bounding_box(&data, time_limit);
-    let num_points = 1000;
+    let num_points = 1500;
 
     let grid = if display_mode == models::DisplayMode::ContourLine {
         Some(contour_line::create_grid(
@@ -154,7 +151,6 @@ pub fn compute_isochrones(
             IsochroneDisplayMode::Circles => circles::get_polygons(&data, time_limit),
             IsochroneDisplayMode::ContourLine => {
                 let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
-                println!("{num_points_x}, {num_points_y}");
                 contour_line::get_polygons(
                     grid,
                     *num_points_x,
@@ -169,11 +165,10 @@ pub fn compute_isochrones(
         isochrones.push(Isochrone::new(polygons, time_limit.num_minutes() as u32));
     }
 
-    println!(
-        "\nTime for findind the isochrones : {:.2?}",
+    log::info!(
+        "Time for findind the isochrones : {:.2?}",
         start_time.elapsed()
     );
-    println!("{:?}", bounding_box);
     IsochroneMap::new(
         isochrones,
         departure_stop_coord,
