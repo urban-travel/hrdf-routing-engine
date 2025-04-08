@@ -61,12 +61,20 @@ pub fn compute_isochrones(
     .take(5)
     .collect::<Vec<_>>();
 
+    // If there is no departue stop found we just use the default
     let departure_stop_coord = departure_stops
         .first()
-        .unwrap()
-        .wgs84_coordinates()
-        .unwrap();
-    let mut isochrones = Vec::new();
+        .map(|ds| {
+            ds.wgs84_coordinates()
+                .expect("No wgs84 found for departure stop")
+        })
+        .unwrap_or_else(|| {
+            Coordinates::new(
+                CoordinateSystem::WGS84,
+                origin_point_latitude,
+                origin_point_longitude,
+            )
+        });
 
     log::info!(
         "Time for finding the departure_stops : {:.2?}",
@@ -75,7 +83,7 @@ pub fn compute_isochrones(
 
     let start_time = Instant::now();
     // then go over all these stops to compute each attainable route
-    let routes = departure_stops
+    let mut routes = departure_stops
         .par_iter()
         .map(|departure_stop| {
             // departure_stop_coord = departure_stop.wgs84_coordinates().unwrap();
@@ -88,7 +96,7 @@ pub fn compute_isochrones(
                 departure_stop,
             );
 
-            let mut local_routes: Vec<_> = find_reachable_stops_within_time_limit(
+            let local_routes: Vec<_> = find_reachable_stops_within_time_limit(
                 hrdf,
                 departure_stop.id(),
                 adjusted_departure_at,
@@ -103,31 +111,32 @@ pub fn compute_isochrones(
             })
             .collect();
 
-            // A false route is created to represent the point of origin in the results.
-            let (easting, northing) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
-            let route = Route::new(
-                NaiveDateTime::default(),
-                departure_at,
-                vec![RouteSection::new(
-                    None,
-                    0,
-                    Some(Coordinates::default()),
-                    Some(Coordinates::default()),
-                    0,
-                    Some(Coordinates::new(CoordinateSystem::LV95, easting, northing)),
-                    Some(Coordinates::default()),
-                    Some(NaiveDateTime::default()),
-                    Some(NaiveDateTime::default()),
-                    Some(0),
-                )],
-            );
-            local_routes.push(route);
             local_routes
         })
         .collect::<Vec<_>>()
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
+
+    // A false route is created to represent the point of origin in the results.
+    let (easting, northing) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
+    let route = Route::new(
+        NaiveDateTime::default(),
+        departure_at,
+        vec![RouteSection::new(
+            None,
+            0,
+            Some(Coordinates::default()),
+            Some(Coordinates::default()),
+            0,
+            Some(Coordinates::new(CoordinateSystem::LV95, easting, northing)),
+            Some(Coordinates::default()),
+            Some(NaiveDateTime::default()),
+            Some(NaiveDateTime::default()),
+            Some(0),
+        )],
+    );
+    routes.push(route);
 
     log::info!("Time for finding the routes : {:.2?}", start_time.elapsed());
 
@@ -151,6 +160,7 @@ pub fn compute_isochrones(
 
     let isochrone_count = time_limit.num_minutes() / isochrone_interval.num_minutes();
 
+    let mut isochrones = Vec::new();
     for i in 0..isochrone_count {
         let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
 
