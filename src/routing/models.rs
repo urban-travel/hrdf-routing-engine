@@ -247,6 +247,7 @@ pub struct RouteSectionResult {
 }
 
 impl RouteSectionResult {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         journey_id: Option<i32>,
         departure_stop_id: i32,

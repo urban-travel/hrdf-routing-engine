@@ -33,6 +33,7 @@ use utils::wgs84_to_lv95;
 /// Computes the isochrones.
 /// The point of origin is used to find the departure stop (the nearest stop).
 /// The departure date and time must be within the timetable period.
+#[allow(clippy::too_many_arguments)]
 pub fn compute_isochrones(
     hrdf: &Hrdf,
     origin_point_latitude: f64,
@@ -59,7 +60,7 @@ pub fn compute_isochrones(
     .take(5)
     .collect::<Vec<_>>();
 
-    let mut departure_stop_coord = departure_stops
+    let departure_stop_coord = departure_stops
         .first()
         .unwrap()
         .wgs84_coordinates()
@@ -127,55 +128,6 @@ pub fn compute_isochrones(
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
-    // for departure_stop in departure_stops {
-    //     departure_stop_coord = departure_stop.wgs84_coordinates().unwrap();
-    //     // The departure time is calculated according to the time it takes to walk to the departure stop.
-    //     let (adjusted_departure_at, adjusted_time_limit) = adjust_departure_at(
-    //         departure_at,
-    //         time_limit,
-    //         origin_point_latitude,
-    //         origin_point_longitude,
-    //         departure_stop,
-    //     );
-    //
-    //     let mut local_routes: Vec<_> = find_reachable_stops_within_time_limit(
-    //         hrdf,
-    //         departure_stop.id(),
-    //         adjusted_departure_at,
-    //         adjusted_time_limit,
-    //         verbose,
-    //     )
-    //     .into_iter()
-    //     .filter(|route| {
-    //         // Keeps only stops in Switzerland.
-    //         let stop_id = route.sections().last().unwrap().arrival_stop_id();
-    //         stop_id.to_string().starts_with("85")
-    //     })
-    //     .collect();
-    //
-    //     // A false route is created to represent the point of origin in the results.
-    //     let (easting, northing) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
-    //     let route = Route::new(
-    //         NaiveDateTime::default(),
-    //         departure_at,
-    //         vec![RouteSection::new(
-    //             None,
-    //             0,
-    //             Some(Coordinates::default()),
-    //             Some(Coordinates::default()),
-    //             0,
-    //             Some(Coordinates::new(CoordinateSystem::LV95, easting, northing)),
-    //             Some(Coordinates::default()),
-    //             Some(NaiveDateTime::default()),
-    //             Some(NaiveDateTime::default()),
-    //             Some(0),
-    //         )],
-    //     );
-    //     local_routes.push(route);
-    //
-    //     // Then merge de found routes
-    //     routes.append(&mut local_routes);
-    // }
 
     log::info!("Time for findind the routes : {:.2?}", start_time.elapsed());
 
