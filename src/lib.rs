@@ -10,6 +10,7 @@ use chrono::Duration;
 use geo::BoundingRect;
 use hrdf_parser::Hrdf;
 pub use isochrone::compute_isochrones;
+pub use isochrone::IsochroneDisplayMode;
 pub use routing::find_reachable_stops_within_time_limit;
 pub use routing::plan_journey;
 pub use routing::Route;
@@ -22,14 +23,12 @@ use utils::create_date_time;
 pub use debug::run_debug;
 pub use service::run_service;
 
-pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
+pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Box<dyn Error>> {
     let origin_point_latitude = 46.183870262988584;
     let origin_point_longitude = 6.12213134765625;
     let departure_at = create_date_time(2025, 4, 1, 8, 3);
     let time_limit = Duration::minutes(480);
     let isochrone_interval = Duration::minutes(80);
-    //let display_mode = isochrone::IsochroneDisplayMode::ContourLine;
-    let display_mode = isochrone::IsochroneDisplayMode::Circles;
     let verbose = true;
 
     let iso = compute_isochrones(
@@ -54,17 +53,17 @@ pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
             Document::new().set(
                 "viewBox",
                 (
-                    min_x / 1000.0,
-                    min_y / 1000.0,
-                    max_x / 1000.0 - min_x / 1000.0,
-                    max_y / 1000.0 - min_y / 1000.0,
+                    min_x / 100.0,
+                    min_y / 100.0,
+                    max_x / 100.0 - min_x / 100.0,
+                    max_y / 100.0 - min_y / 100.0,
                 ),
             ),
             |mut doc, pi| {
                 for int in pi.interiors() {
                     let points_int = int
                         .coords()
-                        .map(|coord| format!("{},{}", coord.x / 1000.0, coord.y / 1000.0))
+                        .map(|coord| format!("{},{}", coord.x / 100.0, coord.y / 100.0))
                         .collect::<Vec<_>>();
                     doc.append(
                         SvgPolygon::new()
@@ -76,7 +75,7 @@ pub fn run_test(hrdf: Hrdf) -> Result<(), Box<dyn Error>> {
                 let points_ext = pi
                     .exterior()
                     .coords()
-                    .map(|coord| format!("{},{}", coord.x / 1000.0, coord.y / 1000.0))
+                    .map(|coord| format!("{},{}", coord.x / 100.0, coord.y / 100.0))
                     .collect::<Vec<_>>();
 
                 doc.add(

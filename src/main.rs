@@ -2,6 +2,7 @@ use std::{error::Error, net::Ipv4Addr};
 
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
+use hrdf_routing_engine::IsochroneDisplayMode;
 use hrdf_routing_engine::{run_debug, run_service, run_test};
 use log::LevelFilter;
 
@@ -20,7 +21,10 @@ enum Mode {
     /// Debug mode used to check if the examples still run
     Debug,
     /// Test new features
-    Test,
+    Test {
+        #[arg(short, long)]
+        mode: IsochroneDisplayMode,
+    },
 }
 
 #[derive(Parser)]
@@ -61,8 +65,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Mode::Serve { address, port } => {
             run_service(hrdf, address, port).await;
         }
-        Mode::Test => {
-            run_test(hrdf)?;
+        Mode::Test { mode } => {
+            run_test(hrdf, mode)?;
         }
     }
 
