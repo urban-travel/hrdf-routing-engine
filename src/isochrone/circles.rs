@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use chrono::Duration;
-use geo::{polygon, unary_union, BooleanOps, LineString, Polygon};
+use geo::{BooleanOps, LineString, Polygon};
 use geo::{Contains, MultiPolygon};
 use hrdf_parser::{CoordinateSystem, Coordinates};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
