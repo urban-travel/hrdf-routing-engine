@@ -3,6 +3,15 @@ use hrdf_parser::Coordinates;
 use serde::Serialize;
 use strum_macros::EnumString;
 
+#[cfg(feature = "svg")]
+use geo::BoundingRect;
+#[cfg(feature = "svg")]
+use std::error::Error;
+#[cfg(feature = "svg")]
+use svg::node::element::Polygon as SvgPolygon;
+#[cfg(feature = "svg")]
+use svg::Document;
+
 use super::utils::wgs84_to_lv95;
 
 #[derive(Debug, Serialize)]
@@ -49,6 +58,51 @@ impl IsochroneMap {
         }
 
         polygons
+    }
+
+    #[cfg(feature = "svg")]
+    pub fn write_svg(&self, path: &str) -> Result<(), Box<dyn Error>> {
+        let polys = self.get_polygons();
+
+        let bounding_rect = polys.last().unwrap().bounding_rect().unwrap();
+        let (min_x, min_y) = bounding_rect.min().x_y();
+        let (max_x, max_y) = bounding_rect.max().x_y();
+        let document = polys.iter().fold(
+            Document::new().set(
+                "viewBox",
+                (
+                    min_x / 100.0,
+                    min_y / 100.0,
+                    max_x / 100.0 - min_x / 100.0,
+                    max_y / 100.0 - min_y / 100.0,
+                ),
+            ),
+            |mut doc, pi| {
+                doc = pi.iter().fold(doc, |doc_nested, p| {
+                    let points_ext = p
+                        .exterior()
+                        .coords()
+                        .map(|coord| {
+                            format!(
+                                "{},{}",
+                                coord.x / 100.0,
+                                (min_y + (max_y - coord.y)) / 100.0
+                            )
+                        })
+                        .collect::<Vec<_>>();
+
+                    doc_nested.add(
+                        SvgPolygon::new()
+                            .set("fill", "none")
+                            .set("stroke", "red")
+                            .set("points", points_ext.join(" ")),
+                    )
+                });
+                doc
+            },
+        );
+        svg::save(format!("{path}"), &document)?;
+        Ok(())
     }
 }
 

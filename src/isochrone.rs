@@ -44,6 +44,7 @@ pub fn compute_isochrones(
     display_mode: models::DisplayMode,
     verbose: bool,
 ) -> IsochroneMap {
+    log::info!("origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {time_limit}, isochrone_interval: {isochrone_interval}, display_mode: {display_mode:?}, verbose: {verbose}");
     let start_time = Instant::now();
 
     // Create a list of stops close enough to be of interest
