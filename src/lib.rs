@@ -63,7 +63,13 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
                 for int in pi.interiors() {
                     let points_int = int
                         .coords()
-                        .map(|coord| format!("{},{}", coord.x / 100.0, coord.y / 100.0))
+                        .map(|coord| {
+                            format!(
+                                "{},{}",
+                                coord.x / 100.0,
+                                (min_y + (max_y - coord.y)) / 100.0
+                            )
+                        })
                         .collect::<Vec<_>>();
                     doc.append(
                         SvgPolygon::new()
@@ -75,7 +81,13 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
                 let points_ext = pi
                     .exterior()
                     .coords()
-                    .map(|coord| format!("{},{}", coord.x / 100.0, coord.y / 100.0))
+                    .map(|coord| {
+                        format!(
+                            "{},{}",
+                            coord.x / 100.0,
+                            (min_y + (max_y - coord.y)) / 100.0
+                        )
+                    })
                     .collect::<Vec<_>>();
 
                 doc.add(
