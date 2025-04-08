@@ -65,11 +65,10 @@ pub fn compute_isochrones(
         .unwrap()
         .wgs84_coordinates()
         .unwrap();
-    // let mut routes: Vec<_> = vec![];
     let mut isochrones = Vec::new();
 
     log::info!(
-        "Time for findind the departure_stops : {:.2?}",
+        "Time for finding the departure_stops : {:.2?}",
         start_time.elapsed()
     );
 
@@ -129,7 +128,7 @@ pub fn compute_isochrones(
         .flatten()
         .collect::<Vec<_>>();
 
-    log::info!("Time for findind the routes : {:.2?}", start_time.elapsed());
+    log::info!("Time for finding the routes : {:.2?}", start_time.elapsed());
 
     let start_time = Instant::now();
 
@@ -173,7 +172,7 @@ pub fn compute_isochrones(
     }
 
     log::info!(
-        "Time for findind the isochrones : {:.2?}",
+        "Time for finding the isochrones : {:.2?}",
         start_time.elapsed()
     );
     IsochroneMap::new(
