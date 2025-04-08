@@ -22,6 +22,7 @@ enum Mode {
     Debug,
     /// Test new features
     Test {
+        /// Display mode of the isochrones: circles or contour_line
         #[arg(short, long)]
         mode: IsochroneDisplayMode,
     },
