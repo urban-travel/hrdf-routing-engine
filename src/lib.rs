@@ -44,41 +44,22 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
 
     let polys = iso.get_polygons();
 
-    polys.iter().enumerate().for_each(|(num, p)| {
-        let bounding_rect = p.bounding_rect().unwrap();
-        let (min_x, min_y) = bounding_rect.min().x_y();
-        let (max_x, max_y) = bounding_rect.max().x_y();
-
-        let document = p.iter().fold(
-            Document::new().set(
-                "viewBox",
-                (
-                    min_x / 100.0,
-                    min_y / 100.0,
-                    max_x / 100.0 - min_x / 100.0,
-                    max_y / 100.0 - min_y / 100.0,
-                ),
+    let bounding_rect = polys.last().unwrap().bounding_rect().unwrap();
+    let (min_x, min_y) = bounding_rect.min().x_y();
+    let (max_x, max_y) = bounding_rect.max().x_y();
+    let document = polys.iter().fold(
+        Document::new().set(
+            "viewBox",
+            (
+                min_x / 100.0,
+                min_y / 100.0,
+                max_x / 100.0 - min_x / 100.0,
+                max_y / 100.0 - min_y / 100.0,
             ),
-            |mut doc, pi| {
-                for int in pi.interiors() {
-                    let points_int = int
-                        .coords()
-                        .map(|coord| {
-                            format!(
-                                "{},{}",
-                                coord.x / 100.0,
-                                (min_y + (max_y - coord.y)) / 100.0
-                            )
-                        })
-                        .collect::<Vec<_>>();
-                    doc.append(
-                        SvgPolygon::new()
-                            .set("fill", "black")
-                            .set("stroke", "black")
-                            .set("points", points_int.join(" ")),
-                    );
-                }
-                let points_ext = pi
+        ),
+        |mut doc, pi| {
+            doc = pi.iter().fold(doc, |doc_nested, p| {
+                let points_ext = p
                     .exterior()
                     .coords()
                     .map(|coord| {
@@ -90,16 +71,18 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
                     })
                     .collect::<Vec<_>>();
 
-                doc.add(
+                doc_nested.add(
                     SvgPolygon::new()
                         .set("fill", "none")
                         .set("stroke", "red")
                         .set("points", points_ext.join(" ")),
                 )
-            },
-        );
-        svg::save(format!("polygon_{display_mode:?}_{num}.svg"), &document).unwrap();
-    });
+            });
+            doc
+        },
+    );
+    svg::save(format!("polygon_{display_mode:?}.svg"), &document).unwrap();
+
     Ok(())
 }
 
