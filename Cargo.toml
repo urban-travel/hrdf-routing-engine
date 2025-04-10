@@ -30,7 +30,7 @@ tower-http = { version = "0.5.2", features = ["cors"] }
 typenum = "1.17.0"
 
 [features]
-default = []
+default = ["svg"]
 svg = ["dep:svg"]
 
 [profile.dev]

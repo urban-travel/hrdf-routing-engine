@@ -53,11 +53,14 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
     );
 
     #[cfg(feature = "svg")]
-    iso.write_svg(&format!(
-        "isocrhones_{}_{}.svg",
-        time_limit.num_minutes(),
-        isochrone_interval.num_minutes()
-    ))?;
+    iso.write_svg(
+        &format!(
+            "isocrhones_{}_{}.svg",
+            time_limit.num_minutes(),
+            isochrone_interval.num_minutes()
+        ),
+        None,
+    )?;
 
     let opt_iso = compute_optimal_isochrones(
         &hrdf,
@@ -78,11 +81,14 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
     // );
 
     #[cfg(feature = "svg")]
-    opt_iso.write_svg(&format!(
-        "optimal_isocrhones_{}_{}.svg",
-        time_limit.num_minutes(),
-        isochrone_interval.num_minutes()
-    ))?;
+    opt_iso.write_svg(
+        &format!(
+            "optimal_isocrhones_{}_{}.svg",
+            time_limit.num_minutes(),
+            isochrone_interval.num_minutes()
+        ),
+        None,
+    )?;
 
     Ok(())
 }

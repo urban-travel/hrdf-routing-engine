@@ -58,9 +58,7 @@ pub fn compute_optimal_isochrones(
         display_mode,
         verbose,
     );
-    let mut max_area = isochrone_map
-        .compute_max_area()
-        .expect("Vector of IsochroneMap is empty");
+    let mut max_area = isochrone_map.compute_max_area();
     while date_time <= max_date_time {
         date_time += Duration::minutes(1);
         let local_isochrone_map = compute_isochrones(
@@ -73,9 +71,7 @@ pub fn compute_optimal_isochrones(
             display_mode,
             verbose,
         );
-        let local_max_area: f64 = local_isochrone_map
-            .compute_max_area()
-            .expect("Vector of isochrone map is empty");
+        let local_max_area: f64 = local_isochrone_map.compute_max_area();
 
         if local_max_area > max_area {
             log::info!("The maximum area is given by {local_max_area}");
@@ -245,13 +241,27 @@ pub fn compute_isochrones(
         ));
     }
 
+    let areas = isochrones.iter().map(|i| i.compute_area()).collect();
+    let max_distances = isochrones
+        .iter()
+        .map(|i| {
+            let ((x, y), max) =
+                i.compute_max_distance(Coordinates::new(CoordinateSystem::LV95, easting, northing));
+            let (w_x, w_y) = lv95_to_wgs84(x, y);
+            ((w_x, w_y), max)
+        })
+        .collect();
+
     log::info!(
         "Time for finding the isochrones : {:.2?}",
         start_time.elapsed()
     );
     IsochroneMap::new(
         isochrones,
+        areas,
+        max_distances,
         departure_stop_coord,
+        departure_at,
         convert_bounding_box_to_wgs84(bounding_box),
     )
 }

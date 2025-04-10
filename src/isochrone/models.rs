@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use geo::{Area, Contains, LineString, MultiPolygon, Polygon};
 use hrdf_parser::Coordinates;
 use serde::Serialize;
@@ -17,19 +18,28 @@ use super::utils::wgs84_to_lv95;
 #[derive(Debug, Serialize)]
 pub struct IsochroneMap {
     isochrones: Vec<Isochrone>,
+    areas: Vec<f64>,
+    max_distances: Vec<((f64, f64), f64)>,
     departure_stop_coord: Coordinates,
+    departure_at: NaiveDateTime,
     bounding_box: ((f64, f64), (f64, f64)),
 }
 
 impl IsochroneMap {
     pub fn new(
         isochrones: Vec<Isochrone>,
+        areas: Vec<f64>,
+        max_distances: Vec<((f64, f64), f64)>,
         departure_stop_coord: Coordinates,
+        departure_at: NaiveDateTime,
         bounding_box: ((f64, f64), (f64, f64)),
     ) -> Self {
         Self {
             isochrones,
+            areas,
+            max_distances,
             departure_stop_coord,
+            departure_at,
             bounding_box,
         }
     }
@@ -38,8 +48,30 @@ impl IsochroneMap {
         self.isochrones.iter().map(|i| i.compute_area()).collect()
     }
 
-    pub fn compute_max_area(&self) -> Option<f64> {
-        self.compute_areas().last().copied()
+    pub fn compute_max_distances(&self, c: Coordinates) -> Vec<((f64, f64), f64)> {
+        self.isochrones
+            .iter()
+            .map(|i| i.compute_max_distance(c))
+            .collect()
+    }
+
+    pub fn compute_max_distance(&self, c: Coordinates) -> ((f64, f64), f64) {
+        self.compute_max_distances(c).into_iter().fold(
+            ((f64::MIN, f64::MIN), f64::MIN),
+            |((m_x, m_y), max), ((x, y), v)| {
+                if v > max {
+                    ((x, y), v)
+                } else {
+                    ((m_x, m_y), max)
+                }
+            },
+        )
+    }
+
+    pub fn compute_max_area(&self) -> f64 {
+        self.compute_areas()
+            .into_iter()
+            .fold(f64::MIN, |max, v| if v > max { v } else { max })
     }
 
     pub fn get_polygons(&self) -> Vec<MultiPolygon> {
@@ -65,13 +97,24 @@ impl IsochroneMap {
     }
 
     #[cfg(feature = "svg")]
-    pub fn write_svg(&self, path: &str) -> Result<(), Box<dyn Error>> {
+    pub fn write_svg(&self, path: &str, c: Option<Coordinates>) -> Result<(), Box<dyn Error>> {
+        use svg::node::element::Line;
+
         let polys = self.get_polygons();
+        let areas = self.compute_areas();
+        let max_distances = if let Some(coord) = c {
+            self.compute_max_distances(coord)
+                .into_iter()
+                .map(Some)
+                .collect()
+        } else {
+            vec![None; areas.len()]
+        };
 
         let bounding_rect = polys.last().unwrap().bounding_rect().unwrap();
         let (min_x, min_y) = bounding_rect.min().x_y();
         let (max_x, max_y) = bounding_rect.max().x_y();
-        let document = polys.iter().fold(
+        let document = polys.into_iter().zip(areas).zip(max_distances).fold(
             Document::new().set(
                 "viewBox",
                 (
@@ -81,7 +124,19 @@ impl IsochroneMap {
                     max_y / 100.0 - min_y / 100.0,
                 ),
             ),
-            |mut doc, pi| {
+            |mut doc, ((pi, _area), dist)| {
+                if let Some(coord) = c {
+                    if let Some(((x, y), _)) = dist {
+                        doc = doc.add(
+                            Line::new()
+                                .set("x1", x)
+                                .set("x2", coord.easting().unwrap())
+                                .set("y1", y)
+                                .set("y2", coord.northing().unwrap())
+                                .set("stroke", "black"),
+                        );
+                    }
+                }
                 doc = pi.iter().fold(doc, |doc_nested, p| {
                     let points_ext = p
                         .exterior()
@@ -125,7 +180,7 @@ impl Isochrone {
     }
 
     /// Transforms the isochrone polygons into geo::MultiPolygons to be able to use various
-    /// functionalities of the crate
+    /// functionalities of the crate. The polygons are in lv95 coordinates
     pub fn to_polygons(&self) -> MultiPolygon {
         self.polygons
             .iter()
@@ -150,6 +205,25 @@ impl Isochrone {
 
     pub fn compute_area(&self) -> f64 {
         self.to_polygons().iter().map(|p| p.unsigned_area()).sum()
+    }
+
+    pub fn compute_max_distance(&self, c: Coordinates) -> ((f64, f64), f64) {
+        self.to_polygons().iter().flat_map(|p| p.exterior()).fold(
+            ((f64::MIN, f64::MIN), f64::MIN),
+            |((o_x, o_y), max), coord| {
+                let (c_x, c_y) = if let (Some(x), Some(y)) = (c.easting(), c.northing()) {
+                    (x, y)
+                } else {
+                    wgs84_to_lv95(c.latitude().unwrap(), c.longitude().unwrap())
+                };
+                let dist = f64::sqrt(f64::powi(c_x - coord.x, 2) + f64::powi(c_y - coord.y, 2));
+                if dist > max {
+                    ((c_x, c_y), dist)
+                } else {
+                    ((o_x, o_y), max)
+                }
+            },
+        )
     }
 }
 

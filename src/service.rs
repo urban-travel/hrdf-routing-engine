@@ -61,6 +61,7 @@ struct ComputeIsochronesRequest {
     time_limit: u32,
     isochrone_interval: u32,
     display_mode: String,
+    find_optimal: bool,
 }
 
 async fn compute_isochrones(
@@ -86,17 +87,31 @@ async fn compute_isochrones(
         // The display mode is incorrect.
         return Err(StatusCode::BAD_REQUEST);
     }
+    println!("{}", params.find_optimal);
 
-    let result = isochrone::compute_optimal_isochrones(
-        &hrdf,
-        params.origin_point_latitude,
-        params.origin_point_longitude,
-        NaiveDateTime::new(params.departure_date, params.departure_time),
-        Duration::minutes(params.time_limit.into()),
-        Duration::minutes(params.isochrone_interval.into()),
-        Duration::minutes(30),
-        IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-        false,
-    );
+    let result = if params.find_optimal {
+        isochrone::compute_optimal_isochrones(
+            &hrdf,
+            params.origin_point_latitude,
+            params.origin_point_longitude,
+            NaiveDateTime::new(params.departure_date, params.departure_time),
+            Duration::minutes(params.time_limit.into()),
+            Duration::minutes(params.isochrone_interval.into()),
+            Duration::minutes(30),
+            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+            false,
+        )
+    } else {
+        isochrone::compute_isochrones(
+            &hrdf,
+            params.origin_point_latitude,
+            params.origin_point_longitude,
+            NaiveDateTime::new(params.departure_date, params.departure_time),
+            Duration::minutes(params.time_limit.into()),
+            Duration::minutes(params.isochrone_interval.into()),
+            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+            false,
+        )
+    };
     Ok(Json(result))
 }
