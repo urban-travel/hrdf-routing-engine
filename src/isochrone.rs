@@ -7,9 +7,9 @@ mod utils;
 use std::time::Instant;
 
 use crate::isochrone::utils::haversine_distance;
-use crate::routing::find_reachable_stops_within_time_limit;
 use crate::routing::Route;
 use crate::routing::RouteSection;
+use crate::routing::find_reachable_stops_within_time_limit;
 use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
 use hrdf_parser::CoordinateSystem;
 use hrdf_parser::Coordinates;
@@ -30,6 +30,62 @@ use utils::lv95_to_wgs84;
 use utils::time_to_distance;
 use utils::wgs84_to_lv95;
 
+/// Computes the best isochrone in [departure_at - delta_time; departure_at + delta_time)
+/// Best is defined by the maximal surface covered by the largest isochrone
+#[allow(clippy::too_many_arguments)]
+pub fn compute_optimal_isochrones(
+    hrdf: &Hrdf,
+    origin_point_latitude: f64,
+    origin_point_longitude: f64,
+    departure_at: NaiveDateTime,
+    time_limit: Duration,
+    isochrone_interval: Duration,
+    delta_time: Duration,
+    display_mode: models::DisplayMode,
+    verbose: bool,
+) -> IsochroneMap {
+    let min_date_time = departure_at - delta_time;
+    let max_date_time = departure_at + delta_time - Duration::minutes(1);
+
+    let mut date_time = min_date_time;
+    let mut isochrone_map = compute_isochrones(
+        hrdf,
+        origin_point_latitude,
+        origin_point_longitude,
+        min_date_time,
+        time_limit,
+        isochrone_interval,
+        display_mode,
+        verbose,
+    );
+    let mut max_area = isochrone_map
+        .compute_max_area()
+        .expect("Vector of IsochroneMap is empty");
+    while date_time <= max_date_time {
+        date_time += Duration::minutes(1);
+        let local_isochrone_map = compute_isochrones(
+            hrdf,
+            origin_point_latitude,
+            origin_point_longitude,
+            date_time,
+            time_limit,
+            isochrone_interval,
+            display_mode,
+            verbose,
+        );
+        let local_max_area: f64 = local_isochrone_map
+            .compute_max_area()
+            .expect("Vector of isochrone map is empty");
+
+        if local_max_area > max_area {
+            log::info!("The maximum area is given by {local_max_area}");
+            isochrone_map = local_isochrone_map;
+            max_area = local_max_area;
+        }
+    }
+    isochrone_map
+}
+
 /// Computes the isochrones.
 /// The point of origin is used to find the departure stop (the nearest stop).
 /// The departure date and time must be within the timetable period.
@@ -44,7 +100,11 @@ pub fn compute_isochrones(
     display_mode: models::DisplayMode,
     verbose: bool,
 ) -> IsochroneMap {
-    log::info!("origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {time_limit}, isochrone_interval: {isochrone_interval}, display_mode: {display_mode:?}, verbose: {verbose}");
+    log::info!(
+        "origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, verbose: {verbose}",
+        time_limit.num_minutes(),
+        isochrone_interval.num_minutes()
+    );
     let start_time = Instant::now();
 
     // Create a list of stops close enough to be of interest
@@ -373,7 +433,7 @@ fn convert_bounding_box_to_wgs84(
     bounding_box: ((f64, f64), (f64, f64)),
 ) -> ((f64, f64), (f64, f64)) {
     (
-        lv95_to_wgs84(bounding_box.0 .0, bounding_box.0 .1),
-        lv95_to_wgs84(bounding_box.1 .0, bounding_box.1 .1),
+        lv95_to_wgs84(bounding_box.0.0, bounding_box.0.1),
+        lv95_to_wgs84(bounding_box.1.0, bounding_box.1.1),
     )
 }

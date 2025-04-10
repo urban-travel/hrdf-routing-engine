@@ -8,9 +8,9 @@ use geo::BoundingRect;
 #[cfg(feature = "svg")]
 use std::error::Error;
 #[cfg(feature = "svg")]
-use svg::node::element::Polygon as SvgPolygon;
-#[cfg(feature = "svg")]
 use svg::Document;
+#[cfg(feature = "svg")]
+use svg::node::element::Polygon as SvgPolygon;
 
 use super::utils::wgs84_to_lv95;
 
@@ -36,6 +36,10 @@ impl IsochroneMap {
 
     pub fn compute_areas(&self) -> Vec<f64> {
         self.isochrones.iter().map(|i| i.compute_area()).collect()
+    }
+
+    pub fn compute_max_area(&self) -> Option<f64> {
+        self.compute_areas().last().copied()
     }
 
     pub fn get_polygons(&self) -> Vec<MultiPolygon> {
@@ -101,7 +105,7 @@ impl IsochroneMap {
                 doc
             },
         );
-        svg::save(format!("{path}"), &document)?;
+        svg::save(path, &document)?;
         Ok(())
     }
 }

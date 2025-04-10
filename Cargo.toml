@@ -37,4 +37,4 @@ svg = ["dep:svg"]
 opt-level=3
 
 [profile.release]
-lto = true
+# lto = true
