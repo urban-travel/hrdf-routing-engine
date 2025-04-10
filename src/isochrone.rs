@@ -28,7 +28,7 @@ use rayon::iter::ParallelIterator;
 use utils::distance_to_time;
 use utils::lv95_to_wgs84;
 use utils::time_to_distance;
-use utils::wgs84_to_lv95;
+pub use utils::wgs84_to_lv95;
 
 /// Computes the best isochrone in [departure_at - delta_time; departure_at + delta_time)
 /// Best is defined by the maximal surface covered by the largest isochrone

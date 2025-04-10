@@ -129,10 +129,10 @@ impl IsochroneMap {
                     if let Some(((x, y), _)) = dist {
                         doc = doc.add(
                             Line::new()
-                                .set("x1", x)
-                                .set("x2", coord.easting().unwrap())
-                                .set("y1", y)
-                                .set("y2", coord.northing().unwrap())
+                                .set("x1", x / 100.0)
+                                .set("y1", (min_y + (max_y - y)) / 100.0)
+                                .set("x2", coord.easting().unwrap() / 100.0)
+                                .set("y2", (min_y + (max_y - coord.northing().unwrap())) / 100.0)
                                 .set("stroke", "black"),
                         );
                     }
