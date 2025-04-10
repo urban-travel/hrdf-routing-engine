@@ -98,6 +98,14 @@ impl IsochroneMap {
 
     #[cfg(feature = "svg")]
     pub fn write_svg(&self, path: &str, c: Option<Coordinates>) -> Result<(), Box<dyn Error>> {
+        const HEXES: [&str; 6] = [
+            "#36AB68", // Nearest.
+            "#91CF60", //
+            "#D7FF67", //
+            "#FFD767", //
+            "#FC8D59", //
+            "#E2453C", // Furthest.
+        ];
         use svg::node::element::Line;
 
         let polys = self.get_polygons();
@@ -110,56 +118,70 @@ impl IsochroneMap {
         } else {
             vec![None; areas.len()]
         };
+        println!("max_distances: {max_distances:?}");
 
-        let bounding_rect = polys.last().unwrap().bounding_rect().unwrap();
+        let bounding_rect = polys
+            .last()
+            .expect("MultiPolygons Vec is empty")
+            .bounding_rect()
+            .expect("Unable to find bounding rectangle");
         let (min_x, min_y) = bounding_rect.min().x_y();
         let (max_x, max_y) = bounding_rect.max().x_y();
-        let document = polys.into_iter().zip(areas).zip(max_distances).fold(
-            Document::new().set(
-                "viewBox",
-                (
-                    min_x / 100.0,
-                    min_y / 100.0,
-                    max_x / 100.0 - min_x / 100.0,
-                    max_y / 100.0 - min_y / 100.0,
+        let document = polys
+            .into_iter()
+            .rev()
+            .enumerate()
+            .zip(areas.into_iter().rev())
+            .zip(max_distances.into_iter().rev())
+            .fold(
+                Document::new().set(
+                    "viewBox",
+                    (
+                        min_x / 100.0,
+                        min_y / 100.0,
+                        max_x / 100.0 - min_x / 100.0,
+                        max_y / 100.0 - min_y / 100.0,
+                    ),
                 ),
-            ),
-            |mut doc, ((pi, _area), dist)| {
-                if let Some(coord) = c {
-                    if let Some(((x, y), _)) = dist {
-                        doc = doc.add(
-                            Line::new()
-                                .set("x1", x / 100.0)
-                                .set("y1", (min_y + (max_y - y)) / 100.0)
-                                .set("x2", coord.easting().unwrap() / 100.0)
-                                .set("y2", (min_y + (max_y - coord.northing().unwrap())) / 100.0)
-                                .set("stroke", "black"),
-                        );
-                    }
-                }
-                doc = pi.iter().fold(doc, |doc_nested, p| {
-                    let points_ext = p
-                        .exterior()
-                        .coords()
-                        .map(|coord| {
-                            format!(
-                                "{},{}",
-                                coord.x / 100.0,
-                                (min_y + (max_y - coord.y)) / 100.0
-                            )
-                        })
-                        .collect::<Vec<_>>();
+                |mut doc, (((num, pi), _area), dist)| {
+                    doc = pi.iter().fold(doc, |doc_nested, p| {
+                        let points_ext = p
+                            .exterior()
+                            .coords()
+                            .map(|coord| {
+                                format!(
+                                    "{},{}",
+                                    coord.x / 100.0,
+                                    (min_y + (max_y - coord.y)) / 100.0
+                                )
+                            })
+                            .collect::<Vec<_>>();
 
-                    doc_nested.add(
-                        SvgPolygon::new()
-                            .set("fill", "none")
-                            .set("stroke", "red")
-                            .set("points", points_ext.join(" ")),
-                    )
-                });
-                doc
-            },
-        );
+                        doc_nested.add(
+                            SvgPolygon::new()
+                                .set("fill", HEXES[num])
+                                .set("stroke", "black")
+                                .set("points", points_ext.join(" ")),
+                        )
+                    });
+                    if let Some(coord) = c {
+                        if let Some(((x, y), _)) = dist {
+                            doc = doc.add(
+                                Line::new()
+                                    .set("x1", x / 100.0)
+                                    .set("y1", (min_y + (max_y - y)) / 100.0)
+                                    .set("x2", coord.easting().unwrap() / 100.0)
+                                    .set(
+                                        "y2",
+                                        (min_y + (max_y - coord.northing().unwrap())) / 100.0,
+                                    )
+                                    .set("stroke", "black"),
+                            );
+                        }
+                    }
+                    doc
+                },
+            );
         svg::save(path, &document)?;
         Ok(())
     }
@@ -218,7 +240,7 @@ impl Isochrone {
                 };
                 let dist = f64::sqrt(f64::powi(c_x - coord.x, 2) + f64::powi(c_y - coord.y, 2));
                 if dist > max {
-                    ((c_x, c_y), dist)
+                    ((coord.x, coord.y), dist)
                 } else {
                     ((o_x, o_y), max)
                 }
