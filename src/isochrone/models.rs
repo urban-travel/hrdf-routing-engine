@@ -8,6 +8,7 @@ use strum_macros::EnumString;
 use geo::BoundingRect;
 #[cfg(feature = "svg")]
 use std::error::Error;
+use std::fmt::Display;
 #[cfg(feature = "svg")]
 use svg::Document;
 #[cfg(feature = "svg")]
@@ -97,7 +98,12 @@ impl IsochroneMap {
     }
 
     #[cfg(feature = "svg")]
-    pub fn write_svg(&self, path: &str, c: Option<Coordinates>) -> Result<(), Box<dyn Error>> {
+    pub fn write_svg(
+        &self,
+        path: &str,
+        scale_factor: f64,
+        c: Option<Coordinates>,
+    ) -> Result<(), Box<dyn Error>> {
         const HEXES: [&str; 6] = [
             "#36AB68", // Nearest.
             "#91CF60", //
@@ -118,7 +124,6 @@ impl IsochroneMap {
         } else {
             vec![None; areas.len()]
         };
-        println!("max_distances: {max_distances:?}");
 
         let bounding_rect = polys
             .last()
@@ -127,23 +132,22 @@ impl IsochroneMap {
             .expect("Unable to find bounding rectangle");
         let (min_x, min_y) = bounding_rect.min().x_y();
         let (max_x, max_y) = bounding_rect.max().x_y();
-        let document = polys
+        let mut document = polys
             .into_iter()
             .rev()
             .enumerate()
             .zip(areas.into_iter().rev())
-            .zip(max_distances.into_iter().rev())
             .fold(
                 Document::new().set(
                     "viewBox",
                     (
-                        min_x / 100.0,
-                        min_y / 100.0,
-                        max_x / 100.0 - min_x / 100.0,
-                        max_y / 100.0 - min_y / 100.0,
+                        min_x * scale_factor,
+                        min_y * scale_factor,
+                        (max_x - min_x) * scale_factor,
+                        (max_y - min_y) * scale_factor,
                     ),
                 ),
-                |mut doc, (((num, pi), _area), dist)| {
+                |mut doc, ((num, pi), _area)| {
                     doc = pi.iter().fold(doc, |doc_nested, p| {
                         let points_ext = p
                             .exterior()
@@ -151,8 +155,8 @@ impl IsochroneMap {
                             .map(|coord| {
                                 format!(
                                     "{},{}",
-                                    coord.x / 100.0,
-                                    (min_y + (max_y - coord.y)) / 100.0
+                                    coord.x * scale_factor,
+                                    (min_y + (max_y - coord.y)) * scale_factor
                                 )
                             })
                             .collect::<Vec<_>>();
@@ -164,24 +168,34 @@ impl IsochroneMap {
                                 .set("points", points_ext.join(" ")),
                         )
                     });
-                    if let Some(coord) = c {
-                        if let Some(((x, y), _)) = dist {
-                            doc = doc.add(
-                                Line::new()
-                                    .set("x1", x / 100.0)
-                                    .set("y1", (min_y + (max_y - y)) / 100.0)
-                                    .set("x2", coord.easting().unwrap() / 100.0)
-                                    .set(
-                                        "y2",
-                                        (min_y + (max_y - coord.northing().unwrap())) / 100.0,
-                                    )
-                                    .set("stroke", "black"),
-                            );
-                        }
-                    }
                     doc
                 },
             );
+        document = max_distances
+            .into_iter()
+            .rev()
+            .fold(document, |mut doc, dist| {
+                if let Some(coord) = c {
+                    if let Some(((x, y), _)) = dist {
+                        doc = doc.add(
+                            Line::new()
+                                .set("x1", x * scale_factor)
+                                .set("y1", (min_y + (max_y - y)) * scale_factor)
+                                .set("x2", coord.easting().unwrap() * scale_factor)
+                                .set(
+                                    "y2",
+                                    (min_y + (max_y - coord.northing().unwrap())) * scale_factor,
+                                )
+                                .set("stroke", "black"),
+                        );
+                        doc
+                    } else {
+                        doc
+                    }
+                } else {
+                    doc
+                }
+            });
         svg::save(path, &document)?;
         Ok(())
     }
@@ -255,4 +269,13 @@ pub enum DisplayMode {
     Circles,
     #[strum(serialize = "contour_line")]
     ContourLine,
+}
+
+impl Display for DisplayMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Circles => write!(f, "circles"),
+            Self::ContourLine => write!(f, "contour_line"),
+        }
+    }
 }

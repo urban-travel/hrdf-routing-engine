@@ -23,7 +23,7 @@ enum Mode {
     /// Test new features
     Test {
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long)]
+        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
 }
