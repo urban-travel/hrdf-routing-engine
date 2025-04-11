@@ -7,9 +7,9 @@ mod utils;
 use std::time::Instant;
 
 use crate::isochrone::utils::haversine_distance;
-use crate::routing::find_reachable_stops_within_time_limit;
 use crate::routing::Route;
 use crate::routing::RouteSection;
+use crate::routing::find_reachable_stops_within_time_limit;
 use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
 use hrdf_parser::CoordinateSystem;
 use hrdf_parser::Coordinates;
@@ -44,7 +44,9 @@ pub fn compute_isochrones(
     display_mode: models::DisplayMode,
     verbose: bool,
 ) -> IsochroneMap {
-    log::info!("origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {time_limit}, isochrone_interval: {isochrone_interval}, display_mode: {display_mode:?}, verbose: {verbose}");
+    log::info!(
+        "origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {time_limit}, isochrone_interval: {isochrone_interval}, display_mode: {display_mode:?}, verbose: {verbose}"
+    );
     let start_time = Instant::now();
 
     // Create a list of stops close enough to be of interest
@@ -104,11 +106,6 @@ pub fn compute_isochrones(
                 verbose,
             )
             .into_iter()
-            .filter(|route| {
-                // Keeps only stops in Switzerland.
-                let stop_id = route.sections().last().unwrap().arrival_stop_id();
-                stop_id.to_string().starts_with("85")
-            })
             .collect();
 
             local_routes
@@ -208,8 +205,6 @@ fn find_stops_in_time_range(
         .stops()
         .entries()
         .into_iter()
-        // Only considers stops in Switzerland.
-        .filter(|stop| stop.id().to_string().starts_with("85"))
         .filter(|stop| stop.wgs84_coordinates().is_some())
         .filter(|stop| {
             adjust_departure_at(
@@ -260,8 +255,6 @@ fn find_nearest_stop(
         .stops()
         .entries()
         .into_iter()
-        // Only considers stops in Switzerland.
-        .filter(|stop| stop.id().to_string().starts_with("85"))
         .filter(|stop| stop.wgs84_coordinates().is_some())
         .min_by(|a, b| {
             let coord_1 = a.wgs84_coordinates().unwrap();
@@ -373,7 +366,7 @@ fn convert_bounding_box_to_wgs84(
     bounding_box: ((f64, f64), (f64, f64)),
 ) -> ((f64, f64), (f64, f64)) {
     (
-        lv95_to_wgs84(bounding_box.0 .0, bounding_box.0 .1),
-        lv95_to_wgs84(bounding_box.1 .0, bounding_box.1 .1),
+        lv95_to_wgs84(bounding_box.0.0, bounding_box.0.1),
+        lv95_to_wgs84(bounding_box.1.0, bounding_box.1.1),
     )
 }
