@@ -4,12 +4,12 @@ mod contour_line;
 mod models;
 mod utils;
 
+use std::collections::HashMap;
 use std::time::Instant;
 
 use crate::isochrone::utils::haversine_distance;
-use crate::routing::Route;
-use crate::routing::RouteSection;
 use crate::routing::find_reachable_stops_within_time_limit;
+use crate::routing::{Route, RouteSection};
 use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
 use hrdf_parser::CoordinateSystem;
 use hrdf_parser::Coordinates;
@@ -142,7 +142,6 @@ pub fn compute_isochrones(
     let mut routes = departure_stops
         .par_iter()
         .map(|departure_stop| {
-            // departure_stop_coord = departure_stop.wgs84_coordinates().unwrap();
             // The departure time is calculated according to the time it takes to walk to the departure stop.
             let (adjusted_departure_at, adjusted_time_limit) = adjust_departure_at(
                 departure_at,
@@ -198,7 +197,7 @@ pub fn compute_isochrones(
 
     let start_time = Instant::now();
 
-    let data = get_data(routes.into_iter(), departure_at);
+    let data = get_filtered_data(&routes, departure_at);
 
     let bounding_box = get_bounding_box(&data, time_limit);
     let num_points = 1500;
@@ -382,22 +381,32 @@ fn adjust_departure_at(
     (adjusted_departure_at, adjusted_time_limit)
 }
 
-fn get_data(
-    routes: impl Iterator<Item = Route>,
+/// Each coordinate should be kept only once with the maximum duration associated
+fn get_filtered_data(
+    routes: &[Route],
     departure_at: NaiveDateTime,
 ) -> Vec<(Coordinates, Duration)> {
-    routes
-        .filter_map(|route| {
-            let coord = route
-                .sections()
-                .last()
-                .unwrap()
-                .arrival_stop_lv95_coordinates();
-
-            let duration = route.arrival_at() - departure_at;
-            coord.zip(Some(duration))
-        })
-        .collect()
+    let mut coordinates_duration: HashMap<i32, (Coordinates, chrono::TimeDelta)> = HashMap::new();
+    for route in routes {
+        let arrival_stop = route.sections().last().expect("Route sections was empty");
+        let arrival_stop_id = arrival_stop.arrival_stop_id();
+        let arrival_stop_coords = if let Some(c) = arrival_stop.arrival_stop_lv95_coordinates() {
+            c
+        } else {
+            continue;
+        };
+        let new_duration = route.arrival_at() - departure_at;
+        if let Some((_, duration)) = coordinates_duration.get_mut(&arrival_stop_id) {
+            // We want the shortest trip duration to be kept only
+            if new_duration < *duration {
+                *duration = new_duration;
+            }
+        } else {
+            let _ =
+                coordinates_duration.insert(arrival_stop_id, (arrival_stop_coords, new_duration));
+        }
+    }
+    coordinates_duration.into_values().collect()
 }
 
 fn get_bounding_box(
