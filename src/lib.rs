@@ -93,6 +93,81 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
     Ok(())
 }
 
+pub fn run_comparison(
+    hrdf_2024: Hrdf,
+    hrdf_2025: Hrdf,
+    display_mode: IsochroneDisplayMode,
+) -> Result<(), Box<dyn Error>> {
+    let origin_point_latitude = 46.183870262988584;
+    let origin_point_longitude = 6.12213134765625;
+    let departure_at_2024 = create_date_time(2024, 4, 1, 12, 0);
+    let departure_at_2025 = create_date_time(2025, 4, 1, 12, 0);
+    let time_limit = Duration::minutes(60);
+    let isochrone_interval = Duration::minutes(60);
+    let verbose = false;
+    let (x, y) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
+    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
+    let opt_duration = Duration::minutes(720);
+
+    let isochrones_2024 = compute_optimal_isochrones(
+        &hrdf_2024,
+        origin_point_latitude,
+        origin_point_longitude,
+        departure_at_2024,
+        time_limit,
+        isochrone_interval,
+        opt_duration,
+        display_mode,
+        verbose,
+    );
+    #[cfg(feature = "svg")]
+    isochrones_2024.write_svg(
+        &format!(
+            "isochrones_2024_{}_{}.svg",
+            time_limit.num_minutes(),
+            isochrone_interval.num_minutes()
+        ),
+        1.0 / 100.0,
+        Some(coord),
+    )?;
+    println!(
+        "time = {}, surface = {}, max_distance = {}",
+        isochrones_2024.departure_at(),
+        isochrones_2024.compute_last_area(),
+        isochrones_2024.compute_max_distance(coord).1
+    );
+
+    let isochrones_2025 = compute_optimal_isochrones(
+        &hrdf_2025,
+        origin_point_latitude,
+        origin_point_longitude,
+        departure_at_2025,
+        time_limit,
+        isochrone_interval,
+        opt_duration,
+        display_mode,
+        verbose,
+    );
+    #[cfg(feature = "svg")]
+    isochrones_2025.write_svg(
+        &format!(
+            "isochrones_2025_{}_{}.svg",
+            time_limit.num_minutes(),
+            isochrone_interval.num_minutes()
+        ),
+        1.0 / 100.0,
+        Some(coord),
+    )?;
+    println!(
+        "time = {}, surface = {}, max_distance = {}",
+        isochrones_2025.departure_at(),
+        isochrones_2025.compute_last_area(),
+        isochrones_2025.compute_max_distance(coord).1
+    );
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};

@@ -58,7 +58,7 @@ pub fn compute_optimal_isochrones(
         display_mode,
         verbose,
     );
-    let mut max_area = isochrone_map.compute_max_area();
+    let mut max_area = isochrone_map.compute_last_area();
     while date_time <= max_date_time {
         date_time += Duration::minutes(1);
         let local_isochrone_map = compute_isochrones(
@@ -71,12 +71,62 @@ pub fn compute_optimal_isochrones(
             display_mode,
             verbose,
         );
-        let local_max_area: f64 = local_isochrone_map.compute_max_area();
+        let local_max_area: f64 = local_isochrone_map.compute_last_area();
 
         if local_max_area > max_area {
             log::info!("The maximum area is given by {local_max_area}");
             isochrone_map = local_isochrone_map;
             max_area = local_max_area;
+        }
+    }
+    isochrone_map
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn compute_worse_isochrones(
+    hrdf: &Hrdf,
+    origin_point_latitude: f64,
+    origin_point_longitude: f64,
+    departure_at: NaiveDateTime,
+    time_limit: Duration,
+    isochrone_interval: Duration,
+    delta_time: Duration,
+    display_mode: models::DisplayMode,
+    verbose: bool,
+) -> IsochroneMap {
+    let min_date_time = departure_at - delta_time;
+    let max_date_time = departure_at + delta_time - Duration::minutes(1);
+
+    let mut date_time = min_date_time;
+    let mut isochrone_map = compute_isochrones(
+        hrdf,
+        origin_point_latitude,
+        origin_point_longitude,
+        min_date_time,
+        time_limit,
+        isochrone_interval,
+        display_mode,
+        verbose,
+    );
+    let mut min_area = isochrone_map.compute_last_area();
+    while date_time <= max_date_time {
+        date_time += Duration::minutes(1);
+        let local_isochrone_map = compute_isochrones(
+            hrdf,
+            origin_point_latitude,
+            origin_point_longitude,
+            date_time,
+            time_limit,
+            isochrone_interval,
+            display_mode,
+            verbose,
+        );
+        let local_min_area: f64 = local_isochrone_map.compute_last_area();
+
+        if local_min_area < min_area {
+            log::info!("The minimum area is given by {local_min_area}");
+            isochrone_map = local_isochrone_map;
+            min_area = local_min_area;
         }
     }
     isochrone_map

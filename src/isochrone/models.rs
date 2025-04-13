@@ -69,10 +69,13 @@ impl IsochroneMap {
         )
     }
 
-    pub fn compute_max_area(&self) -> f64 {
-        self.compute_areas()
-            .into_iter()
-            .fold(f64::MIN, |max, v| if v > max { v } else { max })
+    /// Computes the area of the higher isochrone
+    pub fn compute_last_area(&self) -> f64 {
+        *self
+            .compute_areas()
+            .iter()
+            .last()
+            .expect("There was no area cimputed")
     }
 
     pub fn get_polygons(&self) -> Vec<MultiPolygon> {
@@ -95,6 +98,10 @@ impl IsochroneMap {
         }
 
         polygons
+    }
+
+    pub fn departure_at(&self) -> NaiveDateTime {
+        self.departure_at
     }
 
     #[cfg(feature = "svg")]

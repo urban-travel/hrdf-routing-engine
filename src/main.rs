@@ -3,7 +3,7 @@ use std::{error::Error, net::Ipv4Addr};
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
 use hrdf_routing_engine::IsochroneDisplayMode;
-use hrdf_routing_engine::{run_debug, run_service, run_test};
+use hrdf_routing_engine::{run_comparison, run_debug, run_service, run_test};
 use log::LevelFilter;
 
 #[derive(Subcommand)]
@@ -20,6 +20,12 @@ enum Mode {
     },
     /// Debug mode used to check if the examples still run
     Debug,
+    /// Compare between two years
+    Compare {
+        /// Display mode of the isochrones: circles or contour_line
+        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        mode: IsochroneDisplayMode,
+    },
     /// Test new features
     Test {
         /// Display mode of the isochrones: circles or contour_line
@@ -51,23 +57,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let cli = Cli::parse();
 
-    let hrdf = Hrdf::new(
+    let hrdf_2025 = Hrdf::new(
         Version::V_5_40_41_2_0_7,
         "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
         false,
-        cli.cache_prefix,
+        cli.cache_prefix.clone(),
     )
     .await?;
 
     match cli.mode {
         Mode::Debug => {
-            run_debug(hrdf);
+            run_debug(hrdf_2025);
         }
         Mode::Serve { address, port } => {
-            run_service(hrdf, address, port).await;
+            run_service(hrdf_2025, address, port).await;
         }
         Mode::Test { mode } => {
-            run_test(hrdf, mode)?;
+            run_test(hrdf_2025, mode)?;
+        }
+        Mode::Compare { mode } => {
+            let hrdf_2024 = Hrdf::new(
+                Version::V_5_40_41_2_0_7,
+                "https://data.opentransportdata.swiss/en/dataset/timetable-54-2024-hrdf/permalink",
+                false,
+                cli.cache_prefix,
+            )
+            .await?;
+            run_comparison(hrdf_2024, hrdf_2025, mode)?;
         }
     }
 

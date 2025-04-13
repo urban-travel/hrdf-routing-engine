@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use chrono::Duration;
+use chrono::{Duration, NaiveDateTime};
 use hrdf_parser::Coordinates;
 
 /// https://github.com/antistatique/swisstopo
@@ -117,4 +117,22 @@ pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
 
     radius_of_earth_km * c
+}
+#[derive(Debug, Clone, Copy)]
+struct NaiveDateTimeRange {
+    from: NaiveDateTime,
+    to: NaiveDateTime,
+    incr: Duration,
+}
+
+impl Iterator for NaiveDateTimeRange {
+    type Item = NaiveDateTime;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.to > self.from {
+            return None;
+        }
+        let maybe_next = self.from + self.incr;
+        self.from = maybe_next;
+        (self.from < self.to).then_some(maybe_next)
+    }
 }
