@@ -87,7 +87,6 @@ async fn compute_isochrones(
         // The display mode is incorrect.
         return Err(StatusCode::BAD_REQUEST);
     }
-    println!("{}", params.find_optimal);
 
     let result = if params.find_optimal {
         isochrone::compute_optimal_isochrones(
