@@ -16,7 +16,7 @@ use svg::node::element::Polygon as SvgPolygon;
 
 use super::utils::wgs84_to_lv95;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct IsochroneMap {
     isochrones: Vec<Isochrone>,
     areas: Vec<f64>,
@@ -70,12 +70,11 @@ impl IsochroneMap {
     }
 
     /// Computes the area of the higher isochrone
-    pub fn compute_last_area(&self) -> f64 {
-        *self
-            .compute_areas()
-            .iter()
-            .last()
-            .expect("There was no area cimputed")
+    pub fn compute_max_area(&self) -> f64 {
+        self.compute_areas().iter().fold(
+            f64::MIN,
+            |max_area, area| if *area > max_area { *area } else { max_area },
+        )
     }
 
     pub fn get_polygons(&self) -> Vec<MultiPolygon> {

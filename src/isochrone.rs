@@ -46,45 +46,99 @@ pub fn compute_optimal_isochrones(
     display_mode: models::DisplayMode,
     verbose: bool,
 ) -> IsochroneMap {
+    if verbose {
+        log::info!(
+            "origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
+            time_limit.num_minutes(),
+            isochrone_interval.num_minutes(),
+            delta_time.num_minutes(),
+        );
+    }
+    let start_time = Instant::now();
     let min_date_time = departure_at - delta_time;
     let max_date_time = departure_at + delta_time;
 
-    let isochrone_map = compute_isochrones(
-        hrdf,
-        origin_point_latitude,
-        origin_point_longitude,
-        min_date_time,
-        time_limit,
-        isochrone_interval,
-        display_mode,
-        verbose,
-    );
-    let area = isochrone_map.compute_last_area();
     let (isochrone_map, _) = NaiveDateTimeRange::new(
         min_date_time + Duration::minutes(1),
         max_date_time,
         Duration::minutes(1),
     )
     .into_iter()
-    .fold((isochrone_map, area), |(iso_max, area_max), dep| {
-        println!("{dep}");
-        let isochrone = compute_isochrones(
-            hrdf,
-            origin_point_latitude,
-            origin_point_longitude,
-            dep,
-            time_limit,
-            isochrone_interval,
-            display_mode,
-            verbose,
+    .collect::<Vec<_>>()
+    .par_iter()
+    .fold(
+        || (IsochroneMap::default(), f64::MIN),
+        |(iso_max, area_max), dep| {
+            let isochrone = compute_isochrones(
+                hrdf,
+                origin_point_latitude,
+                origin_point_longitude,
+                *dep,
+                time_limit,
+                isochrone_interval,
+                display_mode,
+                false,
+            );
+            let curr_area = isochrone.compute_max_area();
+            if curr_area > area_max {
+                (isochrone, curr_area)
+            } else {
+                (iso_max, area_max)
+            }
+        },
+    )
+    .reduce(
+        || (IsochroneMap::default(), f64::MIN),
+        |(iso_max, area_max), (iso, area)| {
+            if area > area_max {
+                (iso, area)
+            } else {
+                (iso_max, area_max)
+            }
+        },
+    );
+
+    //let isochrone_map = compute_isochrones(
+    //    hrdf,
+    //    origin_point_latitude,
+    //    origin_point_longitude,
+    //    min_date_time,
+    //    time_limit,
+    //    isochrone_interval,
+    //    display_mode,
+    //    false,
+    //);
+    //let area = isochrone_map.compute_max_area();
+    //let (isochrone_map, _) = NaiveDateTimeRange::new(
+    //    min_date_time + Duration::minutes(1),
+    //    max_date_time,
+    //    Duration::minutes(1),
+    //)
+    //.into_iter()
+    //.fold((isochrone_map, area), |(iso_max, area_max), dep| {
+    //    let isochrone = compute_isochrones(
+    //        hrdf,
+    //        origin_point_latitude,
+    //        origin_point_longitude,
+    //        dep,
+    //        time_limit,
+    //        isochrone_interval,
+    //        display_mode,
+    //        false,
+    //    );
+    //    let curr_area = isochrone.compute_max_area();
+    //    if curr_area > area_max {
+    //        (isochrone, curr_area)
+    //    } else {
+    //        (iso_max, area_max)
+    //    }
+    //});
+    if verbose {
+        log::info!(
+            "Time computing the optimal solution : {:.2?}",
+            start_time.elapsed()
         );
-        let curr_area = isochrone.compute_last_area();
-        if curr_area > area_max {
-            (isochrone, curr_area)
-        } else {
-            (iso_max, area_max)
-        }
-    });
+    }
     isochrone_map
 }
 
@@ -102,11 +156,13 @@ pub fn compute_isochrones(
     display_mode: models::DisplayMode,
     verbose: bool,
 ) -> IsochroneMap {
-    log::info!(
-        "origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, verbose: {verbose}",
-        time_limit.num_minutes(),
-        isochrone_interval.num_minutes()
-    );
+    if verbose {
+        log::info!(
+            "origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, verbose: {verbose}",
+            time_limit.num_minutes(),
+            isochrone_interval.num_minutes()
+        );
+    }
     let start_time = Instant::now();
 
     // Create a list of stops close enough to be of interest
@@ -138,10 +194,12 @@ pub fn compute_isochrones(
             )
         });
 
-    log::info!(
-        "Time for finding the departure_stops : {:.2?}",
-        start_time.elapsed()
-    );
+    if verbose {
+        log::info!(
+            "Time for finding the departure_stops : {:.2?}",
+            start_time.elapsed()
+        );
+    }
 
     let start_time = Instant::now();
     // then go over all these stops to compute each attainable route
@@ -199,7 +257,9 @@ pub fn compute_isochrones(
     );
     routes.push(route);
 
-    log::info!("Time for finding the routes : {:.2?}", start_time.elapsed());
+    if verbose {
+        log::info!("Time for finding the routes : {:.2?}", start_time.elapsed());
+    }
 
     let start_time = Instant::now();
 
@@ -257,10 +317,12 @@ pub fn compute_isochrones(
         })
         .collect();
 
-    log::info!(
-        "Time for finding the isochrones : {:.2?}",
-        start_time.elapsed()
-    );
+    if verbose {
+        log::info!(
+            "Time for finding the isochrones : {:.2?}",
+            start_time.elapsed()
+        );
+    }
     IsochroneMap::new(
         isochrones,
         areas,

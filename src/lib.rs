@@ -76,7 +76,7 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
         isochrone_interval,
         Duration::minutes(30),
         display_mode,
-        false,
+        true,
     );
 
     #[cfg(feature = "svg")]
@@ -133,7 +133,7 @@ pub fn run_comparison(
     println!(
         "time = {}, surface = {}, max_distance = {}",
         isochrones_2024.departure_at(),
-        isochrones_2024.compute_last_area(),
+        isochrones_2024.compute_max_area(),
         isochrones_2024.compute_max_distance(coord).1
     );
 
@@ -161,7 +161,7 @@ pub fn run_comparison(
     println!(
         "time = {}, surface = {}, max_distance = {}",
         isochrones_2025.departure_at(),
-        isochrones_2025.compute_last_area(),
+        isochrones_2025.compute_max_area(),
         isochrones_2025.compute_max_distance(coord).1
     );
 

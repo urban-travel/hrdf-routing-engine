@@ -98,7 +98,7 @@ async fn compute_isochrones(
             Duration::minutes(params.isochrone_interval.into()),
             Duration::minutes(30),
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-            false,
+            true,
         )
     } else {
         isochrone::compute_isochrones(
@@ -109,7 +109,7 @@ async fn compute_isochrones(
             Duration::minutes(params.time_limit.into()),
             Duration::minutes(params.isochrone_interval.into()),
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-            false,
+            true,
         )
     };
     Ok(Json(result))
