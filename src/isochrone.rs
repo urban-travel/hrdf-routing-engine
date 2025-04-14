@@ -30,6 +30,8 @@ use utils::lv95_to_wgs84;
 use utils::time_to_distance;
 pub use utils::wgs84_to_lv95;
 
+use self::utils::NaiveDateTimeRange;
+
 /// Computes the best isochrone in [departure_at - delta_time; departure_at + delta_time)
 /// Best is defined by the maximal surface covered by the largest isochrone
 #[allow(clippy::too_many_arguments)]
@@ -48,7 +50,7 @@ pub fn compute_optimal_isochrones(
     let max_date_time = departure_at + delta_time - Duration::minutes(1);
 
     let mut date_time = min_date_time;
-    let mut isochrone_map = compute_isochrones(
+    let isochrone_map = compute_isochrones(
         hrdf,
         origin_point_latitude,
         origin_point_longitude,
@@ -58,27 +60,29 @@ pub fn compute_optimal_isochrones(
         display_mode,
         verbose,
     );
-    let mut max_area = isochrone_map.compute_last_area();
-    while date_time <= max_date_time {
-        date_time += Duration::minutes(1);
-        let local_isochrone_map = compute_isochrones(
-            hrdf,
-            origin_point_latitude,
-            origin_point_longitude,
-            date_time,
-            time_limit,
-            isochrone_interval,
-            display_mode,
-            verbose,
-        );
-        let local_max_area: f64 = local_isochrone_map.compute_last_area();
-
-        if local_max_area > max_area {
-            log::info!("The maximum area is given by {local_max_area}");
-            isochrone_map = local_isochrone_map;
-            max_area = local_max_area;
-        }
-    }
+    let range = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1));
+    let isochrone_map = range.into_iter().fold((isochrone_map, isochrone_map.compute_last_area()), |(iso, area), dep| );
+    // let mut max_area = isochrone_map.compute_last_area();
+    // while date_time <= max_date_time {
+    //     date_time += Duration::minutes(1);
+    //     let local_isochrone_map = compute_isochrones(
+    //         hrdf,
+    //         origin_point_latitude,
+    //         origin_point_longitude,
+    //         date_time,
+    //         time_limit,
+    //         isochrone_interval,
+    //         display_mode,
+    //         verbose,
+    //     );
+    //     let local_max_area: f64 = local_isochrone_map.compute_last_area();
+    //
+    //     if local_max_area > max_area {
+    //         log::info!("The maximum area is given by {local_max_area}");
+    //         isochrone_map = local_isochrone_map;
+    //         max_area = local_max_area;
+    //     }
+    // }
     isochrone_map
 }
 

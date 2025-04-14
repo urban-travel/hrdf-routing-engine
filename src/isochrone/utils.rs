@@ -118,11 +118,18 @@ pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
 
     radius_of_earth_km * c
 }
+
 #[derive(Debug, Clone, Copy)]
-struct NaiveDateTimeRange {
+pub struct NaiveDateTimeRange {
     from: NaiveDateTime,
     to: NaiveDateTime,
     incr: Duration,
+}
+
+impl NaiveDateTimeRange {
+    pub fn new(from: NaiveDateTime, to: NaiveDateTime, incr: Duration) -> Self {
+        Self { from, to, incr }
+    }
 }
 
 impl Iterator for NaiveDateTimeRange {
