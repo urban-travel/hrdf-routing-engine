@@ -135,7 +135,7 @@ impl NaiveDateTimeRange {
 impl Iterator for NaiveDateTimeRange {
     type Item = NaiveDateTime;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.to > self.from {
+        if self.from > self.to {
             return None;
         }
         let maybe_next = self.from + self.incr;

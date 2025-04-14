@@ -67,6 +67,7 @@ pub fn compute_optimal_isochrones(
     )
     .into_iter()
     .fold((isochrone_map, area), |(iso_max, area_max), dep| {
+        println!("{dep}");
         let isochrone = compute_isochrones(
             hrdf,
             origin_point_latitude,
