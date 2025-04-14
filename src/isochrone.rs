@@ -281,30 +281,28 @@ pub fn compute_isochrones(
 
     let isochrone_count = time_limit.num_minutes() / isochrone_interval.num_minutes();
 
-    let mut isochrones = Vec::new();
-    for i in 0..isochrone_count {
-        let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
+    let isochrones = (0..isochrone_count)
+        .map(|i| {
+            let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
 
-        let polygons = match display_mode {
-            IsochroneDisplayMode::Circles => circles::get_polygons(&data, current_time_limit),
-            IsochroneDisplayMode::ContourLine => {
-                let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
-                contour_line::get_polygons(
-                    grid,
-                    *num_points_x,
-                    *num_points_y,
-                    bounding_box.0,
-                    current_time_limit,
-                    *dx,
-                )
-            }
-        };
+            let polygons = match display_mode {
+                IsochroneDisplayMode::Circles => circles::get_polygons(&data, current_time_limit),
+                IsochroneDisplayMode::ContourLine => {
+                    let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
+                    contour_line::get_polygons(
+                        grid,
+                        *num_points_x,
+                        *num_points_y,
+                        bounding_box.0,
+                        current_time_limit,
+                        *dx,
+                    )
+                }
+            };
 
-        isochrones.push(Isochrone::new(
-            polygons,
-            current_time_limit.num_minutes() as u32,
-        ));
-    }
+            Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
+        })
+        .collect::<Vec<_>>();
 
     let areas = isochrones.iter().map(|i| i.compute_area()).collect();
     let max_distances = isochrones
