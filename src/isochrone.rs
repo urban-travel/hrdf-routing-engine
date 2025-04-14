@@ -47,9 +47,8 @@ pub fn compute_optimal_isochrones(
     verbose: bool,
 ) -> IsochroneMap {
     let min_date_time = departure_at - delta_time;
-    let max_date_time = departure_at + delta_time - Duration::minutes(1);
+    let max_date_time = departure_at + delta_time;
 
-    let mut date_time = min_date_time;
     let isochrone_map = compute_isochrones(
         hrdf,
         origin_point_latitude,
@@ -60,29 +59,31 @@ pub fn compute_optimal_isochrones(
         display_mode,
         verbose,
     );
-    let range = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1));
-    let isochrone_map = range.into_iter().fold((isochrone_map, isochrone_map.compute_last_area()), |(iso, area), dep| );
-    // let mut max_area = isochrone_map.compute_last_area();
-    // while date_time <= max_date_time {
-    //     date_time += Duration::minutes(1);
-    //     let local_isochrone_map = compute_isochrones(
-    //         hrdf,
-    //         origin_point_latitude,
-    //         origin_point_longitude,
-    //         date_time,
-    //         time_limit,
-    //         isochrone_interval,
-    //         display_mode,
-    //         verbose,
-    //     );
-    //     let local_max_area: f64 = local_isochrone_map.compute_last_area();
-    //
-    //     if local_max_area > max_area {
-    //         log::info!("The maximum area is given by {local_max_area}");
-    //         isochrone_map = local_isochrone_map;
-    //         max_area = local_max_area;
-    //     }
-    // }
+    let area = isochrone_map.compute_last_area();
+    let (isochrone_map, _) = NaiveDateTimeRange::new(
+        min_date_time + Duration::minutes(1),
+        max_date_time,
+        Duration::minutes(1),
+    )
+    .into_iter()
+    .fold((isochrone_map, area), |(iso_max, area_max), dep| {
+        let isochrone = compute_isochrones(
+            hrdf,
+            origin_point_latitude,
+            origin_point_longitude,
+            dep,
+            time_limit,
+            isochrone_interval,
+            display_mode,
+            verbose,
+        );
+        let curr_area = isochrone.compute_last_area();
+        if curr_area > area_max {
+            (isochrone, curr_area)
+        } else {
+            (iso_max, area_max)
+        }
+    });
     isochrone_map
 }
 
