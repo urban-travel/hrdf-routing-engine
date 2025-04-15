@@ -12,7 +12,6 @@ use hrdf_parser::Hrdf;
 pub use isochrone::IsochroneDisplayMode;
 pub use isochrone::compute_isochrones;
 use isochrone::compute_optimal_isochrones;
-use isochrone::wgs84_to_lv95;
 pub use routing::Route;
 pub use routing::RouteSection;
 pub use routing::find_reachable_stops_within_time_limit;
@@ -21,6 +20,9 @@ use utils::create_date_time;
 
 pub use debug::run_debug;
 pub use service::run_service;
+
+use self::isochrone::compute_average_isochrones;
+use self::isochrone::utils::wgs84_to_lv95;
 
 pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Box<dyn Error>> {
     let origin_point_latitude = 46.20956654;
@@ -60,6 +62,39 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
     iso.write_svg(
         &format!(
             "isochrones_{}_{}.svg",
+            time_limit.num_minutes(),
+            isochrone_interval.num_minutes()
+        ),
+        1.0 / 100.0,
+        Some(coord),
+    )?;
+
+    #[cfg(feature = "svg")]
+    let iso = compute_average_isochrones(
+        &hrdf,
+        origin_point_latitude,
+        origin_point_longitude,
+        departure_at,
+        time_limit,
+        isochrone_interval,
+        Duration::minutes(30),
+        verbose,
+    );
+    #[cfg(not(feature = "svg"))]
+    let _iso = compute_average_isochrones(
+        &hrdf,
+        origin_point_latitude,
+        origin_point_longitude,
+        departure_at,
+        time_limit,
+        isochrone_interval,
+        verbose,
+    );
+
+    #[cfg(feature = "svg")]
+    iso.write_svg(
+        &format!(
+            "average_isochrones_{}_{}.svg",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes()
         ),

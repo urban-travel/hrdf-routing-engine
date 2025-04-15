@@ -1,7 +1,9 @@
 use std::f64::consts::PI;
 
 use chrono::{Duration, NaiveDateTime};
-use hrdf_parser::Coordinates;
+use hrdf_parser::{Coordinates, Stop};
+
+use super::constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
 
 /// https://github.com/antistatique/swisstopo
 #[rustfmt::skip]
@@ -117,6 +119,33 @@ pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
 
     radius_of_earth_km * c
+}
+
+/// Adjusts the departure time from a stop, given the person is walking from long/lat to stop
+pub fn adjust_departure_at(
+    departure_at: NaiveDateTime,
+    time_limit: Duration,
+    origin_point_latitude: f64,
+    origin_point_longitude: f64,
+    departure_stop: &Stop,
+) -> (NaiveDateTime, Duration) {
+    let distance = {
+        let coord = departure_stop.wgs84_coordinates().unwrap();
+
+        haversine_distance(
+            origin_point_latitude,
+            origin_point_longitude,
+            coord.latitude().expect("Wrong coordinate system"),
+            coord.longitude().expect("Wrong coordinate system"),
+        ) * 1000.0
+    };
+
+    let duration = distance_to_time(distance, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
+
+    let adjusted_departure_at = departure_at.checked_add_signed(duration).unwrap();
+    let adjusted_time_limit = time_limit - duration;
+
+    (adjusted_departure_at, adjusted_time_limit)
 }
 
 #[derive(Debug, Clone, Copy)]
