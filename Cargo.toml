@@ -14,8 +14,7 @@ chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.5.35", features = ["derive"] }
 contour = "0.13.1"
 geo = "0.30.0"
-# hrdf-parser = "0.2.0"
-hrdf-parser = { path = "../hrdf-parser/"}
+hrdf-parser = "0.2.0"
 kd-tree = "0.6.0"
 log = "0.4.22"
 rayon = "1.10.0"
