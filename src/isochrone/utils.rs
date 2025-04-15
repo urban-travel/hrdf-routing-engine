@@ -159,10 +159,6 @@ impl NaiveDateTimeRange {
     pub fn new(from: NaiveDateTime, to: NaiveDateTime, incr: Duration) -> Self {
         Self { from, to, incr }
     }
-
-    //pub fn iter(&self) -> NaiveDateTimeRangeIter<'_> {
-    //    NaiveDateTimeRangeIter { it: self, idx: 0 }
-    //}
 }
 
 impl Iterator for NaiveDateTimeRange {
@@ -176,20 +172,3 @@ impl Iterator for NaiveDateTimeRange {
         (self.from < self.to).then_some(maybe_next)
     }
 }
-
-//pub struct NaiveDateTimeRangeIter<'a> {
-//    it: &'a NaiveDateTimeRange,
-//    idx: i32,
-//}
-//
-//impl<'a> Iterator for NaiveDateTimeRangeIter<'a> {
-//    type Item = NaiveDateTime;
-//
-//    fn next(&mut self) -> Option<Self::Item> {
-//        if self.it.from > self.it.to {
-//            return None;
-//        }
-//        let maybe_next = self.it.from + self.it.incr.checked_mul(self.idx)?;
-//        (self.it.from < self.it.to).then_some(maybe_next)
-//    }
-//}
