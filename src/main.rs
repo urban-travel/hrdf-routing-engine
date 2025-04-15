@@ -3,8 +3,10 @@ use std::{error::Error, net::Ipv4Addr};
 use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
-use hrdf_routing_engine::{IsochroneDisplayMode, run_average, run_optimal, run_simple, run_worst};
-use hrdf_routing_engine::{run_comparison, run_debug, run_service};
+use hrdf_routing_engine::{
+    IsochroneDisplayMode, run_average, run_comparison, run_debug, run_optimal, run_service,
+    run_simple, run_worst,
+};
 use log::LevelFilter;
 
 #[derive(Parser, Debug)]
