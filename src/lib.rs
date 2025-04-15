@@ -7,16 +7,13 @@ mod utils;
 use std::error::Error;
 
 use chrono::Duration;
+use chrono::NaiveDateTime;
 use hrdf_parser::Coordinates;
 use hrdf_parser::Hrdf;
 pub use isochrone::IsochroneDisplayMode;
 pub use isochrone::compute_isochrones;
 use isochrone::compute_optimal_isochrones;
-pub use routing::Route;
-pub use routing::RouteSection;
-pub use routing::find_reachable_stops_within_time_limit;
-pub use routing::plan_journey;
-use utils::create_date_time;
+pub use routing::{Route, RouteSection, find_reachable_stops_within_time_limit, plan_journey};
 
 pub use debug::run_debug;
 pub use service::run_service;
@@ -24,33 +21,25 @@ pub use service::run_service;
 use self::isochrone::compute_average_isochrones;
 use self::isochrone::utils::wgs84_to_lv95;
 
-pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Box<dyn Error>> {
-    let origin_point_latitude = 46.20956654;
-    let origin_point_longitude = 6.13536000;
-
-    let departure_at = create_date_time(2025, 4, 10, 15, 36);
-    let time_limit = Duration::minutes(60);
-    let isochrone_interval = Duration::minutes(10);
-    let verbose = true;
-    let (x, y) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
+#[allow(clippy::too_many_arguments)]
+pub fn run_simple(
+    hrdf: Hrdf,
+    longitude: f64,
+    latitude: f64,
+    departure_at: NaiveDateTime,
+    time_limit: Duration,
+    isochrone_interval: Duration,
+    display_mode: IsochroneDisplayMode,
+    verbose: bool,
+) -> Result<(), Box<dyn Error>> {
+    let (x, y) = wgs84_to_lv95(latitude, longitude);
     let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
 
     #[cfg(feature = "svg")]
     let iso = compute_isochrones(
         &hrdf,
-        origin_point_latitude,
-        origin_point_longitude,
-        departure_at,
-        time_limit,
-        isochrone_interval,
-        display_mode,
-        verbose,
-    );
-    #[cfg(not(feature = "svg"))]
-    let _iso = compute_isochrones(
-        &hrdf,
-        origin_point_latitude,
-        origin_point_longitude,
+        longitude,
+        latitude,
         departure_at,
         time_limit,
         isochrone_interval,
@@ -69,49 +58,75 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
         Some(coord),
     )?;
 
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn run_average(
+    hrdf: Hrdf,
+    longitude: f64,
+    latitude: f64,
+    departure_at: NaiveDateTime,
+    time_limit: Duration,
+    isochrone_interval: Duration,
+    delta_time: Duration,
+    verbose: bool,
+) -> Result<(), Box<dyn Error>> {
+    let (x, y) = wgs84_to_lv95(latitude, longitude);
+    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
+
     #[cfg(feature = "svg")]
     let iso = compute_average_isochrones(
         &hrdf,
-        origin_point_latitude,
-        origin_point_longitude,
+        longitude,
+        latitude,
         departure_at,
         time_limit,
         isochrone_interval,
-        Duration::minutes(30),
-        verbose,
-    );
-    #[cfg(not(feature = "svg"))]
-    let _iso = compute_average_isochrones(
-        &hrdf,
-        origin_point_latitude,
-        origin_point_longitude,
-        departure_at,
-        time_limit,
-        isochrone_interval,
+        delta_time,
         verbose,
     );
 
     #[cfg(feature = "svg")]
     iso.write_svg(
         &format!(
-            "average_isochrones_{}_{}.svg",
+            "average_isochrones_{}_{}_{}.svg",
             time_limit.num_minutes(),
-            isochrone_interval.num_minutes()
+            isochrone_interval.num_minutes(),
+            delta_time.num_minutes()
         ),
         1.0 / 100.0,
         Some(coord),
     )?;
 
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn run_optimal(
+    hrdf: Hrdf,
+    longitude: f64,
+    latitude: f64,
+    departure_at: NaiveDateTime,
+    time_limit: Duration,
+    isochrone_interval: Duration,
+    delta_time: Duration,
+    display_mode: IsochroneDisplayMode,
+    verbose: bool,
+) -> Result<(), Box<dyn Error>> {
+    let (x, y) = wgs84_to_lv95(latitude, longitude);
+    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
+
     let opt_iso = compute_optimal_isochrones(
         &hrdf,
-        origin_point_latitude,
-        origin_point_longitude,
+        longitude,
+        latitude,
         departure_at,
         time_limit,
         isochrone_interval,
-        Duration::minutes(30),
+        delta_time,
         display_mode,
-        true,
+        verbose,
     );
 
     #[cfg(feature = "svg")]
@@ -128,30 +143,31 @@ pub fn run_test(hrdf: Hrdf, display_mode: IsochroneDisplayMode) -> Result<(), Bo
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_comparison(
     hrdf_2024: Hrdf,
     hrdf_2025: Hrdf,
+    longitude: f64,
+    latitude: f64,
+    departure_at_2024: NaiveDateTime,
+    departure_at_2025: NaiveDateTime,
+    time_limit: Duration,
+    isochrone_interval: Duration,
+    delta_time: Duration,
     display_mode: IsochroneDisplayMode,
+    verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let origin_point_latitude = 46.183870262988584;
-    let origin_point_longitude = 6.12213134765625;
-    let departure_at_2024 = create_date_time(2024, 4, 1, 12, 0);
-    let departure_at_2025 = create_date_time(2025, 4, 1, 12, 0);
-    let time_limit = Duration::minutes(60);
-    let isochrone_interval = Duration::minutes(60);
-    let verbose = false;
-    let (x, y) = wgs84_to_lv95(origin_point_latitude, origin_point_longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-    let opt_duration = Duration::minutes(720);
+    let (easting, northing) = wgs84_to_lv95(latitude, longitude);
+    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, easting, northing);
 
     let isochrones_2024 = compute_optimal_isochrones(
         &hrdf_2024,
-        origin_point_latitude,
-        origin_point_longitude,
+        longitude,
+        latitude,
         departure_at_2024,
         time_limit,
         isochrone_interval,
-        opt_duration,
+        delta_time,
         display_mode,
         verbose,
     );
@@ -174,12 +190,12 @@ pub fn run_comparison(
 
     let isochrones_2025 = compute_optimal_isochrones(
         &hrdf_2025,
-        origin_point_latitude,
-        origin_point_longitude,
+        longitude,
+        latitude,
         departure_at_2025,
         time_limit,
         isochrone_interval,
-        opt_duration,
+        delta_time,
         display_mode,
         verbose,
     );

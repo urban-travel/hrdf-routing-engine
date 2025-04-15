@@ -91,8 +91,8 @@ async fn compute_isochrones(
     let result = if params.find_optimal {
         isochrone::compute_optimal_isochrones(
             &hrdf,
-            params.origin_point_latitude,
             params.origin_point_longitude,
+            params.origin_point_latitude,
             NaiveDateTime::new(params.departure_date, params.departure_time),
             Duration::minutes(params.time_limit.into()),
             Duration::minutes(params.isochrone_interval.into()),
@@ -103,8 +103,8 @@ async fn compute_isochrones(
     } else {
         isochrone::compute_isochrones(
             &hrdf,
-            params.origin_point_latitude,
             params.origin_point_longitude,
+            params.origin_point_latitude,
             NaiveDateTime::new(params.departure_date, params.departure_time),
             Duration::minutes(params.time_limit.into()),
             Duration::minutes(params.isochrone_interval.into()),

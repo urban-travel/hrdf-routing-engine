@@ -31,8 +31,8 @@ use self::utils::wgs84_to_lv95;
 #[allow(clippy::too_many_arguments)]
 pub fn compute_optimal_isochrones(
     hrdf: &Hrdf,
-    origin_point_latitude: f64,
-    origin_point_longitude: f64,
+    longitude: f64,
+    latitude: f64,
     departure_at: NaiveDateTime,
     time_limit: Duration,
     isochrone_interval: Duration,
@@ -42,7 +42,7 @@ pub fn compute_optimal_isochrones(
 ) -> IsochroneMap {
     if verbose {
         log::info!(
-            "origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
+            "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes(),
             delta_time.num_minutes(),
@@ -65,8 +65,8 @@ pub fn compute_optimal_isochrones(
         |(iso_max, area_max), dep| {
             let isochrone = compute_isochrones(
                 hrdf,
-                origin_point_latitude,
-                origin_point_longitude,
+                longitude,
+                latitude,
                 *dep,
                 time_limit,
                 isochrone_interval,
@@ -92,41 +92,6 @@ pub fn compute_optimal_isochrones(
         },
     );
 
-    //let isochrone_map = compute_isochrones(
-    //    hrdf,
-    //    origin_point_latitude,
-    //    origin_point_longitude,
-    //    min_date_time,
-    //    time_limit,
-    //    isochrone_interval,
-    //    display_mode,
-    //    false,
-    //);
-    //let area = isochrone_map.compute_max_area();
-    //let (isochrone_map, _) = NaiveDateTimeRange::new(
-    //    min_date_time + Duration::minutes(1),
-    //    max_date_time,
-    //    Duration::minutes(1),
-    //)
-    //.into_iter()
-    //.fold((isochrone_map, area), |(iso_max, area_max), dep| {
-    //    let isochrone = compute_isochrones(
-    //        hrdf,
-    //        origin_point_latitude,
-    //        origin_point_longitude,
-    //        dep,
-    //        time_limit,
-    //        isochrone_interval,
-    //        display_mode,
-    //        false,
-    //    );
-    //    let curr_area = isochrone.compute_max_area();
-    //    if curr_area > area_max {
-    //        (isochrone, curr_area)
-    //    } else {
-    //        (iso_max, area_max)
-    //    }
-    //});
     if verbose {
         log::info!(
             "Time computing the optimal solution : {:.2?}",
@@ -142,8 +107,8 @@ pub fn compute_optimal_isochrones(
 #[allow(clippy::too_many_arguments)]
 pub fn compute_average_isochrones(
     hrdf: &Hrdf,
-    origin_point_latitude: f64,
-    origin_point_longitude: f64,
+    longitude: f64,
+    latitude: f64,
     departure_at: NaiveDateTime,
     time_limit: Duration,
     isochrone_interval: Duration,
@@ -152,21 +117,17 @@ pub fn compute_average_isochrones(
 ) -> IsochroneMap {
     if verbose {
         log::info!(
-            "Computing average isochrone:\norigin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, verbose: {verbose}",
+            "Computing average isochrone:\n longitude: {longitude}, latitude: {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes(),
             delta_time.num_minutes()
         );
     }
     // If there is no departue stop found we just use the default
-    let departure_coord = Coordinates::new(
-        CoordinateSystem::WGS84,
-        origin_point_latitude,
-        origin_point_longitude,
-    );
+    let departure_coord = Coordinates::new(CoordinateSystem::WGS84, latitude, longitude);
 
-    let (x, y) = wgs84_to_lv95(origin_point_latitude, origin_point_latitude);
-    let departure_coord_lv95 = Coordinates::new(CoordinateSystem::LV95, x, y);
+    let (easting, northing) = wgs84_to_lv95(latitude, longitude);
+    let departure_coord_lv95 = Coordinates::new(CoordinateSystem::LV95, easting, northing);
 
     let start_time = Instant::now();
     let min_date_time = departure_at - delta_time;
@@ -181,15 +142,8 @@ pub fn compute_average_isochrones(
     .collect::<Vec<_>>()
     .par_iter()
     .map(|dep| {
-        let routes = compute_routes_from_origin(
-            hrdf,
-            origin_point_latitude,
-            origin_point_longitude,
-            *dep,
-            time_limit,
-            5,
-            verbose,
-        );
+        let routes =
+            compute_routes_from_origin(hrdf, latitude, longitude, *dep, time_limit, 5, verbose);
 
         unique_coordinates_from_routes(&routes, departure_at)
     })
@@ -278,8 +232,8 @@ pub fn compute_average_isochrones(
 #[allow(clippy::too_many_arguments)]
 pub fn compute_isochrones(
     hrdf: &Hrdf,
-    origin_point_latitude: f64,
-    origin_point_longitude: f64,
+    longitude: f64,
+    latitude: f64,
     departure_at: NaiveDateTime,
     time_limit: Duration,
     isochrone_interval: Duration,
@@ -288,27 +242,23 @@ pub fn compute_isochrones(
 ) -> IsochroneMap {
     if verbose {
         log::info!(
-            "origin_point_latitude : {origin_point_latitude}, origin_point_longitude: {origin_point_longitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, verbose: {verbose}",
+            "longitude: {longitude}, latitude : {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes()
         );
     }
     // If there is no departue stop found we just use the default
-    let departure_coord = Coordinates::new(
-        CoordinateSystem::WGS84,
-        origin_point_latitude,
-        origin_point_longitude,
-    );
+    let departure_coord = Coordinates::new(CoordinateSystem::WGS84, latitude, longitude);
 
-    let (x, y) = wgs84_to_lv95(origin_point_latitude, origin_point_latitude);
-    let departure_coord_lv95 = Coordinates::new(CoordinateSystem::LV95, x, y);
+    let (easting, northing) = wgs84_to_lv95(latitude, longitude);
+    let departure_coord_lv95 = Coordinates::new(CoordinateSystem::LV95, easting, northing);
 
     let start_time = Instant::now();
 
     let routes = compute_routes_from_origin(
         hrdf,
-        origin_point_latitude,
-        origin_point_longitude,
+        latitude,
+        longitude,
         departure_at,
         time_limit,
         5,
