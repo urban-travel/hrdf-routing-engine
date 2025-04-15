@@ -19,6 +19,7 @@ pub use debug::run_debug;
 pub use service::run_service;
 
 use self::isochrone::compute_average_isochrones;
+use self::isochrone::compute_worst_isochrones;
 use self::isochrone::utils::wgs84_to_lv95;
 
 #[allow(clippy::too_many_arguments)]
@@ -133,6 +134,47 @@ pub fn run_optimal(
     opt_iso.write_svg(
         &format!(
             "optimal_isochrones_{}_{}.svg",
+            time_limit.num_minutes(),
+            isochrone_interval.num_minutes()
+        ),
+        1.0 / 100.0,
+        Some(coord),
+    )?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn run_worst(
+    hrdf: Hrdf,
+    longitude: f64,
+    latitude: f64,
+    departure_at: NaiveDateTime,
+    time_limit: Duration,
+    isochrone_interval: Duration,
+    delta_time: Duration,
+    display_mode: IsochroneDisplayMode,
+    verbose: bool,
+) -> Result<(), Box<dyn Error>> {
+    let (x, y) = wgs84_to_lv95(latitude, longitude);
+    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
+
+    let opt_iso = compute_worst_isochrones(
+        &hrdf,
+        longitude,
+        latitude,
+        departure_at,
+        time_limit,
+        isochrone_interval,
+        delta_time,
+        display_mode,
+        verbose,
+    );
+
+    #[cfg(feature = "svg")]
+    opt_iso.write_svg(
+        &format!(
+            "worst_isochrones_{}_{}.svg",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes()
         ),

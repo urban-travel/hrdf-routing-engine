@@ -3,7 +3,7 @@ use std::{error::Error, net::Ipv4Addr};
 use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
-use hrdf_routing_engine::{IsochroneDisplayMode, run_average, run_optimal, run_simple};
+use hrdf_routing_engine::{IsochroneDisplayMode, run_average, run_optimal, run_simple, run_worst};
 use hrdf_routing_engine::{run_comparison, run_debug, run_service};
 use log::LevelFilter;
 
@@ -59,6 +59,17 @@ enum Mode {
     },
     /// Compute the optimal isochrones
     Optimal {
+        #[command(flatten)]
+        isochrone_args: IsochroneArgs,
+        /// The +/- duration on which to compute the average (in minutes)
+        #[arg(short, long, default_value_t = 30)]
+        delta_time: i64,
+        /// Display mode of the isochrones: circles or contour_line
+        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        mode: IsochroneDisplayMode,
+    },
+    /// Compute the optimal isochrones
+    Worst {
         #[command(flatten)]
         isochrone_args: IsochroneArgs,
         /// The +/- duration on which to compute the average (in minutes)
@@ -137,6 +148,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 verbose,
             } = isochrone_args;
             run_optimal(
+                hrdf_2025,
+                longitude,
+                latitude,
+                NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
+                Duration::minutes(time_limit),
+                Duration::minutes(interval),
+                Duration::minutes(delta_time),
+                mode,
+                verbose,
+            )?;
+        }
+        Mode::Worst {
+            isochrone_args,
+            delta_time,
+            mode,
+        } => {
+            let IsochroneArgs {
+                latitude,
+                longitude,
+                departure_at,
+                time_limit,
+                interval,
+                verbose,
+            } = isochrone_args;
+            run_worst(
                 hrdf_2025,
                 longitude,
                 latitude,

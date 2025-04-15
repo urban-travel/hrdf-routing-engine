@@ -847,8 +847,6 @@ dependencies = [
 [[package]]
 name = "hrdf-parser"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aea7295fd3d2b804d47e6a0c9a95310df22a7f047701c2ca3742ef3f11279599"
 dependencies = [
  "bincode",
  "chrono",
