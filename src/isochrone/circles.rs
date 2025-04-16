@@ -1,8 +1,11 @@
 use std::f64::consts::PI;
+use std::fs::File;
+use std::io::BufReader;
 
 use chrono::Duration;
 use geo::{BooleanOps, LineString, Polygon};
 use geo::{Contains, MultiPolygon};
+use geojson::{FeatureCollection, GeoJson};
 use hrdf_parser::{CoordinateSystem, Coordinates};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
@@ -15,6 +18,50 @@ pub fn get_polygons(
     data: &[(Coordinates, Duration)],
     time_limit: Duration,
 ) -> Vec<Vec<Coordinates>> {
+    let file = File::open("./lake-geneva.geojson").unwrap();
+    let reader = BufReader::new(file);
+
+    // Parse the GeoJSON file
+    let geojson: GeoJson = serde_json::from_reader(reader).unwrap();
+
+    // let lake_polygon: Polygon = FeatureCollection::try_from(geojson)
+    //     .unwrap()
+    //     .into_iter()
+    //     .filter_map(|feature| {
+    //         feature
+    //             .geometry
+    //             .and_then(|geometry| Polygon::try_from(geometry).into_iter().ok())
+    //     })
+    //     .next()
+    //     .unwrap();
+
+    let lake_polygon = FeatureCollection::try_from(geojson)
+        .unwrap()
+        .into_iter()
+        .filter_map(|feature| {
+            feature.geometry.and_then(|geometry| {
+                if let geojson::Value::Polygon(exteriors) = geometry.value {
+                    let polygons: MultiPolygon = exteriors
+                        .into_iter()
+                        .map(|exterior| {
+                            Polygon::new(
+                                exterior
+                                    .into_iter()
+                                    .map(|coords| (coords[1], coords[0]))
+                                    .collect(),
+                                vec![],
+                            )
+                        })
+                        .collect();
+                    Some(polygons)
+                } else {
+                    None
+                }
+            })
+        })
+        .next()
+        .unwrap();
+
     data.par_iter()
         .filter(|(_, duration)| *duration <= time_limit)
         .map(|(center_lv95, duration)| {
@@ -52,9 +99,19 @@ pub fn get_polygons(
         .reduce(|| MultiPolygon::new(vec![]), |poly, p| poly.union(&p))
         .into_par_iter()
         .map(|p| {
-            p.exterior()
-                .coords()
-                .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
+            // println!("ISO: {p:?}");
+            // println!("LAKE: {lake_polygon:?}");
+            // lake_polygon
+            //     .difference(&p)
+            p.difference(&lake_polygon)
+                .into_iter()
+                .flat_map(|new_p| {
+                    new_p
+                        .exterior()
+                        .coords()
+                        .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
+                        .collect::<Vec<_>>()
+                })
                 .collect()
         })
         .collect()
