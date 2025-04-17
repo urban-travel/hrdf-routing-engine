@@ -884,6 +884,7 @@ name = "hrdf-routing-engine"
 version = "0.3.0"
 dependencies = [
  "axum",
+ "bincode",
  "chrono",
  "clap",
  "contour",
@@ -893,9 +894,11 @@ dependencies = [
  "kd-tree",
  "log",
  "rayon",
+ "reqwest",
  "rustc-hash 2.1.1",
  "serde",
  "serde_json",
+ "sha2",
  "simple_logger",
  "strum 0.26.3",
  "strum_macros",
@@ -904,6 +907,7 @@ dependencies = [
  "tokio",
  "tower-http",
  "typenum",
+ "url",
 ]
 
 [[package]]

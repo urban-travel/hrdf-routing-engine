@@ -6,19 +6,26 @@ use std::{
 
 use axum::{Json, Router, extract::Query, http::StatusCode, routing::get};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
+use geo::MultiPolygon;
 use hrdf_parser::{Hrdf, timetable_end_date, timetable_start_date};
 use serde::{Deserialize, Serialize};
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::isochrone::{self, IsochroneDisplayMode, IsochroneMap};
 
-pub async fn run_service(hrdf: Hrdf, ip_addr: Ipv4Addr, port: u16) {
+pub async fn run_service(
+    hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
+    ip_addr: Ipv4Addr,
+    port: u16,
+) {
     log::info!("Starting the server...");
 
     let hrdf = Arc::new(hrdf);
     let hrdf_1 = Arc::clone(&hrdf);
     let hrdf_2 = Arc::clone(&hrdf);
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
+    let excluded_polygons = Arc::new(excluded_polygons);
 
     #[rustfmt::skip]
     let app = Router::new()
@@ -28,7 +35,7 @@ pub async fn run_service(hrdf: Hrdf, ip_addr: Ipv4Addr, port: u16) {
         )
         .route(
             "/isochrones",
-            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), params)),
+            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), Arc::clone(&excluded_polygons), params)),
         )
         .layer(cors);
     let address = SocketAddr::from((ip_addr, port));
@@ -66,6 +73,7 @@ struct ComputeIsochronesRequest {
 
 async fn compute_isochrones(
     hrdf: Arc<Hrdf>,
+    excluded_polygons: Arc<MultiPolygon>,
     Query(params): Query<ComputeIsochronesRequest>,
 ) -> Result<Json<IsochroneMap>, StatusCode> {
     // The coordinates are not checked but should be.
@@ -91,6 +99,7 @@ async fn compute_isochrones(
     let result = if params.find_optimal {
         isochrone::compute_optimal_isochrones(
             &hrdf,
+            &excluded_polygons,
             params.origin_point_longitude,
             params.origin_point_latitude,
             NaiveDateTime::new(params.departure_date, params.departure_time),
@@ -103,6 +112,7 @@ async fn compute_isochrones(
     } else {
         isochrone::compute_isochrones(
             &hrdf,
+            &excluded_polygons,
             params.origin_point_longitude,
             params.origin_point_latitude,
             NaiveDateTime::new(params.departure_date, params.departure_time),

@@ -2,6 +2,7 @@ use std::error::Error;
 
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
 use chrono::{Duration, NaiveDateTime};
+use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;
 
@@ -12,6 +13,7 @@ use self::isochrone::utils::wgs84_to_lv95;
 #[allow(clippy::too_many_arguments)]
 pub fn run_simple(
     hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at: NaiveDateTime,
@@ -26,6 +28,7 @@ pub fn run_simple(
     #[cfg(feature = "svg")]
     let iso = compute_isochrones(
         &hrdf,
+        &excluded_polygons,
         longitude,
         latitude,
         departure_at,
@@ -93,6 +96,7 @@ pub fn run_average(
 #[allow(clippy::too_many_arguments)]
 pub fn run_optimal(
     hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at: NaiveDateTime,
@@ -107,6 +111,7 @@ pub fn run_optimal(
 
     let opt_iso = compute_optimal_isochrones(
         &hrdf,
+        &excluded_polygons,
         longitude,
         latitude,
         departure_at,
@@ -134,6 +139,7 @@ pub fn run_optimal(
 #[allow(clippy::too_many_arguments)]
 pub fn run_worst(
     hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at: NaiveDateTime,
@@ -148,6 +154,7 @@ pub fn run_worst(
 
     let opt_iso = compute_worst_isochrones(
         &hrdf,
+        &excluded_polygons,
         longitude,
         latitude,
         departure_at,
@@ -176,6 +183,7 @@ pub fn run_worst(
 pub fn run_comparison(
     hrdf_2024: Hrdf,
     hrdf_2025: Hrdf,
+    excluded_polygons: MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at_2024: NaiveDateTime,
@@ -191,6 +199,7 @@ pub fn run_comparison(
 
     let isochrones_2024 = compute_optimal_isochrones(
         &hrdf_2024,
+        &excluded_polygons,
         longitude,
         latitude,
         departure_at_2024,
@@ -219,6 +228,7 @@ pub fn run_comparison(
 
     let isochrones_2025 = compute_optimal_isochrones(
         &hrdf_2025,
+        &excluded_polygons,
         longitude,
         latitude,
         departure_at_2025,

@@ -1,8 +1,9 @@
 mod circles;
 mod constants;
 mod contour_line;
+pub(crate) mod externals;
 mod models;
-pub mod utils;
+pub(crate) mod utils;
 
 use std::collections::HashMap;
 use std::time::Instant;
@@ -11,6 +12,9 @@ use crate::isochrone::utils::haversine_distance;
 use crate::routing::Route;
 use crate::routing::compute_routes_from_origin;
 use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
+use geo::BooleanOps;
+use geo::CoordsIter;
+use geo::MultiPolygon;
 use hrdf_parser::{CoordinateSystem, Coordinates, DataStorage, Hrdf, Model, Stop};
 pub use models::DisplayMode as IsochroneDisplayMode;
 pub use models::IsochroneMap;
@@ -31,6 +35,7 @@ use self::utils::wgs84_to_lv95;
 #[allow(clippy::too_many_arguments)]
 pub fn compute_optimal_isochrones(
     hrdf: &Hrdf,
+    excluded_polygons: &MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at: NaiveDateTime,
@@ -65,6 +70,7 @@ pub fn compute_optimal_isochrones(
         |(iso_max, area_max), dep| {
             let isochrone = compute_isochrones(
                 hrdf,
+                excluded_polygons,
                 longitude,
                 latitude,
                 *dep,
@@ -106,6 +112,7 @@ pub fn compute_optimal_isochrones(
 #[allow(clippy::too_many_arguments)]
 pub fn compute_worst_isochrones(
     hrdf: &Hrdf,
+    excluded_polygons: &MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at: NaiveDateTime,
@@ -140,6 +147,7 @@ pub fn compute_worst_isochrones(
         |(iso_max, area_max), dep| {
             let isochrone = compute_isochrones(
                 hrdf,
+                excluded_polygons,
                 longitude,
                 latitude,
                 *dep,
@@ -271,6 +279,14 @@ pub fn compute_average_isochrones(
                 dx,
             );
 
+            let polygons = polygons
+                .into_iter()
+                .map(|p| {
+                    p.exterior_coords_iter()
+                        .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
+                        .collect()
+                })
+                .collect();
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })
         .collect::<Vec<_>>();
@@ -307,6 +323,7 @@ pub fn compute_average_isochrones(
 #[allow(clippy::too_many_arguments)]
 pub fn compute_isochrones(
     hrdf: &Hrdf,
+    excluded_polygons: &MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at: NaiveDateTime,
@@ -382,6 +399,22 @@ pub fn compute_isochrones(
                     )
                 }
             };
+            let polygons = polygons
+                .into_iter()
+                .map(|p| p.difference(excluded_polygons));
+            let polygons = polygons
+                .into_iter()
+                .map(|p| {
+                    p.into_iter()
+                        .flat_map(|ip| {
+                            ip.exterior()
+                                .coords()
+                                .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect();
 
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })
