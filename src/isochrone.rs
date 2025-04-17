@@ -190,6 +190,7 @@ pub fn compute_worst_isochrones(
 #[allow(clippy::too_many_arguments)]
 pub fn compute_average_isochrones(
     hrdf: &Hrdf,
+    excluded_polygons: &MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at: NaiveDateTime,
@@ -279,6 +280,10 @@ pub fn compute_average_isochrones(
                 dx,
             );
 
+            let polygons = polygons
+                .into_iter()
+                .map(|p| p.difference(excluded_polygons))
+                .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p));
             let polygons = polygons
                 .into_iter()
                 .map(|p| {
@@ -401,20 +406,17 @@ pub fn compute_isochrones(
             };
             let polygons = polygons
                 .into_iter()
-                .map(|p| p.difference(excluded_polygons));
+                .map(|p| p.difference(excluded_polygons))
+                .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p));
             let polygons = polygons
                 .into_iter()
                 .map(|p| {
-                    p.into_iter()
-                        .flat_map(|ip| {
-                            ip.exterior()
-                                .coords()
-                                .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
-                                .collect::<Vec<_>>()
-                        })
-                        .collect::<Vec<_>>()
+                    p.exterior()
+                        .coords()
+                        .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
+                        .collect()
                 })
-                .collect();
+                .collect::<Vec<_>>();
 
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })

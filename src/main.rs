@@ -232,6 +232,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             run_average(
                 hrdf_2025,
+                excluded_polygons,
                 longitude,
                 latitude,
                 NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,

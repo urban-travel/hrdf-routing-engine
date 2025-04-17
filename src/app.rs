@@ -55,6 +55,7 @@ pub fn run_simple(
 #[allow(clippy::too_many_arguments)]
 pub fn run_average(
     hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
     longitude: f64,
     latitude: f64,
     departure_at: NaiveDateTime,
@@ -69,6 +70,7 @@ pub fn run_average(
     #[cfg(feature = "svg")]
     let iso = compute_average_isochrones(
         &hrdf,
+        &excluded_polygons,
         longitude,
         latitude,
         departure_at,
