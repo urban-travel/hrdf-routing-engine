@@ -81,7 +81,7 @@ impl IsochroneMap {
         let mut polygons = self
             .isochrones
             .iter()
-            .map(|i| i.to_polygons())
+            .map(|i| i.polygons().clone())
             .collect::<Vec<_>>();
 
         let polygons_original = polygons.clone();
@@ -209,12 +209,12 @@ impl IsochroneMap {
 
 #[derive(Debug, Serialize)]
 pub struct Isochrone {
-    polygons: Vec<Vec<Coordinates>>,
+    polygons: MultiPolygon,
     time_limit: u32, // In minutes.
 }
 
 impl Isochrone {
-    pub fn new(polygons: Vec<Vec<Coordinates>>, time_limit: u32) -> Self {
+    pub fn new(polygons: MultiPolygon, time_limit: u32) -> Self {
         Self {
             polygons,
             time_limit,
@@ -223,42 +223,41 @@ impl Isochrone {
 
     /// Transforms the isochrone polygons into geo::MultiPolygons to be able to use various
     /// functionalities of the crate. The polygons are in lv95 coordinates
-    pub fn to_polygons(&self) -> MultiPolygon {
-        self.polygons
-            .iter()
-            .map(|p| {
-                Polygon::new(
-                    LineString::from(
-                        p.iter()
-                            .map(|c| {
-                                if let (Some(x), Some(y)) = (c.easting(), c.northing()) {
-                                    (x, y)
-                                } else {
-                                    wgs84_to_lv95(c.latitude().unwrap(), c.longitude().unwrap())
-                                }
-                            })
-                            .collect::<Vec<_>>(),
-                    ),
-                    vec![],
-                )
-            })
-            .collect()
+    pub fn polygons(&self) -> &MultiPolygon {
+        &self.polygons
     }
 
     pub fn compute_area(&self) -> f64 {
-        self.to_polygons().iter().map(|p| p.unsigned_area()).sum()
+        self.polygons()
+            .iter()
+            .map(|p| {
+                let exterior = LineString::from(
+                    p.exterior()
+                        .coords()
+                        .map(|c| wgs84_to_lv95(c.x, c.y))
+                        .collect::<Vec<_>>(),
+                );
+                let interiors = p
+                    .interiors()
+                    .iter()
+                    .map(|ls| ls.coords().map(|c| wgs84_to_lv95(c.x, c.y)).collect())
+                    .collect();
+                Polygon::new(exterior, interiors).unsigned_area()
+            })
+            .sum()
     }
 
     pub fn compute_max_distance(&self, c: Coordinates) -> ((f64, f64), f64) {
-        self.to_polygons().iter().flat_map(|p| p.exterior()).fold(
+        self.polygons().iter().flat_map(|p| p.exterior()).fold(
             ((f64::MIN, f64::MIN), f64::MIN),
             |((o_x, o_y), max), coord| {
+                let (cx_lv95, cy_lv95) = wgs84_to_lv95(coord.x, coord.y);
                 let (c_x, c_y) = if let (Some(x), Some(y)) = (c.easting(), c.northing()) {
                     (x, y)
                 } else {
                     wgs84_to_lv95(c.latitude().unwrap(), c.longitude().unwrap())
                 };
-                let dist = f64::sqrt(f64::powi(c_x - coord.x, 2) + f64::powi(c_y - coord.y, 2));
+                let dist = f64::sqrt(f64::powi(c_x - cx_lv95, 2) + f64::powi(c_y - cy_lv95, 2));
                 if dist > max {
                     ((coord.x, coord.y), dist)
                 } else {

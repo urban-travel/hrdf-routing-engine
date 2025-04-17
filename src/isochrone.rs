@@ -13,7 +13,6 @@ use crate::routing::Route;
 use crate::routing::compute_routes_from_origin;
 use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
 use geo::BooleanOps;
-use geo::CoordsIter;
 use geo::MultiPolygon;
 use hrdf_parser::{CoordinateSystem, Coordinates, DataStorage, Hrdf, Model, Stop};
 pub use models::DisplayMode as IsochroneDisplayMode;
@@ -284,14 +283,26 @@ pub fn compute_average_isochrones(
                 .into_iter()
                 .map(|p| p.difference(excluded_polygons))
                 .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p));
-            let polygons = polygons
-                .into_iter()
-                .map(|p| {
-                    p.exterior_coords_iter()
-                        .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
-                        .collect()
-                })
-                .collect();
+            // let polygons: MultiPolygon = polygons
+            //     .into_iter()
+            //     .map(|p| {
+            //         let exterior = LineString::new(
+            //             p.exterior_coords_iter()
+            //                 .map(|c| geo::Coord::from(lv95_to_wgs84(c.x, c.y)))
+            //                 .collect::<Vec<_>>(),
+            //         );
+            //         let interiors = p
+            //             .interiors()
+            //             .iter()
+            //             .map(|ls| {
+            //                 ls.points()
+            //                     .map(|p| Point::from(lv95_to_wgs84(p.x(), p.y())))
+            //                     .collect()
+            //             })
+            //             .collect::<Vec<_>>();
+            //         Polygon::new(exterior, interiors)
+            //     })
+            //     .collect();
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })
         .collect::<Vec<_>>();
@@ -408,16 +419,27 @@ pub fn compute_isochrones(
                 .into_iter()
                 .map(|p| p.difference(excluded_polygons))
                 .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p));
-            let polygons = polygons
-                .into_iter()
-                .map(|p| {
-                    p.exterior()
-                        .coords()
-                        .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
-                        .collect()
-                })
-                .collect::<Vec<_>>();
 
+            // let polygons: MultiPolygon = polygons
+            //     .into_iter()
+            //     .map(|p| {
+            //         let exterior = LineString::new(
+            //             p.exterior_coords_iter()
+            //                 .map(|c| geo::Coord::from(lv95_to_wgs84(c.x, c.y)))
+            //                 .collect::<Vec<_>>(),
+            //         );
+            //         let interiors = p
+            //             .interiors()
+            //             .iter()
+            //             .map(|ls| {
+            //                 ls.points()
+            //                     .map(|p| Point::from(lv95_to_wgs84(p.x(), p.y())))
+            //                     .collect()
+            //             })
+            //             .collect::<Vec<_>>();
+            //         Polygon::new(exterior, interiors)
+            //     })
+            //     .collect();
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })
         .collect::<Vec<_>>();
@@ -425,11 +447,7 @@ pub fn compute_isochrones(
     let areas = isochrones.iter().map(|i| i.compute_area()).collect();
     let max_distances = isochrones
         .iter()
-        .map(|i| {
-            let ((x, y), max) = i.compute_max_distance(departure_coord_lv95);
-            let (w_x, w_y) = lv95_to_wgs84(x, y);
-            ((w_x, w_y), max)
-        })
+        .map(|i| i.compute_max_distance(departure_coord_lv95))
         .collect();
 
     if verbose {
