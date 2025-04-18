@@ -120,7 +120,11 @@ impl IsochroneMap {
         ];
         use svg::node::element::Line;
 
-        let polys = self.get_polygons();
+        let polys = self
+            .get_polygons()
+            .into_iter()
+            .map(|m| multi_polygon_to_lv95(&m))
+            .collect::<Vec<_>>();
         let areas = self.compute_areas();
         let max_distances = if let Some(coord) = c {
             self.compute_max_distances(coord)
@@ -234,6 +238,8 @@ impl Isochrone {
             .sum()
     }
 
+    /// Computes the max distance from all the points in the isochrone to the c Coord.
+    /// The distance is given in meters and the position in LV95 coordinates
     pub fn compute_max_distance(&self, c: Coordinates) -> ((f64, f64), f64) {
         self.polygons().iter().flat_map(|p| p.exterior()).fold(
             ((f64::MIN, f64::MIN), f64::MIN),
@@ -246,7 +252,7 @@ impl Isochrone {
                 };
                 let dist = f64::sqrt(f64::powi(c_x - cx_lv95, 2) + f64::powi(c_y - cy_lv95, 2));
                 if dist > max {
-                    ((coord.x, coord.y), dist)
+                    ((cx_lv95, cy_lv95), dist)
                 } else {
                     ((o_x, o_y), max)
                 }

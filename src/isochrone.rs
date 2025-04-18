@@ -407,7 +407,11 @@ pub fn compute_isochrones(
     let areas = isochrones.iter().map(|i| i.compute_area()).collect();
     let max_distances = isochrones
         .iter()
-        .map(|i| i.compute_max_distance(departure_coord_lv95))
+        .map(|i| {
+            let ((x, y), max) = i.compute_max_distance(departure_coord_lv95);
+            let (w_x, w_y) = lv95_to_wgs84(x, y);
+            ((w_x, w_y), max)
+        })
         .collect();
 
     if verbose {
