@@ -14,7 +14,7 @@ use svg::Document;
 #[cfg(feature = "svg")]
 use svg::node::element::Polygon as SvgPolygon;
 
-use super::utils::wgs84_to_lv95;
+use super::utils::{multi_polygon_to_lv95, wgs84_to_lv95};
 
 #[derive(Debug, Serialize, Default)]
 pub struct IsochroneMap {
@@ -228,22 +228,9 @@ impl Isochrone {
     }
 
     pub fn compute_area(&self) -> f64 {
-        self.polygons()
+        multi_polygon_to_lv95(self.polygons())
             .iter()
-            .map(|p| {
-                let exterior = LineString::from(
-                    p.exterior()
-                        .coords()
-                        .map(|c| wgs84_to_lv95(c.x, c.y))
-                        .collect::<Vec<_>>(),
-                );
-                let interiors = p
-                    .interiors()
-                    .iter()
-                    .map(|ls| ls.coords().map(|c| wgs84_to_lv95(c.x, c.y)).collect())
-                    .collect();
-                Polygon::new(exterior, interiors).unsigned_area()
-            })
+            .map(|p| p.unsigned_area())
             .sum()
     }
 

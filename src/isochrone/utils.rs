@@ -1,6 +1,7 @@
 use std::f64::consts::PI;
 
 use chrono::{Duration, NaiveDateTime};
+use geo::{LineString, MultiPolygon, Polygon};
 use hrdf_parser::{Coordinates, Stop};
 
 use super::constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
@@ -59,6 +60,27 @@ pub fn wgs84_to_lv95(latitude: f64, longitude: f64) -> (f64, f64) {
         + 119.79 * phi_aux.powi(3);
 
     (easting, northing)
+}
+
+/// Creates a new MultiPolygon in lv95 coordinates. We suppose the original polygon was in wgs84
+/// coordinates
+pub fn multi_polygon_to_lv95(mp: &MultiPolygon) -> MultiPolygon {
+    mp.iter()
+        .map(|p| {
+            let exterior = LineString::from(
+                p.exterior()
+                    .coords()
+                    .map(|c| wgs84_to_lv95(c.x, c.y))
+                    .collect::<Vec<_>>(),
+            );
+            let interiors = p
+                .interiors()
+                .iter()
+                .map(|ls| ls.coords().map(|c| wgs84_to_lv95(c.x, c.y)).collect())
+                .collect();
+            Polygon::new(exterior, interiors)
+        })
+        .collect()
 }
 
 /// https://github.com/antistatique/swisstopo

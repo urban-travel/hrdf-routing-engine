@@ -69,48 +69,73 @@ fn parse_geojson_file(path: &str) -> Result<MultiPolygon, Box<dyn Error>> {
 pub struct ExcludedPolygons;
 
 impl ExcludedPolygons {
+    fn build_cache(multis: &MultiPolygon, path: &str) -> Result<(), Box<dyn Error>> {
+        let data = bincode::serialize(multis)?;
+        std::fs::write(path, data)?;
+        Ok(())
+    }
+
+    fn load_from_cache(path: &str) -> Result<MultiPolygon, Box<dyn Error>> {
+        let data = std::fs::read(path)?;
+        let multis: MultiPolygon = bincode::deserialize(&data)?;
+        Ok(multis)
+    }
+
     pub async fn try_new(
         urls: &[&str],
         force_rebuild_cache: bool,
         cache_prefix: Option<String>,
     ) -> Result<MultiPolygon, Box<dyn Error>> {
-        let mut multis = Vec::new();
-        for &url in urls {
-            let unique_filename = format!("{:x}", Sha256::digest(url.as_bytes()));
-            // let cache_path = format!(
-            //     "{}/{unique_filename}.cache",
-            //     cache_prefix.unwrap_or(String::from("./"))
-            // )
-            // .replace("//", "/");
+        let cache_path = format!(
+            "{}/{:x}.cache",
+            cache_prefix.unwrap_or("./".to_string()),
+            Sha256::digest(
+                urls.iter()
+                    .fold(String::new(), |res, &s| res + s)
+                    .as_bytes(),
+            )
+        )
+        .replace("//", "/");
 
-            // The cache must be built.
-            // If cache loading has failed, the cache must be rebuilt.
-            let data_path = if Url::parse(url).is_ok() {
-                let data_path = format!("/tmp/{unique_filename}");
+        let multis = if !force_rebuild_cache && Path::new(&cache_path).exists() {
+            Self::load_from_cache(&cache_path)?
+        } else {
+            let mut multis = Vec::new();
+            for &url in urls {
+                let unique_filename = format!("{:x}", Sha256::digest(url.as_bytes()));
 
-                if !Path::new(&data_path).exists() {
-                    // The data must be downloaded.
-                    log::info!("Downloading GeoJson data to {data_path}...");
-                    let response = reqwest::get(url).await?;
-                    let mut file = std::fs::File::create(&data_path)?;
-                    let mut content = Cursor::new(response.bytes().await?);
-                    std::io::copy(&mut content, &mut file)?;
-                }
+                // The cache must be built.
+                // If cache loading has failed, the cache must be rebuilt.
+                let data_path = if Url::parse(url).is_ok() {
+                    let data_path = format!("/tmp/{unique_filename}");
 
-                data_path
-            } else {
-                url.to_string()
-            };
+                    if !Path::new(&data_path).exists() {
+                        // The data must be downloaded.
+                        log::info!("Downloading GeoJson data to {data_path}...");
+                        let response = reqwest::get(url).await?;
+                        let mut file = std::fs::File::create(&data_path)?;
+                        let mut content = Cursor::new(response.bytes().await?);
+                        std::io::copy(&mut content, &mut file)?;
+                    }
 
-            log::info!("Parsing ExcludedPolygons data from {data_path}...");
-            let local = parse_geojson_file(&data_path)?;
+                    data_path
+                } else {
+                    url.to_string()
+                };
 
-            multis.push(local);
-        }
+                log::info!("Parsing ExcludedPolygons data from {data_path}...");
+                let local = parse_geojson_file(&data_path)?;
 
-        let multis = multis
-            .into_iter()
-            .fold(MultiPolygon::new(vec![]), |poly, p| poly.union(&p));
+                multis.push(local);
+            }
+
+            let multis = multis
+                .into_iter()
+                .fold(MultiPolygon::new(vec![]), |poly, p| poly.union(&p));
+            Self::build_cache(&multis, &cache_path)?;
+            multis
+        };
+
         Ok(multis)
     }
 }

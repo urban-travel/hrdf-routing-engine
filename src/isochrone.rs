@@ -283,26 +283,6 @@ pub fn compute_average_isochrones(
                 .into_iter()
                 .map(|p| p.difference(excluded_polygons))
                 .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p));
-            // let polygons: MultiPolygon = polygons
-            //     .into_iter()
-            //     .map(|p| {
-            //         let exterior = LineString::new(
-            //             p.exterior_coords_iter()
-            //                 .map(|c| geo::Coord::from(lv95_to_wgs84(c.x, c.y)))
-            //                 .collect::<Vec<_>>(),
-            //         );
-            //         let interiors = p
-            //             .interiors()
-            //             .iter()
-            //             .map(|ls| {
-            //                 ls.points()
-            //                     .map(|p| Point::from(lv95_to_wgs84(p.x(), p.y())))
-            //                     .collect()
-            //             })
-            //             .collect::<Vec<_>>();
-            //         Polygon::new(exterior, interiors)
-            //     })
-            //     .collect();
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })
         .collect::<Vec<_>>();
@@ -420,26 +400,6 @@ pub fn compute_isochrones(
                 .map(|p| p.difference(excluded_polygons))
                 .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p));
 
-            // let polygons: MultiPolygon = polygons
-            //     .into_iter()
-            //     .map(|p| {
-            //         let exterior = LineString::new(
-            //             p.exterior_coords_iter()
-            //                 .map(|c| geo::Coord::from(lv95_to_wgs84(c.x, c.y)))
-            //                 .collect::<Vec<_>>(),
-            //         );
-            //         let interiors = p
-            //             .interiors()
-            //             .iter()
-            //             .map(|ls| {
-            //                 ls.points()
-            //                     .map(|p| Point::from(lv95_to_wgs84(p.x(), p.y())))
-            //                     .collect()
-            //             })
-            //             .collect::<Vec<_>>();
-            //         Polygon::new(exterior, interiors)
-            //     })
-            //     .collect();
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })
         .collect::<Vec<_>>();

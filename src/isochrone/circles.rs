@@ -35,7 +35,6 @@ pub fn get_polygons(data: &[(Coordinates, Duration)], time_limit: Duration) -> M
             .collect::<Vec<_>>();
             Polygon::new(LineString::from(polygon), vec![])
         })
-        //.collect::<Vec<_>>();
         .fold(
             || MultiPolygon::new(vec![]),
             |poly: MultiPolygon<f64>, p: Polygon<f64>| {
@@ -47,14 +46,6 @@ pub fn get_polygons(data: &[(Coordinates, Duration)], time_limit: Duration) -> M
             },
         )
         .reduce(|| MultiPolygon::new(vec![]), |poly, p| poly.union(&p))
-    // .into_par_iter()
-    // .map(|p| {
-    //     p.exterior()
-    //         .coords()
-    //         .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
-    //         .collect()
-    // })
-    // .collect()
 }
 
 fn generate_lv95_circle_points(e: f64, n: f64, radius: f64, num_points: usize) -> Vec<Coordinates> {

@@ -129,9 +129,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .await?;
 
-    let excluded_polygons = ExcludedPolygons::try_new(&LAKES_GEOJSON_URLS, false, None)
-        .await
-        .unwrap();
+    let excluded_polygons =
+        ExcludedPolygons::try_new(&LAKES_GEOJSON_URLS, false, cli.cache_prefix.clone()).await?;
 
     match cli.mode {
         Mode::Debug => {
