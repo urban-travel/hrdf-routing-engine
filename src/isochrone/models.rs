@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use geo::{Area, Contains, LineString, MultiPolygon, Polygon};
+use geo::{Area, Contains, MultiPolygon};
 use hrdf_parser::Coordinates;
 use serde::Serialize;
 use strum_macros::EnumString;
