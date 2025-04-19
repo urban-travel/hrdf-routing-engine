@@ -1,5 +1,5 @@
 /.vscode
 /target
 *.cache
-deploy.sh
 *.svg
+deploy.sh

@@ -1,5 +1,6 @@
 use chrono::Duration;
 use contour::ContourBuilder;
+use geo::{BooleanOps, MapCoordsInPlace, MultiPolygon};
 use hrdf_parser::{CoordinateSystem, Coordinates};
 use kd_tree::{KdPoint, KdTree};
 
@@ -16,13 +17,13 @@ pub fn create_grid(
     time_limit: Duration,
     num_points: usize,
 ) -> (Vec<(Coordinates, Duration)>, usize, usize, f64) {
-    let dist_x = bounding_box.1 .0 - bounding_box.0 .0;
-    let dist_y = bounding_box.1 .1 - bounding_box.0 .1;
+    let dist_x = bounding_box.1.0 - bounding_box.0.0;
+    let dist_y = bounding_box.1.1 - bounding_box.0.1;
     let max = dist_x.max(dist_y);
     let dx = max / num_points as f64;
 
-    let num_points_x = ((bounding_box.1 .0 - bounding_box.0 .0) / dx).ceil() as usize;
-    let num_points_y = ((bounding_box.1 .1 - bounding_box.0 .1) / dx).ceil() as usize;
+    let num_points_x = ((bounding_box.1.0 - bounding_box.0.0) / dx).ceil() as usize;
+    let num_points_y = ((bounding_box.1.1 - bounding_box.0.1) / dx).ceil() as usize;
 
     let tree = KdTree::build_by_ordered_float(
         data.iter()
@@ -41,10 +42,10 @@ pub fn create_grid(
         .into_par_iter()
         .map(|y| {
             let mut result = Vec::new();
-            let y = bounding_box.0 .1 + dx * y as f64;
+            let y = bounding_box.0.1 + dx * y as f64;
 
             for x in 0..num_points_x {
-                let x = bounding_box.0 .0 + dx * x as f64;
+                let x = bounding_box.0.0 + dx * x as f64;
 
                 let coord = Coordinates::new(CoordinateSystem::LV95, x, y);
 
@@ -90,16 +91,12 @@ pub fn get_polygons(
     min_point: (f64, f64),
     time_limit: Duration,
     dx: f64,
-) -> Vec<Vec<Coordinates>> {
+) -> MultiPolygon {
     let values: Vec<_> = grid
         .iter()
         .map(
             |&(_, duration)| {
-                if duration <= time_limit {
-                    1.0
-                } else {
-                    0.0
-                }
+                if duration <= time_limit { 1.0 } else { 0.0 }
             },
         )
         .collect();
@@ -107,22 +104,19 @@ pub fn get_polygons(
     let contour_builder = ContourBuilder::new(num_points_x, num_points_y, true);
     let contours = contour_builder.contours(&values, &[0.5]).unwrap();
 
-    contours[0]
-        .geometry()
-        .0
-        .iter()
-        .map(|polygon| {
-            polygon
-                .exterior()
-                .into_iter()
-                .map(|coord| {
-                    let lv95 = (min_point.0 + dx * coord.x, min_point.1 + dx * coord.y);
-                    let wgs84 = lv95_to_wgs84(lv95.0, lv95.1);
-                    Coordinates::new(CoordinateSystem::WGS84, wgs84.0, wgs84.1)
-                })
-                .collect()
+    contours
+        .into_iter()
+        .map(|c| {
+            let (mut poly, _) = c.into_inner();
+            poly.map_coords_in_place(|c| {
+                geo::Coord::from(lv95_to_wgs84(
+                    min_point.0 + dx * c.x,
+                    min_point.1 + dx * c.y,
+                ))
+            });
+            poly
         })
-        .collect()
+        .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p))
 }
 
 #[derive(Debug)]

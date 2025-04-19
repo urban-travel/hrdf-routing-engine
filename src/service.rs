@@ -4,21 +4,28 @@ use std::{
     sync::Arc,
 };
 
-use axum::{extract::Query, http::StatusCode, routing::get, Json, Router};
+use axum::{Json, Router, extract::Query, http::StatusCode, routing::get};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
-use hrdf_parser::{timetable_end_date, timetable_start_date, Hrdf};
+use geo::MultiPolygon;
+use hrdf_parser::{Hrdf, timetable_end_date, timetable_start_date};
 use serde::{Deserialize, Serialize};
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::isochrone::{self, IsochroneDisplayMode, IsochroneMap};
 
-pub async fn run_service(hrdf: Hrdf, ip_addr: Ipv4Addr, port: u16) {
+pub async fn run_service(
+    hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
+    ip_addr: Ipv4Addr,
+    port: u16,
+) {
     log::info!("Starting the server...");
 
     let hrdf = Arc::new(hrdf);
     let hrdf_1 = Arc::clone(&hrdf);
     let hrdf_2 = Arc::clone(&hrdf);
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
+    let excluded_polygons = Arc::new(excluded_polygons);
 
     #[rustfmt::skip]
     let app = Router::new()
@@ -28,7 +35,7 @@ pub async fn run_service(hrdf: Hrdf, ip_addr: Ipv4Addr, port: u16) {
         )
         .route(
             "/isochrones",
-            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), params)),
+            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), Arc::clone(&excluded_polygons), params)),
         )
         .layer(cors);
     let address = SocketAddr::from((ip_addr, port));
@@ -61,10 +68,12 @@ struct ComputeIsochronesRequest {
     time_limit: u32,
     isochrone_interval: u32,
     display_mode: String,
+    find_optimal: bool,
 }
 
 async fn compute_isochrones(
     hrdf: Arc<Hrdf>,
+    excluded_polygons: Arc<MultiPolygon>,
     Query(params): Query<ComputeIsochronesRequest>,
 ) -> Result<Json<IsochroneMap>, StatusCode> {
     // The coordinates are not checked but should be.
@@ -87,15 +96,31 @@ async fn compute_isochrones(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let result = isochrone::compute_isochrones(
-        &hrdf,
-        params.origin_point_latitude,
-        params.origin_point_longitude,
-        NaiveDateTime::new(params.departure_date, params.departure_time),
-        Duration::minutes(params.time_limit.into()),
-        Duration::minutes(params.isochrone_interval.into()),
-        IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-        false,
-    );
+    let result = if params.find_optimal {
+        isochrone::compute_optimal_isochrones(
+            &hrdf,
+            &excluded_polygons,
+            params.origin_point_longitude,
+            params.origin_point_latitude,
+            NaiveDateTime::new(params.departure_date, params.departure_time),
+            Duration::minutes(params.time_limit.into()),
+            Duration::minutes(params.isochrone_interval.into()),
+            Duration::minutes(30),
+            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+            true,
+        )
+    } else {
+        isochrone::compute_isochrones(
+            &hrdf,
+            &excluded_polygons,
+            params.origin_point_longitude,
+            params.origin_point_latitude,
+            NaiveDateTime::new(params.departure_date, params.departure_time),
+            Duration::minutes(params.time_limit.into()),
+            Duration::minutes(params.isochrone_interval.into()),
+            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+            true,
+        )
+    };
     Ok(Json(result))
 }

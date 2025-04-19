@@ -4,17 +4,14 @@ use chrono::Duration;
 use geo::{BooleanOps, LineString, Polygon};
 use geo::{Contains, MultiPolygon};
 use hrdf_parser::{CoordinateSystem, Coordinates};
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use super::{
     constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR,
     utils::{lv95_to_wgs84, time_to_distance},
 };
 
-pub fn get_polygons(
-    data: &[(Coordinates, Duration)],
-    time_limit: Duration,
-) -> Vec<Vec<Coordinates>> {
+pub fn get_polygons(data: &[(Coordinates, Duration)], time_limit: Duration) -> MultiPolygon {
     data.par_iter()
         .filter(|(_, duration)| *duration <= time_limit)
         .map(|(center_lv95, duration)| {
@@ -38,7 +35,6 @@ pub fn get_polygons(
             .collect::<Vec<_>>();
             Polygon::new(LineString::from(polygon), vec![])
         })
-        //.collect::<Vec<_>>();
         .fold(
             || MultiPolygon::new(vec![]),
             |poly: MultiPolygon<f64>, p: Polygon<f64>| {
@@ -50,14 +46,6 @@ pub fn get_polygons(
             },
         )
         .reduce(|| MultiPolygon::new(vec![]), |poly, p| poly.union(&p))
-        .into_par_iter()
-        .map(|p| {
-            p.exterior()
-                .coords()
-                .map(|c| Coordinates::new(CoordinateSystem::WGS84, c.x, c.y))
-                .collect()
-        })
-        .collect()
 }
 
 fn generate_lv95_circle_points(e: f64, n: f64, radius: f64, num_points: usize) -> Vec<Coordinates> {
