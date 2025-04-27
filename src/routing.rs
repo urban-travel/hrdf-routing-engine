@@ -87,7 +87,7 @@ fn find_stops_in_time_range(
         .entries()
         .into_iter()
         // Only considers stops in Switzerland.
-        .filter(|stop| stop.id().to_string().starts_with("85"))
+        // .filter(|stop| stop.id().to_string().starts_with("85"))
         .filter(|stop| stop.wgs84_coordinates().is_some())
         .filter(|stop| {
             adjust_departure_at(
@@ -173,14 +173,14 @@ pub fn compute_routes_from_origin(
                 adjusted_departure_at,
                 adjusted_time_limit,
                 verbose,
-            )
-            .into_iter()
-            .filter(|route| {
-                // Keeps only stops in Switzerland.
-                let stop_id = route.sections().last().unwrap().arrival_stop_id();
-                stop_id.to_string().starts_with("85")
-            })
-            .collect();
+            );
+            // .into_iter()
+            // .filter(|route| {
+            //     // Keeps only stops in Switzerland.
+            //     let stop_id = route.sections().last().unwrap().arrival_stop_id();
+            //     stop_id.to_string().starts_with("85")
+            // })
+            // .collect();
 
             local_routes
         })
