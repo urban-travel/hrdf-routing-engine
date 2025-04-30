@@ -102,9 +102,12 @@ enum Mode {
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    /// prefix path for the cache, when absent defaults lo "./"
+    /// Prefix path for the cache, when absent defaults lo "./"
     #[arg(short, long)]
     cache_prefix: Option<String>,
+    /// Force to rebuild the cache
+    #[arg(short, long, default_value_t = false)]
+    force_rebuild: bool,
     /// What mode is used
     #[command(subcommand)]
     mode: Mode,
@@ -124,13 +127,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let hrdf_2025 = Hrdf::new(
         Version::V_5_40_41_2_0_7,
         "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
-        false,
+        cli.force_rebuild,
         cli.cache_prefix.clone(),
     )
     .await?;
 
-    let excluded_polygons =
-        ExcludedPolygons::try_new(&LAKES_GEOJSON_URLS, false, cli.cache_prefix.clone()).await?;
+    let excluded_polygons = ExcludedPolygons::try_new(
+        &LAKES_GEOJSON_URLS,
+        cli.force_rebuild,
+        cli.cache_prefix.clone(),
+    )
+    .await?;
 
     match cli.mode {
         Mode::Debug => {
@@ -258,7 +265,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let hrdf_2024 = Hrdf::new(
                 Version::V_5_40_41_2_0_7,
                 "https://data.opentransportdata.swiss/en/dataset/timetable-54-2024-hrdf/permalink",
-                false,
+                cli.force_rebuild,
                 cli.cache_prefix,
             )
             .await?;
