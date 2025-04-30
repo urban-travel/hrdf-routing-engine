@@ -157,12 +157,6 @@ pub fn get_operating_journeys(
         .map_or(Vec::new(), |bit_fields_1| {
             let bit_fields_2 = data_storage.bit_fields_by_day().get(&date).unwrap();
             let bit_fields: Vec<_> = bit_fields_1.intersection(bit_fields_2).collect();
-            //bit_fields_1
-            //    .iter()
-            //    .for_each(|bf| log::debug!("BITFIELD BY STOP ID {bf}"));
-            //bit_fields_2
-            //    .iter()
-            //    .for_each(|bf| log::debug!("BITFIELD BY DAY {bf}"));
 
             bit_fields
                 .into_iter()
