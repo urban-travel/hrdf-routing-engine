@@ -166,6 +166,14 @@ pub fn compute_routes_from_origin(
                 origin_point_longitude,
                 departure_stop,
             );
+            if verbose {
+                log::info!(
+                    "Departure stop : {:?}, Adjusted departure at : {:?}, Adjusted time limit : {:?}",
+                    departure_stop,
+                    adjusted_departure_at,
+                    adjusted_time_limit
+                );
+            }
 
             let local_routes: Vec<_> = find_reachable_stops_within_time_limit(
                 hrdf,

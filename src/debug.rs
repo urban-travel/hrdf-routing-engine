@@ -59,13 +59,31 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
     // plan_journey(hrdf, 8587477, 8509368, create_date_time(2025, 5, 29, 17, 29), verbose);
 
     // 10. Chancy, Douane => Sevelen, Post
+    //plan_journey(
+    //    hrdf,
+    //    8587477,
+    //    8588197,
+    //    create_date_time(2025, 9, 10, 13, 37),
+    //    true,
+    //);
+
+    //11. Genève => Paris gare de Lyon
     plan_journey(
         hrdf,
-        8587477,
-        8588197,
-        create_date_time(2025, 9, 10, 13, 37),
+        8501008,
+        8768600,
+        create_date_time(2025, 4, 28, 8, 29),
         true,
     );
+
+    //12. Genève => Lausanne
+    //plan_journey(
+    //    hrdf,
+    //    8501008,
+    //    8501120,
+    //    create_date_time(2025, 4, 28, 8, 20),
+    //    true,
+    //);
 
     println!("\n{:.2?}", start_time.elapsed());
 }
