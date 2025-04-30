@@ -469,7 +469,7 @@ fn unique_coordinates_from_routes(
     routes: &[Route],
     departure_at: NaiveDateTime,
 ) -> Vec<(Coordinates, Duration)> {
-    let mut coordinates_duration: HashMap<i32, (Coordinates, chrono::TimeDelta)> = HashMap::new();
+    let mut coordinates_duration: HashMap<i32, (Coordinates, chrono::Duration)> = HashMap::new();
     for route in routes {
         let arrival_stop = route.sections().last().expect("Route sections was empty");
         let arrival_stop_id = arrival_stop.arrival_stop_id();

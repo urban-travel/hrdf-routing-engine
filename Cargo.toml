@@ -35,6 +35,10 @@ tower-http = { version = "0.6.2", features = ["cors"] }
 typenum = "1.17.0"
 url = "2.5.4"
 
+# For -Zminimal-versions
+native-tls = "0.2.14"
+flate2 = "1.0.35"
+
 [features]
 default = ["svg"]
 svg = ["dep:svg"]
