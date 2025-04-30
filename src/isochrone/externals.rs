@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{BufReader, Cursor};
 use std::path::Path;
 
+use bincode::config;
 use geo::{BooleanOps, MultiPolygon, Polygon};
 use geojson::{FeatureCollection, GeoJson};
 use sha2::{Digest, Sha256};
@@ -70,14 +71,14 @@ pub struct ExcludedPolygons;
 
 impl ExcludedPolygons {
     fn build_cache(multis: &MultiPolygon, path: &str) -> Result<(), Box<dyn Error>> {
-        let data = bincode::serialize(multis)?;
+        let data = bincode::serde::encode_to_vec(multis, config::standard())?;
         std::fs::write(path, data)?;
         Ok(())
     }
 
     fn load_from_cache(path: &str) -> Result<MultiPolygon, Box<dyn Error>> {
         let data = std::fs::read(path)?;
-        let multis: MultiPolygon = bincode::deserialize(&data)?;
+        let (multis, _) = bincode::serde::decode_from_slice(&data, config::standard())?;
         Ok(multis)
     }
 
