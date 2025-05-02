@@ -1,5 +1,5 @@
 use chrono::{Duration, NaiveDate, NaiveDateTime};
-use hrdf_parser::{DataStorage, Journey, Model, TransportType, timetable_end_date};
+use hrdf_parser::{DataStorage, Journey, Model, ThroughService, TransportType, timetable_end_date};
 use rustc_hash::FxHashSet;
 
 use crate::utils::{
@@ -124,11 +124,18 @@ pub fn next_departures(
                     .journeys()
                     .find(id)
                     .expect("Error: previous journey not found");
+                let journey_id = journey.id();
 
                 // We check if the pair legagy_id is the same because it indicates
                 // that it is the same train continuing the journey although they are stored as
                 // separated journey in the hrdf format for an unknown reason
-                if previous_journey.legacy_id() != journey.legacy_id() {
+                if !has_through_service(
+                    data_storage,
+                    departure_at.date(),
+                    id,
+                    journey_id,
+                    departure_stop_id,
+                ) {
                     let exchange_time = get_exchange_time(
                         data_storage,
                         departure_stop_id,
@@ -174,6 +181,49 @@ pub fn get_operating_journeys(
                 })
                 .collect()
         })
+}
+
+fn has_through_service(
+    data_storage: &DataStorage,
+    date: NaiveDate,
+    journey_id_1: i32,
+    journey_id_2: i32,
+    stop_id: i32,
+) -> bool {
+    if stop_id == 8774500 {
+        log::info!(
+            "{} {} {stop_id} {:?}",
+            journey_id_1,
+            journey_id_2,
+            data_storage
+                .bit_field_id_for_through_service_by_journey_id_stop_id()
+                .get(&(journey_id_1, journey_id_2, stop_id))
+        );
+
+        log::info!(
+            "{}",
+            serde_json::to_string_pretty(data_storage.journeys().find(journey_id_1).unwrap())
+                .unwrap()
+        );
+        log::info!(
+            "{}",
+            serde_json::to_string_pretty(data_storage.journeys().find(journey_id_2).unwrap())
+                .unwrap()
+        );
+        log::info!(
+            "{}",
+            serde_json::to_string_pretty(data_storage.journeys().find(872558).unwrap()).unwrap()
+        );
+    }
+    let through_service_bitfield = data_storage
+        .bit_field_id_for_through_service_by_journey_id_stop_id()
+        .get(&(journey_id_1, journey_id_2, stop_id));
+    through_service_bitfield.is_some_and(|bf| {
+        log::info!("through_service_bitfield: {bf}");
+        let bit_fields_2 = data_storage.bit_fields_by_day().get(&date).unwrap();
+        log::info!("contained? {}, for {stop_id}", bit_fields_2.contains(bf));
+        bit_fields_2.contains(bf)
+    })
 }
 
 pub fn get_exchange_time(
