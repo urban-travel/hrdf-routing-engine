@@ -230,8 +230,10 @@ pub fn get_exchange_time(
     if let Some(exchange_time) = exchange_time_journey_pair(
         data_storage,
         stop_id,
-        journey_id_1,
-        journey_id_2,
+        journey_1.legacy_id(),
+        journey_1.administration(),
+        journey_2.legacy_id(),
+        journey_2.administration(),
         departure_at,
     ) {
         return exchange_time;
@@ -287,14 +289,17 @@ pub fn get_exchange_time(
 fn exchange_time_journey_pair(
     data_storage: &DataStorage,
     stop_id: i32,
-    journey_id_1: i32,
-    journey_id_2: i32,
+    journey_legacy_id_1: i32,
+    administration_1: &str,
+    journey_legacy_id_2: i32,
+    administration_2: &str,
     departure_at: NaiveDateTime,
 ) -> Option<i16> {
-    let exchange_times =
-        data_storage
-            .exchange_times_journey_map()
-            .get(&(stop_id, journey_id_1, journey_id_2))?;
+    let exchange_times = data_storage.exchange_times_journey_map().get(&(
+        stop_id,
+        (journey_legacy_id_1, administration_1.to_string()),
+        (journey_legacy_id_2, administration_2.to_string()),
+    ))?;
 
     // "2 +" because a 2-bit offset is mandatory.
     // "- 1" to obtain an index.
