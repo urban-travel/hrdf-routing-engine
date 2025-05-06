@@ -4,8 +4,8 @@ use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
 use hrdf_routing_engine::{
-    ExcludedPolygons, IsochroneDisplayMode, LAKES_GEOJSON_URLS, run_average, run_comparison,
-    run_debug, run_optimal, run_service, run_simple, run_worst,
+    ExcludedPolygons, HectareData, IsochroneDisplayMode, LAKES_GEOJSON_URLS, run_average,
+    run_comparison, run_debug, run_optimal, run_service, run_simple, run_surface_per_ha, run_worst,
 };
 use log::LevelFilter;
 
@@ -96,6 +96,17 @@ enum Mode {
         /// The +/- duration on which to compute the average (in minutes)
         #[arg(short, long, default_value_t = 30)]
         delta_time: i64,
+    },
+    /// Surface per Hectare
+    Hectare {
+        #[command(flatten)]
+        isochrone_args: IsochroneArgs,
+        /// The +/- duration on which to compute the average (in minutes)
+        #[arg(short, long, default_value_t = 30)]
+        delta_time: i64,
+        /// The +/- duration on which to compute the average (in minutes)
+        #[arg(short, long, default_value_t = String::from("https://dam-api.bfs.admin.ch/hub/api/dam/assets/32686751/master"))]
+        url: String,
     },
 }
 
@@ -283,6 +294,34 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 mode,
                 verbose,
             )?;
+        }
+
+        Mode::Hectare {
+            isochrone_args,
+            delta_time,
+            url,
+        } => {
+            let IsochroneArgs {
+                latitude: _latitude,
+                longitude: _longitude,
+                departure_at,
+                time_limit,
+                interval: _interval,
+                verbose,
+            } = isochrone_args;
+            let hectare =
+                HectareData::new(&url, cli.force_rebuild, cli.cache_prefix.clone()).await?;
+            let surfaces = run_surface_per_ha(
+                hrdf_2025,
+                excluded_polygons,
+                hectare,
+                NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
+                Duration::minutes(time_limit),
+                Duration::minutes(delta_time),
+                IsochroneDisplayMode::Circles,
+                verbose,
+            )?;
+            log::info!("{}", serde_json::to_string_pretty(&surfaces).unwrap());
         }
     }
 

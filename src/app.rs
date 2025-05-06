@@ -106,28 +106,41 @@ pub fn run_surface_per_ha(
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     verbose: bool,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<Vec<(u64, f64, f64, f64)>, Box<dyn Error>> {
+    let id_pos_surf = hectare
+        .data()
+        .iter()
+        .filter_map(|record| {
+            let &HectareRecord {
+                reli,
+                longitude,
+                latitude,
+                population,
+            } = record;
 
-    hectare.data().iter().map(|record| {
-        let HectareRecord { reli, longitude, latitude } = record;
+            if population > 0 {
+                let opt_iso = compute_optimal_isochrones(
+                    &hrdf,
+                    &excluded_polygons,
+                    longitude,
+                    latitude,
+                    departure_at,
+                    time_limit,
+                    time_limit,
+                    delta_time,
+                    display_mode,
+                    verbose,
+                );
 
-    let opt_iso = compute_optimal_isochrones(
-        &hrdf,
-        &excluded_polygons,
-        longitude,
-        latitude,
-        departure_at,
-        time_limit,
-        time_limit,
-        delta_time,
-        display_mode,
-        verbose,
-    )
+                let area = opt_iso.compute_max_area();
+                Some((reli, longitude, latitude, area))
+            } else {
+                None
+            }
+        })
+        .collect();
 
-    let area = opt_iso.compute_max_area();
-    }).collect();
-
-    Ok(())
+    Ok(id_pos_surf)
 }
 
 #[allow(clippy::too_many_arguments)]

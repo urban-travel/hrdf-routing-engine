@@ -235,23 +235,26 @@ impl HectareData {
     }
 
     fn parse(decompressed_data_path: &str) -> Result<Vec<HectareRecord>, Box<dyn Error>> {
-        let path = format!("{decompressed_data_path}/STATPOP2023.csv");
+        let path = format!("{decompressed_data_path}/ag-b-00.03-vz2023statpop/STATPOP2023.csv");
         let file = File::open(path)?;
 
-        let mut rdr = csv::Reader::from_reader(file);
+        let mut rdr = csv::ReaderBuilder::new().delimiter(b';').from_reader(file);
         rdr.records()
             .map(|result| {
                 let record = result?;
+                println!("{:?}", record);
 
                 let reli: u64 = record[2].parse()?;
                 let easting: f64 = record[3].parse()?;
                 let northing: f64 = record[4].parse()?;
+                let population: u64 = record[5].parse()?;
 
                 let (longitude, latitude) = lv95_to_wgs84(easting, northing);
                 Ok(HectareRecord {
                     reli,
                     longitude,
                     latitude,
+                    population,
                 })
             })
             .collect()
@@ -279,4 +282,5 @@ pub struct HectareRecord {
     pub reli: u64,
     pub longitude: f64,
     pub latitude: f64,
+    pub population: u64,
 }
