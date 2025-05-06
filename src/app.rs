@@ -6,6 +6,8 @@ use chrono::{Duration, NaiveDateTime};
 use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 use self::isochrone::compute_average_isochrones;
 use self::isochrone::compute_worst_isochrones;
@@ -109,7 +111,7 @@ pub fn run_surface_per_ha(
 ) -> Result<Vec<(u64, f64, f64, f64)>, Box<dyn Error>> {
     let id_pos_surf = hectare
         .data()
-        .iter()
+        .into_par_iter()
         .filter_map(|record| {
             let &HectareRecord {
                 reli,

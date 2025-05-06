@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::Write;
 use std::{error::Error, net::Ipv4Addr};
 
 use chrono::{Duration, NaiveDateTime};
@@ -321,7 +323,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 IsochroneDisplayMode::Circles,
                 verbose,
             )?;
-            log::info!("{}", serde_json::to_string_pretty(&surfaces).unwrap());
+            let data = serde_json::to_string_pretty(&surfaces).unwrap();
+            let mut f = File::create("res.json").expect("Unable to create file");
+            f.write_all(data.as_bytes()).expect("Unable to write data");
         }
     }
 
