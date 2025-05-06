@@ -1,5 +1,6 @@
 use std::error::Error;
 
+use crate::isochrone::externals::{HectareData, HectareRecord};
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
 use chrono::{Duration, NaiveDateTime};
 use geo::MultiPolygon;
@@ -91,6 +92,40 @@ pub fn run_average(
         1.0 / 100.0,
         Some(coord),
     )?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn run_surface_per_ha(
+    hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
+    hectare: HectareData,
+    departure_at: NaiveDateTime,
+    time_limit: Duration,
+    delta_time: Duration,
+    display_mode: IsochroneDisplayMode,
+    verbose: bool,
+) -> Result<(), Box<dyn Error>> {
+
+    hectare.data().iter().map(|record| {
+        let HectareRecord { reli, longitude, latitude } = record;
+
+    let opt_iso = compute_optimal_isochrones(
+        &hrdf,
+        &excluded_polygons,
+        longitude,
+        latitude,
+        departure_at,
+        time_limit,
+        time_limit,
+        delta_time,
+        display_mode,
+        verbose,
+    )
+
+    let area = opt_iso.compute_max_area();
+    }).collect();
 
     Ok(())
 }

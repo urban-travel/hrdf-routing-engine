@@ -1,13 +1,18 @@
+use std::env;
 use std::error::Error;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{BufReader, Cursor};
 use std::path::Path;
 
 use bincode::config;
 use geo::{BooleanOps, MultiPolygon, Polygon};
 use geojson::{FeatureCollection, GeoJson};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use url::Url;
+use zip::ZipArchive;
+
+use super::utils::lv95_to_wgs84;
 
 pub const LAKES_GEOJSON_URLS: [&str; 20] = [
     "https://raw.githubusercontent.com/ZHB/switzerland-geojson/05cc91014860ddd8a6c1704f4a421f1e9b1f0080/lakes/lake-baldegg.geojson",
@@ -139,4 +144,139 @@ impl ExcludedPolygons {
 
         Ok(multis)
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HectareData {
+    data: Vec<HectareRecord>,
+}
+
+impl HectareData {
+    /// Loads and parses the data.
+    /// If an URL is provided, the data containing the population per hectare is loaded from the specified URL which is downloaded automatically.
+    /// If a path is provided, it must absolutely point to an valid archive (ZIP file).
+    /// The ZIP archive is automatically decompressed into the temp_dir of the OS folder.
+    pub async fn new(
+        url_or_path: &str,
+        force_rebuild_cache: bool,
+        cache_prefix: Option<String>,
+    ) -> Result<Self, Box<dyn Error>> {
+        let unique_filename = format!("{:x}", Sha256::digest(url_or_path.as_bytes()));
+        let cache_path = format!(
+            "{}/{unique_filename}.cache",
+            cache_prefix.unwrap_or(String::from("./"))
+        )
+        .replace("//", "/");
+
+        let hectare = if Path::new(&cache_path).exists() && !force_rebuild_cache {
+            // Loading from cache.
+            log::info!("Loading Hectare data from cache ({cache_path})...");
+
+            // If loading from cache fails, None is returned.
+            HectareData::load_from_cache(&cache_path).ok()
+        } else {
+            // No loading from cache.
+            None
+        };
+
+        let hectare = if let Some(hectare) = hectare {
+            // The cache has been loaded without error.
+            hectare
+        } else {
+            // The cache must be built.
+            // If cache loading has failed, the cache must be rebuilt.
+            let compressed_data_path = if Url::parse(url_or_path).is_ok() {
+                let compressed_data_path = env::temp_dir()
+                    .join(format!("{unique_filename}.zip"))
+                    .into_os_string()
+                    .into_string()
+                    .expect("Could not convert to string.");
+
+                if !Path::new(&compressed_data_path).exists() {
+                    // The data must be downloaded.
+                    log::info!("Downloading HECTARE data to {compressed_data_path}...");
+                    let response = reqwest::get(url_or_path).await?;
+                    let mut file = std::fs::File::create(&compressed_data_path)?;
+                    let mut content = Cursor::new(response.bytes().await?);
+                    std::io::copy(&mut content, &mut file)?;
+                }
+
+                compressed_data_path
+            } else {
+                url_or_path.to_string()
+            };
+
+            let decompressed_data_path = env::temp_dir()
+                .join(unique_filename)
+                .into_os_string()
+                .into_string()
+                .expect("Could not convert to string.");
+
+            if !Path::new(&decompressed_data_path).exists() {
+                // The data must be decompressed.
+                log::info!("Unzipping HECTARE archive into {decompressed_data_path}...");
+                let file = File::open(&compressed_data_path)?;
+                let mut archive = ZipArchive::new(BufReader::new(file))?;
+                archive.extract(&decompressed_data_path)?;
+            }
+
+            log::info!("Parsing HECTARE data from {decompressed_data_path}...");
+
+            let hectare = Self {
+                data: Self::parse(&decompressed_data_path)?,
+            };
+
+            log::info!("Building cache...");
+            hectare.build_cache(&cache_path)?;
+            hectare
+        };
+
+        Ok(hectare)
+    }
+
+    fn parse(decompressed_data_path: &str) -> Result<Vec<HectareRecord>, Box<dyn Error>> {
+        let path = format!("{decompressed_data_path}/STATPOP2023.csv");
+        let file = File::open(path)?;
+
+        let mut rdr = csv::Reader::from_reader(file);
+        rdr.records()
+            .map(|result| {
+                let record = result?;
+
+                let reli: u64 = record[2].parse()?;
+                let easting: f64 = record[3].parse()?;
+                let northing: f64 = record[4].parse()?;
+
+                let (longitude, latitude) = lv95_to_wgs84(easting, northing);
+                Ok(HectareRecord {
+                    reli,
+                    longitude,
+                    latitude,
+                })
+            })
+            .collect()
+    }
+
+    pub fn data(&self) -> &Vec<HectareRecord> {
+        &self.data
+    }
+
+    fn build_cache(&self, path: &str) -> Result<(), Box<dyn Error>> {
+        let data = bincode::serde::encode_to_vec(self, config::standard())?;
+        fs::write(path, data)?;
+        Ok(())
+    }
+
+    fn load_from_cache(path: &str) -> Result<Self, Box<dyn Error>> {
+        let data = fs::read(path)?;
+        let (hrdf, _) = bincode::serde::decode_from_slice(&data, config::standard())?;
+        Ok(hrdf)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HectareRecord {
+    pub reli: u64,
+    pub longitude: f64,
+    pub latitude: f64,
 }
