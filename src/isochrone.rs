@@ -76,7 +76,7 @@ pub fn compute_optimal_isochrones(
                 time_limit,
                 isochrone_interval,
                 display_mode,
-                false,
+                verbose,
             );
             let curr_area = isochrone.compute_max_area();
             if curr_area > area_max {

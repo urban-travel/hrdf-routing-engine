@@ -29,7 +29,20 @@ struct IsochroneArgs {
     #[arg(short, long, default_value_t = 10)]
     interval: i64,
     /// Verbose on or off
-    #[arg(short, long, default_value_t = true)]
+    #[arg(short, long, default_value_t = false)]
+    verbose: bool,
+}
+
+#[derive(Parser, Debug)]
+struct IsochroneHectareArgs {
+    /// Departure date and time
+    #[arg(short, long, default_value_t = String::from("2025-04-10 07:30:00"))]
+    departure_at: String,
+    /// Maximum time of the isochrone in minutes
+    #[arg(short, long, default_value_t = 60)]
+    time_limit: i64,
+    /// Verbose on or off
+    #[arg(short, long, default_value_t = false)]
     verbose: bool,
 }
 
@@ -102,7 +115,7 @@ enum Mode {
     /// Surface per Hectare
     Hectare {
         #[command(flatten)]
-        isochrone_args: IsochroneArgs,
+        isochrone_args: IsochroneHectareArgs,
         /// The +/- duration on which to compute the average (in minutes)
         #[arg(short, long, default_value_t = 30)]
         delta_time: i64,
@@ -130,12 +143,16 @@ struct Cli {
 async fn main() -> Result<(), Box<dyn Error>> {
     simple_logger::SimpleLogger::new()
         .with_level(LevelFilter::Off)
-        .with_module_level("hrdf_routing_engine", LevelFilter::Info)
+        .with_module_level("hrdf_routing_engine", LevelFilter::Debug)
         .env()
         .init()
         .unwrap();
 
     let cli = Cli::parse();
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(50)
+        .build_global()
+        .unwrap();
 
     let hrdf_2025 = Hrdf::new(
         Version::V_5_40_41_2_0_7,
@@ -303,12 +320,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             delta_time,
             url,
         } => {
-            let IsochroneArgs {
-                latitude: _latitude,
-                longitude: _longitude,
+            let IsochroneHectareArgs {
                 departure_at,
                 time_limit,
-                interval: _interval,
                 verbose,
             } = isochrone_args;
             let hectare =

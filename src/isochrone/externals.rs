@@ -242,26 +242,27 @@ impl HectareData {
         rdr.records()
             .map(|result| {
                 let record = result?;
-                println!("{:?}", record);
 
                 let reli: u64 = record[2].parse()?;
                 let easting: f64 = record[3].parse()?;
                 let northing: f64 = record[4].parse()?;
                 let population: u64 = record[5].parse()?;
 
-                let (longitude, latitude) = lv95_to_wgs84(easting, northing);
+                let (latitude, longitude) = lv95_to_wgs84(easting, northing);
+                // println!("{latitude}, {longitude}");
                 Ok(HectareRecord {
                     reli,
                     longitude,
                     latitude,
                     population,
+                    area: None,
                 })
             })
             .collect()
     }
 
-    pub fn data(&self) -> &Vec<HectareRecord> {
-        &self.data
+    pub fn data(self) -> Vec<HectareRecord> {
+        self.data
     }
 
     fn build_cache(&self, path: &str) -> Result<(), Box<dyn Error>> {
@@ -277,10 +278,11 @@ impl HectareData {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HectareRecord {
     pub reli: u64,
     pub longitude: f64,
     pub latitude: f64,
     pub population: u64,
+    pub area: Option<f64>,
 }

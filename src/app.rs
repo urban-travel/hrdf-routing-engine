@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::time::Instant;
 
 use crate::isochrone::externals::{HectareData, HectareRecord};
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
@@ -8,6 +9,7 @@ use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
+use simple_tqdm::ParTqdm;
 
 use self::isochrone::compute_average_isochrones;
 use self::isochrone::compute_worst_isochrones;
@@ -108,19 +110,27 @@ pub fn run_surface_per_ha(
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     verbose: bool,
-) -> Result<Vec<(u64, f64, f64, f64)>, Box<dyn Error>> {
+) -> Result<Vec<HectareRecord>, Box<dyn Error>> {
     let id_pos_surf = hectare
         .data()
         .into_par_iter()
-        .filter_map(|record| {
-            let &HectareRecord {
+        .tqdm()
+        .map(|record| {
+            let start = Instant::now();
+            let HectareRecord {
                 reli,
                 longitude,
                 latitude,
                 population,
+                area,
             } = record;
+            log::debug!(
+                "Computing max area for {reli} (longitude, latitude) = ({longitude}, {latitude})"
+            );
 
-            if population > 0 {
+            let he_re = if area.is_some() {
+                record
+            } else {
                 let opt_iso = compute_optimal_isochrones(
                     &hrdf,
                     &excluded_polygons,
@@ -135,10 +145,20 @@ pub fn run_surface_per_ha(
                 );
 
                 let area = opt_iso.compute_max_area();
-                Some((reli, longitude, latitude, area))
-            } else {
-                None
-            }
+                HectareRecord {
+                    reli,
+                    longitude,
+                    latitude,
+                    population,
+                    area: Some(area),
+                }
+            };
+            let time = start.elapsed();
+            log::debug!(
+                "Done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {:.2?}",
+                time
+            );
+            he_re
         })
         .collect();
 
