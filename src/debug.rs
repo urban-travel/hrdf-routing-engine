@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use chrono::Duration;
 use hrdf_parser::Hrdf;
-use reqwest::{Error, Response};
+
 use crate::{
     routing::{find_reachable_stops_within_time_limit, plan_journey},
     utils::create_date_time,
@@ -207,12 +207,14 @@ pub fn test_find_reachable_stops_within_time_limit(hrdf: &Hrdf) {
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
-    use chrono::{DateTime, Local, NaiveDate, Utc};
+    use chrono::{DateTime, Local, NaiveDate};
     use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
 
     use hrdf_parser::{Hrdf, Version};
     use serde::{Deserialize, Serialize};
     use test_log::test;
+    use xml::{EventReader, ParserConfig};
+    use serde_xml_rs::{de::Deserializer};
 
     #[test(tokio::test)]
     async fn debug() {
@@ -269,158 +271,214 @@ mod tests {
     }
 
     // response structures
+
+    #[derive(Serialize, Deserialize)]
+    struct OJPResponse{
+        #[serde(rename="OJPResponse")]
+        ojp_response: OJPResp
+    }
     #[derive(Serialize, Deserialize)]
     struct OJPResp{
-        siri: ServiceDelivery
+        #[serde(rename="siri:ServiceDelivery")]
+        siri_service_delivery: ServiceDelivery
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct ServiceDelivery{
-        responde_timestamp: DateTime<Local>,
+        #[serde(rename="siri:ResponseTimestamp")]
+        response_timestamp: DateTime<Local>,
+        #[serde(rename="siri:ProducerRef")]
         producer_ref: String,
-        ojp_trip_delivery: OJPTripDelivery
+        o_j_p_trip_delivery: OJPTripDelivery
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct OJPTripDelivery{
-        responde_timestamp: DateTime<Local>,
+        #[serde(rename="siri:ResponseTimestamp")]
+        response_timestamp: DateTime<Local>,
+        #[serde(rename="siri:RequestMessageRef")]
         request_msg_ref: String,
+        #[serde(rename="siri:DefaultLanguage")]
         default_lang: String,
-        trip_response_ctx: Vec<Place>,
+        trip_response_context: TripResponseContext,
         trip_result: Vec<TripResult>,
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct TripResponseContext{
+        places: Place,
+        situations: ()
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct Place{
+        place: Vec<PlaceCnt>
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct PlaceCnt {
+        #[serde(rename = "#content")]
         place: PlaceType,
-        name: String,
+        name: Text,
         geo_position: GeoPosition
     }
     #[derive(Serialize, Deserialize)]
     enum PlaceType{
-        StopPlace{stop_place: StopPlace},
-        StopPoint{stop_point: StopPoint},
-        TopographicPlace{topographic_place: TopographicPlace}
+        #[serde(rename_all = "PascalCase")]
+        StopPlace{
+            stop_place_ref: i32,
+            stop_place_name: Text,
+            private_code: PrivateCode,
+            topographic_place_ref: String,
+        },
+        #[serde(rename_all = "PascalCase")]
+        StopPoint{
+            #[serde(rename="siri:StopPointRef")]
+            stop_point_ref: String,
+            stop_point_name: Text,
+            private_code: PrivateCode,
+            parent_ref: i32,
+            topographic_place_ref: String,
+        },
+        #[serde(rename_all = "PascalCase")]
+        TopographicPlace{
+            topographic_place_code: String,
+            topographic_place_name: Text,
+        }
     }
     #[derive(Serialize, Deserialize)]
-    struct StopPoint{
-        stop_point_ref: String,
-        name: String,
-        private_code: PrivateCode,
-        parent_ref: i32,
-        topographic_place_ref: String,
-    }
-    #[derive(Serialize, Deserialize)]
-    struct TopographicPlace{
-        topographic_place_code: String,
-        name: String,
-    }
-    #[derive(Serialize, Deserialize)]
-    struct StopPlace{
-        stop_place_ref: i32,
-        name: String,
-        private_code: PrivateCode,
-        topographic_place_ref: String,
-    }
-    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct PrivateCode {
         system: String,
         value: String,
     }
 
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct GeoPosition{
+        #[serde(rename="siri:Longitude")]
         longitude: f64,
+        #[serde(rename="siri:Latitude")]
         latitude: f64,
     }
 
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct TripResult{
-        trip_id: String,
+        id: String,
         trip: Trip,
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct Trip{
-        trip_id: String,
-        duration: Duration,
+        id: String,
+        duration: String, //Duration,
         start_time: DateTime<Local>,
         end_time: DateTime<Local>,
         transfers: i32,
         distance: i32,
-        legs: Vec<Leg>
+        leg: Vec<Leg>
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct Leg{
         id: i32,
-        duration: Duration,
+        duration: String, //Duration,
         timed_leg: TimedLeg,
-        emission_co2: f64,
+        emission_c_o2: EmissionCO2,
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct EmissionCO2{
+        kilogram_per_person_km: f64
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct TimedLeg{
         leg_board: LegBoard,
-        leg_align: LegAlign,
+        leg_alight: LegAlight,
         service: Service,
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct LegBoard{
+        #[serde(rename="siri:StopPointRef")]
         stop_point_ref: String,
-        stop_point_name: String,
-        name_suffix: String,
-        planned_quay: i32,
-        estimated_quay: i32,
+        stop_point_name: Text,
+        name_suffix: Text,
+        planned_quay: Text,
+        estimated_quay: Text,
         service_departure: ServiceTime,
         order: i32
     }
     #[derive(Serialize, Deserialize)]
-    struct LegAlign{
+    #[serde(rename_all = "PascalCase")]
+    struct LegAlight {
+        #[serde(rename="siri:StopPointRef")]
         stop_point_ref: String,
-        stop_point_name: String,
-        name_suffix: String,
-        planned_quay: i32,
-        estimated_quay: i32,
+        stop_point_name: Text,
+        name_suffix: Text,
+        planned_quay: Text,
+        estimated_quay: Text,
         service_arrival: ServiceTime,
         order: i32
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct Service{
         operating_day_ref: NaiveDate,
         journey_ref: String,
         public_code: String,
+        #[serde(rename="siri:LineRef")]
         line_ref: String,
+        #[serde(rename="siri:DirectionRef")]
         direction_ref: String,
         mode: Mode,
         product_category: ProductCategory,
-        published_service_name: PublishedServiceName,
-        attributes: Vec<Attribute>,
-        origin_text: String,
+        published_service_name: Text,
+        train_number: i32,
+        attribute: Vec<Attribute>,
+        origin_text: Text,
+        #[serde(rename="siri:OperatorRef")]
         operation_ref: i32,
         destination_stop_point_ref: i32,
-        destination_text: String,
+        destination_text: Text,
     }
 
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct Mode{
         pt_mode: String,
+        #[serde(rename="siri:RailSubmode")]
         rail_submodule: String, // todo check if always there
-        name: String,
-        short_name: String,
+        name: Text,
+        short_name: Text,
     }
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct ProductCategory{
-        name: String,
-        short_name: String,
+        name: Text,
+        short_name: Text,
         product_category_ref: i32,
     }
     #[derive(Serialize, Deserialize)]
-    struct PublishedServiceName{text: String}
-    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct Attribute{
-        user_text: String,
+        user_text: Text,
         code: String,
     }
 
     #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct ServiceTime {
-        timetable_time: DateTime<Local>,
+        timetabled_time: DateTime<Local>,
         estimated_time: DateTime<Local>,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct Text{
+        text: String,
     }
 
     #[test(tokio::test)]
@@ -440,35 +498,65 @@ mod tests {
         // reqwest et serde pour récupérer les infos
         let content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
                             <OJP xmlns=\"http://www.vdv.de/ojp\" xmlns:siri=\"http://www.siri.org.uk/siri\" version=\"2.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.vdv.de/ojp ../../../../Downloads/OJP-changes_for_v1.1%20(1)/OJP-changes_for_v1.1/OJP.xsd\">
-                             <OJPRequest>
-                             <siri:ServiceRequest>
-                             <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
-                             <siri:RequestorRef>MENTZRegTest</siri:RequestorRef>
-                             <OJPLocationInformationRequest>
-                             <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
-                             <siri:MessageIdentifier>LIR-1a</siri:MessageIdentifier>
-                             <InitialInput>
-                             <Name>Bern</Name>
-                             </InitialInput>
-                             <Restrictions>
-                             <Type>stop</Type>
-                             <NumberOfResults>10</NumberOfResults>
-                             </Restrictions>
-                             </OJPLocationInformationRequest>
-                             </siri:ServiceRequest>
-                             </OJPRequest>
-                             </OJP>";
-        let res = client.post("http://httpbin.org/post")
-            .header("Authorization","Bearer eyJvcmciOiI2NDA2NTFhNTIyZmEwNTAwMDEyOWJiZTEiLCJpZCI6IjQ2NWE4N2MwOThkMzRlMzFiN2I5YmRmMDg1MGFjZWQxIiwiaCI6Im11cm11cjEyOCJ9")
+                             	<OJPRequest>
+                                <siri:ServiceRequest>
+                                    <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
+                                    <siri:RequestorRef>MENTZRegTest</siri:RequestorRef>
+                                    <OJPTripRequest>
+                                        <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
+                                        <siri:MessageIdentifier>TR-1h2</siri:MessageIdentifier>
+                                        <Origin>
+                                            <PlaceRef>
+                                                <siri:StopPointRef>8503091</siri:StopPointRef>
+                                                <Name>
+                                                    <Text>Giesshübel</Text>
+                                                </Name>
+                                            </PlaceRef>
+                                            <!-- <DepArrTime>2024-06-01T11:16:59.475Z</DepArrTime> -->
+                                        </Origin>
+                                        <Destination>
+                                            <PlaceRef>
+                                                <siri:StopPointRef>8503000</siri:StopPointRef>
+                                                <Name>
+                                                    <Text>Zürich HB</Text>
+                                                </Name>
+                                            </PlaceRef>
+                                        </Destination>
+                                        <Params>
+                                            <ModeAndModeOfOperationFilter>
+                                                <Exclude>true</Exclude>
+                                                <PtMode>tram</PtMode>
+                                            </ModeAndModeOfOperationFilter>
+                                            <NumberOfResults>3</NumberOfResults>
+                                        </Params>
+                                    </OJPTripRequest>
+                                </siri:ServiceRequest>
+                            </OJPRequest>
+                        </OJP>
+";
+        let token = "eyJvcmciOiI2NDA2NTFhNTIyZmEwNTAwMDEyOWJiZTEiLCJpZCI6IjQ2NWE4N2MwOThkMzRlMzFiN2I5YmRmMDg1MGFjZWQxIiwiaCI6Im11cm11cjEyOCJ9";
+        let url = "https://api.opentransportdata.swiss/ojp20";
+        let res = client.post(url)
+            .header("Content-Type", "application/xml")
+            .header("accept", "*/*")
+            .bearer_auth(token)
             .body(content)
             .send()
             .await;
 
         // Do the path search
-        match res{
-            Ok(res) => {println!("{:?}", res)}
-            _ => {}
-        }
+        let response = match res{
+            Ok(res) => {res.text().await},
+            Err(e) => {Err(e)}
+        }.unwrap();
+        println!("{:#?}", response);
+        let config = ParserConfig::new()
+            .trim_whitespace(false)
+            .whitespace_to_characters(true);
+        let event_reader = EventReader::new_with_config(response.as_bytes(), config);
+        let item = OJPResponse::deserialize(&mut Deserializer::new(event_reader)).unwrap();
+
+        println!("{:#?}", item.ojp_response.siri_service_delivery.producer_ref);
         // compare path duration
     }
 }
