@@ -215,6 +215,8 @@ mod tests {
     use test_log::test;
     use xml::{EventReader, ParserConfig};
     use serde_xml_rs::{de::Deserializer};
+    use crate::routing::plan_journey;
+    use crate::utils::create_date_time;
 
     #[test(tokio::test)]
     async fn debug() {
@@ -514,6 +516,12 @@ mod tests {
         let from_point_ref = 8501008; // Geneva
         let to_point_ref = 8501120; // Lausanne
         let expected_result_nb = 3;
+        let journey_year = 2025;
+        let journey_month = 6;
+        let journey_day = 1;
+        let journey_hour = 11;
+        let journey_minute = 16;
+        let journey_second = 17;
         
         let client = reqwest::Client::new();
         // reqwest et serde pour récupérer les infos
@@ -521,16 +529,16 @@ mod tests {
                             <OJP xmlns=\"http://www.vdv.de/ojp\" xmlns:siri=\"http://www.siri.org.uk/siri\" version=\"2.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.vdv.de/ojp ../../../../Downloads/OJP-changes_for_v1.1%20(1)/OJP-changes_for_v1.1/OJP.xsd\">
                              	<OJPRequest>
                                     <siri:ServiceRequest>
-                                        <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
+                                        <siri:RequestTimestamp>{journey_year}-{journey_month:0>2}-{journey_day:0>2}T{journey_hour:0>2}:{journey_minute:0>2}:{journey_second:0>2}.475Z</siri:RequestTimestamp>
                                         <siri:RequestorRef>Hepisochrone</siri:RequestorRef>
                                         <OJPTripRequest>
-                                            <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
+                                            <siri:RequestTimestamp>{journey_year}-{journey_month:0>2}-{journey_day:0>2}T{journey_hour:0>2}:{journey_minute:0>2}:{journey_second:0>2}.475Z</siri:RequestTimestamp>
                                             <siri:MessageIdentifier>TR-1h2</siri:MessageIdentifier>
                                             <Origin>
                                                 <PlaceRef>
                                                     <siri:StopPointRef>{from_point_ref}</siri:StopPointRef>
                                                 </PlaceRef>
-                                                <!-- <DepArrTime>2024-06-01T11:16:59.475Z</DepArrTime> -->
+                                                <!-- <DepArrTime>{journey_year}-{journey_month}-{journey_day}T{journey_hour}:{journey_minute}:{journey_second}.475Z</DepArrTime> -->
                                             </Origin>
                                             <Destination>
                                                 <PlaceRef>
@@ -567,15 +575,26 @@ mod tests {
         let item = OJPResponse::deserialize(&mut Deserializer::new(event_reader)).unwrap();
 
         println!("{:#?}", item.ojp_response.siri_service_delivery.producer_ref);
-        let min_duration = &item.ojp_response.siri_service_delivery.o_j_p_trip_delivery.trip_result.
+        let ref_trip = &item.ojp_response.siri_service_delivery.o_j_p_trip_delivery.trip_result.
             iter().min_by(|i: &&TripResult, j: &&TripResult| -> Ordering {
             let a = (i.trip.end_time - i.trip.start_time).as_seconds_f64();
             let b = (j.trip.end_time - j.trip.start_time).as_seconds_f64();
             a.partial_cmp(&b).unwrap()
-        }).unwrap().trip.duration;
+        }).unwrap().trip;
+        let min_duration = &ref_trip.duration;
         println!("{:#?}", min_duration);
         // Do the path search
+        
+        let our_route = plan_journey(
+            &hrdf,
+            from_point_ref,
+            to_point_ref,
+            create_date_time(journey_year, journey_month, journey_day, journey_hour, journey_minute),
+            true,
+        ).unwrap();
 
         // compare path duration
+        println!("{:#?}",our_route.arrival_at());
+        println!("{:#?}",ref_trip.end_time);
     }
 }
