@@ -206,7 +206,7 @@ pub fn test_find_reachable_stops_within_time_limit(hrdf: &Hrdf) {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::cmp::Ordering;
     use chrono::{DateTime, Local, NaiveDate};
     use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
 
@@ -373,7 +373,7 @@ mod tests {
     struct Trip{
         id: String,
         duration: String, //Duration,
-        start_time: DateTime<Local>,
+        start_time: DateTime<Local>, // todo use this to compute duration
         end_time: DateTime<Local>,
         transfers: i32,
         distance: i32,
@@ -384,7 +384,8 @@ mod tests {
     struct Leg{
         id: i32,
         duration: String, //Duration,
-        timed_leg: TimedLeg,
+        #[serde(rename = "#content")]
+        timed_leg: TypeLeg,
         emission_c_o2: EmissionCO2,
     }
     #[derive(Serialize, Deserialize)]
@@ -394,10 +395,27 @@ mod tests {
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct TimedLeg{
-        leg_board: LegBoard,
-        leg_alight: LegAlight,
-        service: Service,
+    enum TypeLeg{
+        #[serde(rename_all = "PascalCase")]
+        TimedLeg{
+            leg_board: LegBoard,
+            leg_alight: LegAlight,
+            service: Service,
+        },
+        #[serde(rename_all = "PascalCase")]
+        TransferLeg{
+            transfer_type: String,
+            leg_start: LegPoint,
+            leg_end: LegPoint,
+            duration: String,
+        }
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct LegPoint{
+        #[serde(rename="siri:StopPointRef")]
+        stop_point_ref: String,
+        name: Text,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
@@ -493,47 +511,40 @@ mod tests {
             .await
             .unwrap();
         
+        let from_point_ref = 8501008; // Geneva
+        let to_point_ref = 8501120; // Lausanne
+        let expected_result_nb = 3;
         
         let client = reqwest::Client::new();
         // reqwest et serde pour récupérer les infos
-        let content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+        let content = format!{"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
                             <OJP xmlns=\"http://www.vdv.de/ojp\" xmlns:siri=\"http://www.siri.org.uk/siri\" version=\"2.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.vdv.de/ojp ../../../../Downloads/OJP-changes_for_v1.1%20(1)/OJP-changes_for_v1.1/OJP.xsd\">
                              	<OJPRequest>
-                                <siri:ServiceRequest>
-                                    <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
-                                    <siri:RequestorRef>MENTZRegTest</siri:RequestorRef>
-                                    <OJPTripRequest>
+                                    <siri:ServiceRequest>
                                         <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
-                                        <siri:MessageIdentifier>TR-1h2</siri:MessageIdentifier>
-                                        <Origin>
-                                            <PlaceRef>
-                                                <siri:StopPointRef>8503091</siri:StopPointRef>
-                                                <Name>
-                                                    <Text>Giesshübel</Text>
-                                                </Name>
-                                            </PlaceRef>
-                                            <!-- <DepArrTime>2024-06-01T11:16:59.475Z</DepArrTime> -->
-                                        </Origin>
-                                        <Destination>
-                                            <PlaceRef>
-                                                <siri:StopPointRef>8503000</siri:StopPointRef>
-                                                <Name>
-                                                    <Text>Zürich HB</Text>
-                                                </Name>
-                                            </PlaceRef>
-                                        </Destination>
-                                        <Params>
-                                            <ModeAndModeOfOperationFilter>
-                                                <Exclude>true</Exclude>
-                                                <PtMode>tram</PtMode>
-                                            </ModeAndModeOfOperationFilter>
-                                            <NumberOfResults>3</NumberOfResults>
-                                        </Params>
-                                    </OJPTripRequest>
-                                </siri:ServiceRequest>
-                            </OJPRequest>
-                        </OJP>
-";
+                                        <siri:RequestorRef>Hepisochrone</siri:RequestorRef>
+                                        <OJPTripRequest>
+                                            <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
+                                            <siri:MessageIdentifier>TR-1h2</siri:MessageIdentifier>
+                                            <Origin>
+                                                <PlaceRef>
+                                                    <siri:StopPointRef>{from_point_ref}</siri:StopPointRef>
+                                                </PlaceRef>
+                                                <!-- <DepArrTime>2024-06-01T11:16:59.475Z</DepArrTime> -->
+                                            </Origin>
+                                            <Destination>
+                                                <PlaceRef>
+                                                    <siri:StopPointRef>{to_point_ref}</siri:StopPointRef>
+                                                </PlaceRef>
+                                            </Destination>
+                                            <Params>
+                                                <NumberOfResults>{expected_result_nb}</NumberOfResults>
+                                            </Params>
+                                        </OJPTripRequest>
+                                    </siri:ServiceRequest>
+                                </OJPRequest>
+                            </OJP>
+                            "};
         let token = "eyJvcmciOiI2NDA2NTFhNTIyZmEwNTAwMDEyOWJiZTEiLCJpZCI6IjQ2NWE4N2MwOThkMzRlMzFiN2I5YmRmMDg1MGFjZWQxIiwiaCI6Im11cm11cjEyOCJ9";
         let url = "https://api.opentransportdata.swiss/ojp20";
         let res = client.post(url)
@@ -543,8 +554,7 @@ mod tests {
             .body(content)
             .send()
             .await;
-
-        // Do the path search
+        
         let response = match res{
             Ok(res) => {res.text().await},
             Err(e) => {Err(e)}
@@ -557,6 +567,15 @@ mod tests {
         let item = OJPResponse::deserialize(&mut Deserializer::new(event_reader)).unwrap();
 
         println!("{:#?}", item.ojp_response.siri_service_delivery.producer_ref);
+        let min_duration = &item.ojp_response.siri_service_delivery.o_j_p_trip_delivery.trip_result.
+            iter().min_by(|i: &&TripResult, j: &&TripResult| -> Ordering {
+            let a = (i.trip.end_time - i.trip.start_time).as_seconds_f64();
+            let b = (j.trip.end_time - j.trip.start_time).as_seconds_f64();
+            a.partial_cmp(&b).unwrap()
+        }).unwrap().trip.duration;
+        println!("{:#?}", min_duration);
+        // Do the path search
+
         // compare path duration
     }
 }
