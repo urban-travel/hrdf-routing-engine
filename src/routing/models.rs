@@ -61,7 +61,7 @@ impl RouteSection {
 
     // Functions
 
-    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
+    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
         self.journey_id.map(|id| data_storage.journeys().find(id))
     }
 }
@@ -288,7 +288,7 @@ impl RouteSectionResult {
 
     // Functions
 
-    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
+    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
         self.journey_id.map(|id| data_storage.journeys().find(id))
     }
 

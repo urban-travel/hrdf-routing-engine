@@ -8,7 +8,7 @@ use crate::{
     utils::create_date_time,
 };
 
-const N: u32 = 20;
+const N: u32 = 1;
 
 pub fn run_debug(hrdf: Hrdf) {
     println!();
@@ -33,7 +33,10 @@ fn test_plan_journey(hrdf: &Hrdf) {
     for i in 0..N {
         let verbose = i == 0;
 
-        // 1. Petit-Lancy, Les Esserts => Onex, Bandol
+        plan_journey(hrdf, 8592688, 8508134, create_date_time(2024, 6, 1, 12, 30), verbose);
+
+
+        // // 1. Petit-Lancy, Les Esserts => Onex, Bandol
         // plan_journey(hrdf, 8587418, 8593027, create_date_time(2024, 6, 1, 12, 30), verbose);
 
         // 2. Petit-Lancy, Les Esserts => Genève-Aéroport
@@ -61,7 +64,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, 8587477, 8509368, create_date_time(2024, 5, 29, 17, 29), verbose);
 
         // 10. Chancy, Douane => Sevelen, Post
-        plan_journey(hrdf, 8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose);
+        // plan_journey(hrdf, 8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose);
     }
 
     println!("\n{:.2?}", start_time.elapsed() / N);
