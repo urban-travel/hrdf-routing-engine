@@ -31,8 +31,8 @@ pub fn get_routes_to_ignore(data_storage: &DataStorage, route: &Route) -> FxHash
         .into_iter()
         .filter_map(|section| {
             section
-                .journey(data_storage)
-                .and_then(|journey| journey.hash_route(route.arrival_stop_id()))
+                .trip(data_storage)
+                .and_then(|trip| trip.hash_route(route.arrival_stop_id()))
         })
         .collect()
 }

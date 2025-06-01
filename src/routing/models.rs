@@ -1,11 +1,11 @@
 use chrono::NaiveDateTime;
-use hrdf_parser::{Coordinates, DataStorage, Journey};
+use hrdf_parser::{Coordinates, DataStorage, Trip};
 use rustc_hash::FxHashSet;
 use serde::Serialize;
 
 #[derive(Debug, Clone)]
 pub struct RouteSection {
-    journey_id: Option<i32>,
+    trip_id: Option<i32>,
     departure_stop_id: i32,
     arrival_stop_id: i32,
     arrival_at: NaiveDateTime,
@@ -14,14 +14,14 @@ pub struct RouteSection {
 
 impl RouteSection {
     pub fn new(
-        journey_id: Option<i32>,
+        trip_id: Option<i32>,
         departure_stop_id: i32,
         arrival_stop_id: i32,
         arrival_at: NaiveDateTime,
         duration: Option<i16>,
     ) -> Self {
         Self {
-            journey_id,
+            trip_id,
             departure_stop_id,
             arrival_stop_id,
             arrival_at,
@@ -31,8 +31,8 @@ impl RouteSection {
 
     // Getters/Setters
 
-    pub fn journey_id(&self) -> Option<i32> {
-        self.journey_id
+    pub fn trip_id(&self) -> Option<i32> {
+        self.trip_id
     }
 
     pub fn departure_stop_id(&self) -> i32 {
@@ -61,8 +61,8 @@ impl RouteSection {
 
     // Functions
 
-    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
-        self.journey_id.map(|id| data_storage.journeys().find(id))
+    pub fn trip<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Trip> {
+        self.trip_id.map(|id| data_storage.trips().find(id))
     }
 }
 
@@ -114,40 +114,33 @@ impl Route {
         !self.visited_stops.is_disjoint(stops)
     }
 
-    pub fn sections_having_journey(&self) -> Vec<&RouteSection> {
+    pub fn sections_having_trip(&self) -> Vec<&RouteSection> {
         self.sections
             .iter()
-            .filter(|section| section.journey_id().is_some())
+            .filter(|section| section.trip_id().is_some())
             .collect()
     }
 
     pub fn count_connections(&self) -> usize {
-        self.sections_having_journey().len()
+        self.sections_having_trip().len()
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum RoutingAlgorithmMode {
     SolveFromDepartureStopToArrivalStop,
-    SolveFromDepartureStopToReachableArrivalStops,
 }
 
 pub struct RoutingAlgorithmArgs {
     mode: RoutingAlgorithmMode,
     arrival_stop_id: Option<i32>,
-    time_limit: Option<NaiveDateTime>,
 }
 
 impl RoutingAlgorithmArgs {
-    pub fn new(
-        mode: RoutingAlgorithmMode,
-        arrival_stop_id: Option<i32>,
-        time_limit: Option<NaiveDateTime>,
-    ) -> Self {
+    pub fn new(mode: RoutingAlgorithmMode, arrival_stop_id: Option<i32>) -> Self {
         Self {
             mode,
             arrival_stop_id,
-            time_limit,
         }
     }
 
@@ -155,15 +148,6 @@ impl RoutingAlgorithmArgs {
         Self::new(
             RoutingAlgorithmMode::SolveFromDepartureStopToArrivalStop,
             Some(arrival_stop_id),
-            None,
-        )
-    }
-
-    pub fn solve_from_departure_stop_to_reachable_arrival_stops(time_limit: NaiveDateTime) -> Self {
-        Self::new(
-            RoutingAlgorithmMode::SolveFromDepartureStopToReachableArrivalStops,
-            None,
-            Some(time_limit),
         )
     }
 
@@ -176,11 +160,6 @@ impl RoutingAlgorithmArgs {
     /// Do not call this function if you are not sure that arrival_stop_id is not None.
     pub fn arrival_stop_id(&self) -> i32 {
         self.arrival_stop_id.unwrap()
-    }
-
-    /// Do not call this function if you are not sure that time_limit is not None.
-    pub fn time_limit(&self) -> NaiveDateTime {
-        self.time_limit.unwrap()
     }
 }
 
@@ -217,7 +196,7 @@ impl RouteResult {
 
 #[derive(Debug, Serialize)]
 pub struct RouteSectionResult {
-    journey_id: Option<i32>,
+    trip_id: Option<i32>,
     departure_stop_id: i32,
     departure_stop_lv95_coordinates: Option<Coordinates>,
     departure_stop_wgs84_coordinates: Option<Coordinates>,
@@ -231,7 +210,7 @@ pub struct RouteSectionResult {
 
 impl RouteSectionResult {
     pub fn new(
-        journey_id: Option<i32>,
+        trip_id: Option<i32>,
         departure_stop_id: i32,
         departure_stop_lv95_coordinates: Option<Coordinates>,
         departure_stop_wgs84_coordinates: Option<Coordinates>,
@@ -243,7 +222,7 @@ impl RouteSectionResult {
         duration: Option<i16>,
     ) -> Self {
         Self {
-            journey_id,
+            trip_id,
             departure_stop_id,
             departure_stop_lv95_coordinates,
             departure_stop_wgs84_coordinates,
@@ -288,11 +267,11 @@ impl RouteSectionResult {
 
     // Functions
 
-    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
-        self.journey_id.map(|id| data_storage.journeys().find(id))
+    pub fn trip<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Trip> {
+        self.trip_id.map(|id| data_storage.trips().find(id))
     }
 
     pub fn is_walking_trip(&self) -> bool {
-        self.journey_id.is_none()
+        self.trip_id.is_none()
     }
 }

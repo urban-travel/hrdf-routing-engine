@@ -1,5 +1,5 @@
 use chrono::{Duration, NaiveDate, NaiveDateTime};
-use hrdf_parser::{timetable_end_date, DataStorage, Journey, Model, TransportType};
+use hrdf_parser::{timetable_end_date, DataStorage,  Trip, Model, TransportType};
 use rustc_hash::FxHashSet;
 
 use crate::utils::{
@@ -11,23 +11,23 @@ use super::{models::Route, utils::get_routes_to_ignore};
 pub fn get_connections(
     data_storage: &DataStorage,
     route: &Route,
-    journeys_to_ignore: &FxHashSet<i32>,
+    trips_to_ignore: &FxHashSet<i32>,
 ) -> Vec<Route> {
     next_departures(
         data_storage,
         route.arrival_stop_id(),
         route.arrival_at(),
         Some(get_routes_to_ignore(data_storage, &route)),
-        route.last_section().journey_id(),
+        route.last_section().trip_id(),
     )
     .into_iter()
-    // A journey is removed if it has already been explored at a lower connection level.
-    .filter(|(journey, _)| !journeys_to_ignore.contains(&journey.id()))
-    .filter_map(|(journey, journey_departure_at)| {
+    // A trip is removed if it has already been explored at a lower connection level.
+    .filter(|(trip, _)| !trips_to_ignore.contains(&trip.id()))
+    .filter_map(|(trip, trip_departure_at)| {
         route.extend(
             data_storage,
-            journey.id(),
-            journey_departure_at.date(),
+            trip.id(),
+            trip_departure_at.date(),
             true,
         )
     })
@@ -39,43 +39,43 @@ pub fn next_departures<'a>(
     departure_stop_id: i32,
     departure_at: NaiveDateTime,
     routes_to_ignore: Option<FxHashSet<u64>>,
-    previous_journey_id: Option<i32>,
-) -> Vec<(&'a Journey, NaiveDateTime)> {
-    fn get_journeys(
+    previous_trip_id: Option<i32>,
+) -> Vec<(&'a  Trip, NaiveDateTime)> {
+    fn get_trips(
         data_storage: &DataStorage,
         date: NaiveDate,
         stop_id: i32,
-    ) -> (Vec<(&Journey, NaiveDateTime)>, NaiveDateTime) {
+    ) -> (Vec<(& Trip, NaiveDateTime)>, NaiveDateTime) {
         let mut max_departure_at = NaiveDateTime::new(date, create_time(0, 0));
 
-        let journeys = get_operating_journeys(data_storage, date, stop_id)
+        let trips = get_operating_trips(data_storage, date, stop_id)
             .into_iter()
-            .filter(|journey| !journey.is_last_stop(stop_id, true))
-            .map(|journey| {
-                let journey_departure_at = journey.departure_at_of(stop_id, date);
-                if journey_departure_at > max_departure_at {
-                    max_departure_at = journey_departure_at;
+            .filter(|trip| !trip.is_last_stop(stop_id, true))
+            .map(|trip| {
+                let trip_departure_at = trip.departure_at_of(stop_id, date);
+                if trip_departure_at > max_departure_at {
+                    max_departure_at = trip_departure_at;
                 }
-                (journey, journey_departure_at)
+                (trip, trip_departure_at)
             })
             .collect();
-        (journeys, max_departure_at)
+        (trips, max_departure_at)
     }
 
-    let (journeys_1, mut max_depearture_at_journeys_1_adjusted) =
-        get_journeys(data_storage, departure_at.date(), departure_stop_id);
-    max_depearture_at_journeys_1_adjusted = max_depearture_at_journeys_1_adjusted
+    let (trips_1, mut max_depearture_at_trips_1_adjusted) =
+        get_trips(data_storage, departure_at.date(), departure_stop_id);
+    max_depearture_at_trips_1_adjusted = max_depearture_at_trips_1_adjusted
         .checked_add_signed(Duration::hours(-4))
         .unwrap();
 
-    let (journeys_2, max_departure_at) = if departure_at > max_depearture_at_journeys_1_adjusted {
-        // The journeys of the next day are also loaded.
+    let (trips_2, max_departure_at) = if departure_at > max_depearture_at_trips_1_adjusted {
+        // The trips of the next day are also loaded.
         // The maximum departure time is 08:00 the next day.
         let departure_date = add_1_day(departure_at.date());
-        let (journeys, _) = get_journeys(data_storage, departure_date, departure_stop_id);
+        let (trips, _) = get_trips(data_storage, departure_date, departure_stop_id);
         let max_departure_at = NaiveDateTime::new(departure_date, create_time(8, 0));
 
-        (journeys, max_departure_at)
+        (trips, max_departure_at)
     } else {
         let max_departure_at = if departure_at.time() < create_time(8, 0) {
             // The maximum departure time is 08:00.
@@ -88,56 +88,56 @@ pub fn next_departures<'a>(
         (Vec::new(), max_departure_at)
     };
 
-    let mut journeys: Vec<(&Journey, NaiveDateTime)> = [journeys_1, journeys_2]
+    let mut trips: Vec<(& Trip, NaiveDateTime)> = [trips_1, trips_2]
         .concat()
         .into_iter()
-        .filter(|&(_, journey_departure_at)| {
-            // Journeys that depart too early or too late are ignored.
-            journey_departure_at >= departure_at && journey_departure_at <= max_departure_at
+        .filter(|&(_, trip_departure_at)| {
+            //  Trips that depart too early or too late are ignored.
+            trip_departure_at >= departure_at && trip_departure_at <= max_departure_at
         })
         .collect();
 
-    // Journeys are sorted by ascending departure time, allowing them to be filtered correctly afterwards.
-    journeys.sort_by_key(|(_, journey_departure_at)| *journey_departure_at);
+    //  Trips are sorted by ascending departure time, allowing them to be filtered correctly afterwards.
+    trips.sort_by_key(|(_, trip_departure_at)| *trip_departure_at);
 
     let mut routes_to_ignore = routes_to_ignore.unwrap_or_else(FxHashSet::default);
 
-    journeys
+    trips
         .into_iter()
-        .filter(|(journey, _)| {
-            let hash = journey.hash_route(departure_stop_id).unwrap();
+        .filter(|(trip, _)| {
+            let hash = trip.hash_route(departure_stop_id).unwrap();
 
             if !routes_to_ignore.contains(&hash) {
-                // The journey is the first to have this destination (terminus).
+                // The trip is the first to have this destination (terminus).
                 routes_to_ignore.insert(hash);
                 true
             } else {
-                // The journey has the same destination as another journey, but arrives later.
+                // The trip has the same destination as another trip, but arrives later.
                 // It's ignored.
                 false
             }
         })
-        .filter(|&(journey, journey_departure_at)| {
-            // It is checked that there is enough time to embark on the journey (exchange time).
-            previous_journey_id.map_or(true, |id| {
+        .filter(|&(trip, trip_departure_at)| {
+            // It is checked that there is enough time to embark on the trip (exchange time).
+            previous_trip_id.map_or(true, |id| {
                 let exchange_time = get_exchange_time(
                     data_storage,
                     departure_stop_id,
                     id,
-                    journey.id(),
-                    journey_departure_at,
+                    trip.id(),
+                    trip_departure_at,
                 );
-                add_minutes_to_date_time(departure_at, exchange_time.into()) <= journey_departure_at
+                add_minutes_to_date_time(departure_at, exchange_time.into()) <= trip_departure_at
             })
         })
         .collect()
 }
 
-pub fn get_operating_journeys(
+pub fn get_operating_trips(
     data_storage: &DataStorage,
     date: NaiveDate,
     stop_id: i32,
-) -> Vec<&Journey> {
+) -> Vec<& Trip> {
     data_storage
         .bit_fields_by_stop_id()
         .get(&stop_id)
@@ -149,12 +149,12 @@ pub fn get_operating_journeys(
                 .into_iter()
                 .map(|&bit_field_id| {
                     data_storage
-                        .journeys_by_stop_id_and_bit_field_id()
+                        .trips_by_stop_id_and_bit_field_id()
                         .get(&(stop_id, bit_field_id))
                         .unwrap()
                 })
                 .flatten()
-                .map(|&journey_id| data_storage.journeys().find(journey_id))
+                .map(|&trip_id| data_storage.trips().find(trip_id))
                 .collect()
         })
 }
@@ -162,20 +162,20 @@ pub fn get_operating_journeys(
 pub fn get_exchange_time(
     data_storage: &DataStorage,
     stop_id: i32,
-    journey_id_1: i32,
-    journey_id_2: i32,
+    trip_id_1: i32,
+    trip_id_2: i32,
     departure_at: NaiveDateTime,
 ) -> i16 {
     let stop = data_storage.stops().find(stop_id);
-    let journey_1 = data_storage.journeys().find(journey_id_1);
-    let journey_2 = data_storage.journeys().find(journey_id_2);
+    let trip_1 = data_storage.trips().find(trip_id_1);
+    let trip_2 = data_storage.trips().find(trip_id_2);
 
-    // Fahrtpaarbezogene Umsteigezeiten /-\ Journey pair-related exchange times.
-    if let Some(exchange_time) = exchange_time_journey_pair(
+    // Fahrtpaarbezogene Umsteigezeiten /-\  Trip pair-related exchange times.
+    if let Some(exchange_time) = exchange_time_trip_pair(
         data_storage,
         stop_id,
-        journey_id_1,
-        journey_id_2,
+        trip_id_1,
+        trip_id_2,
         departure_at,
     ) {
         return exchange_time;
@@ -186,8 +186,8 @@ pub fn get_exchange_time(
     // Verwaltungsbezogene Umsteigezeiten an Haltestellen /-\ Administration-related exchange times at stops.
     if let Some(&id) = data_storage.exchange_times_administration_map().get(&(
         Some(stop_id),
-        journey_1.administration().into(),
-        journey_2.administration().into(),
+        trip_1.administration().into(),
+        trip_2.administration().into(),
     )) {
         return data_storage
             .exchange_times_administration()
@@ -199,8 +199,8 @@ pub fn get_exchange_time(
     if let Some(exchange_time) = stop.exchange_time() {
         return exchange_time_at_stop(
             exchange_time,
-            journey_1.transport_type(data_storage),
-            journey_2.transport_type(data_storage),
+            trip_1.transport_type(data_storage),
+            trip_2.transport_type(data_storage),
         );
     }
 
@@ -209,8 +209,8 @@ pub fn get_exchange_time(
     // Verwaltungsbezogene Umsteigezeiten (global) /-\ Administration-related exchange times (global).
     if let Some(&id) = data_storage.exchange_times_administration_map().get(&(
         None,
-        journey_1.administration().into(),
-        journey_2.administration().into(),
+        trip_1.administration().into(),
+        trip_2.administration().into(),
     )) {
         return data_storage
             .exchange_times_administration()
@@ -221,22 +221,22 @@ pub fn get_exchange_time(
     // Standardumsteigezeit /-\ Standard exchange time.
     exchange_time_at_stop(
         data_storage.default_exchange_time(),
-        journey_1.transport_type(data_storage),
-        journey_2.transport_type(data_storage),
+        trip_1.transport_type(data_storage),
+        trip_2.transport_type(data_storage),
     )
 }
 
-fn exchange_time_journey_pair(
+fn exchange_time_trip_pair(
     data_storage: &DataStorage,
     stop_id: i32,
-    journey_id_1: i32,
-    journey_id_2: i32,
+    trip_id_1: i32,
+    trip_id_2: i32,
     departure_at: NaiveDateTime,
 ) -> Option<i16> {
     let Some(exchange_times) =
         data_storage
-            .exchange_times_journey_map()
-            .get(&(stop_id, journey_id_1, journey_id_2))
+            .exchange_times_trip_map()
+            .get(&(stop_id, trip_id_1, trip_id_2))
     else {
         return None;
     };
@@ -249,7 +249,7 @@ fn exchange_time_journey_pair(
     ) - 1;
 
     for &id in exchange_times {
-        let exchange_time = data_storage.exchange_times_journey().find(id);
+        let exchange_time = data_storage.exchange_times_trip().find(id);
 
         if let Some(bit_field_id) = exchange_time.bit_field_id() {
             let bit_field = data_storage.bit_fields().find(bit_field_id);

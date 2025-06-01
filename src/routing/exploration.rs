@@ -13,7 +13,7 @@ use super::{
 pub fn explore_routes<F>(
     data_storage: &DataStorage,
     mut routes: Vec<Route>,
-    journeys_to_ignore: &mut FxHashSet<i32>,
+    trips_to_ignore: &mut FxHashSet<i32>,
     earliest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
     mut can_continue_exploration: F,
 ) -> Vec<Route>
@@ -30,8 +30,8 @@ where
         }
 
         if route.last_section().departure_stop_id() == route.last_section().arrival_stop_id() {
-            // Some journeys start and end at the same stop, so it's not possible to know whether the journey has reached its last stop.
-            // The above condition, however, lets us know that the journey is about to loop.
+            // Some trips start and end at the same stop, so it's not possible to know whether the trip has reached its last stop.
+            // The above condition, however, lets us know that the trip is about to loop.
             continue;
         }
 
@@ -42,13 +42,13 @@ where
         }
 
         explore_nearby_stops(data_storage, &route, &mut routes);
-        explore_connections(data_storage, &route, &journeys_to_ignore, &mut new_routes);
+        explore_connections(data_storage, &route, &trips_to_ignore, &mut new_routes);
     }
 
-    // All new journeys are recorded as not available for the next connection level.
+    // All new trips are recorded as not available for the next connection level.
     new_routes.iter().for_each(|route| {
-        if let Some(journey_id) = route.last_section().journey_id() {
-            journeys_to_ignore.insert(journey_id);
+        if let Some(trip_id) = route.last_section().trip_id() {
+            trips_to_ignore.insert(trip_id);
         }
     });
 
@@ -61,12 +61,12 @@ fn explore_last_route_section_more_if_possible(
     route: &Route,
     routes: &mut Vec<Route>,
 ) {
-    let Some(journey_id) = route.last_section().journey_id() else {
+    let Some(trip_id) = route.last_section().trip_id() else {
         return;
     };
 
     // The next section (tronçon dans ce cas) is visited if possible.
-    let new_route = route.extend(data_storage, journey_id, route.arrival_at().date(), false);
+    let new_route = route.extend(data_storage, trip_id, route.arrival_at().date(), false);
 
     if let Some(rou) = new_route {
         sorted_insert(routes, rou);
@@ -82,7 +82,7 @@ fn can_explore_connections(
     let stop = data_storage.stops().find(stop_id);
 
     if !stop.can_be_used_as_exchange_point() {
-        // The arrival stop of the last RouteSection of a journey is not necessarily usable for exchange, hence the check.
+        // The arrival stop of the last RouteSection of a trip is not necessarily usable for exchange, hence the check.
         return false;
     }
 
@@ -107,14 +107,14 @@ fn can_explore_connections(
 fn explore_connections(
     data_storage: &DataStorage,
     route: &Route,
-    journeys_to_ignore: &FxHashSet<i32>,
+    trips_to_ignore: &FxHashSet<i32>,
     new_routes: &mut Vec<Route>,
 ) {
-    new_routes.extend(get_connections(data_storage, &route, journeys_to_ignore));
+    new_routes.extend(get_connections(data_storage, &route, trips_to_ignore));
 }
 
 fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut Vec<Route>) {
-    if route.last_section().journey_id().is_none() {
+    if route.last_section().trip_id().is_none() {
         // No walking between 2 stops, after walking between 2 stops just before.
         return;
     }

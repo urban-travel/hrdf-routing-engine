@@ -6,18 +6,18 @@ impl RouteResult {
     #[rustfmt::skip]
     pub fn print(&self, data_storage: &DataStorage) {
         for section in self.sections() {
-            let journey = section.journey(data_storage);
+            let trip = section.trip(data_storage);
 
-            if journey.is_none() {
+            if trip.is_none() {
                 let stop = data_storage.stops().find(section.arrival_stop_id());
                 println!("Approx. {}-minute walk to {}", section.duration().unwrap(), stop.name());
                 continue;
             }
 
-            let journey = journey.unwrap();
-            println!("Journey #{}", journey.id());
+            let trip = trip.unwrap();
+            println!(" Trip #{}", trip.id());
 
-            let mut route_iter = journey.route().into_iter().peekable();
+            let mut route_iter = trip.route().into_iter().peekable();
 
             while route_iter.peek().unwrap().stop_id() != section.departure_stop_id() {
                 route_iter.next();

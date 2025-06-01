@@ -13,7 +13,7 @@ pub use models::RouteSectionResult as RouteSection;
 
 use core::compute_routing;
 
-use chrono::{Duration, NaiveDateTime};
+use chrono::NaiveDateTime;
 use models::RoutingAlgorithmArgs;
 
 /// Finds the fastest route from the departure stop to the arrival stop.
@@ -42,26 +42,4 @@ pub fn plan_journey(
     }
 
     result
-}
-
-/// Finds all stops that can be reached within a time limit from the departured stop.
-/// The departure date and time must be within the timetable period.
-#[allow(dead_code)]
-pub fn find_reachable_stops_within_time_limit(
-    hrdf: &Hrdf,
-    departure_stop_id: i32,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    verbose: bool,
-) -> Vec<Route> {
-    let routes = compute_routing(
-        hrdf.data_storage(),
-        departure_stop_id,
-        departure_at,
-        verbose,
-        RoutingAlgorithmArgs::solve_from_departure_stop_to_reachable_arrival_stops(
-            departure_at.checked_add_signed(time_limit).unwrap(),
-        ),
-    );
-    routes.into_iter().map(|(_, v)| v).collect()
 }

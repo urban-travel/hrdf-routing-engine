@@ -18,13 +18,13 @@ pub fn compute_routing(
     args: RoutingAlgorithmArgs,
 ) -> FxHashMap<i32, RouteResult> {
     let mut routes = create_initial_routes(data_storage, departure_stop_id, departure_at);
-    let mut journeys_to_ignore = FxHashSet::default();
+    let mut trips_to_ignore = FxHashSet::default();
     let mut earliest_arrival_by_stop_id = FxHashMap::default();
     let mut solutions = FxHashMap::default();
 
     routes.iter().for_each(|route| {
-        if let Some(journey_id) = route.last_section().journey_id() {
-            journeys_to_ignore.insert(journey_id);
+        if let Some(trip_id) = route.last_section().trip_id() {
+            trips_to_ignore.insert(trip_id);
         }
     });
 
@@ -42,22 +42,22 @@ pub fn compute_routing(
                     args.arrival_stop_id(),
                 )
             }),
-            RoutingAlgorithmMode::SolveFromDepartureStopToReachableArrivalStops => {
-                Box::new(|route| {
-                    can_continue_exploration_one_to_many(
-                        data_storage,
-                        route,
-                        &mut solutions,
-                        args.time_limit(),
-                    )
-                })
-            }
+            // RoutingAlgorithmMode::SolveFromDepartureStopToReachableArrivalStops => {
+            //     Box::new(|route| {
+            //         can_continue_exploration_one_to_many(
+            //             data_storage,
+            //             route,
+            //             &mut solutions,
+            //             args.time_limit(),
+            //         )
+            //     })
+            // }
         };
 
         let new_routes = explore_routes(
             data_storage,
             routes,
-            &mut journeys_to_ignore,
+            &mut trips_to_ignore,
             &mut earliest_arrival_by_stop_id,
             can_continue_exploration,
         );
@@ -83,12 +83,12 @@ pub fn create_initial_routes(
     let mut routes: Vec<Route> =
         next_departures(data_storage, departure_stop_id, departure_at, None, None)
             .into_iter()
-            .filter_map(|(journey, journey_departure_at)| {
+            .filter_map(|(trip, trip_departure_at)| {
                 RouteSection::find_next(
                     data_storage,
-                    journey,
+                    trip,
                     departure_stop_id,
-                    journey_departure_at.date(),
+                    trip_departure_at.date(),
                     true,
                 )
                 .map(|(section, mut visited_stops)| {
@@ -132,7 +132,7 @@ fn can_continue_exploration_one_to_one(
         return can_improve_solution(route, &solution);
     }
 
-    let candidate = if route.last_section().journey_id().is_none() {
+    let candidate = if route.last_section().trip_id().is_none() {
         route.clone()
     } else {
         update_arrival_stop(data_storage, route.clone(), arrival_stop_id)
@@ -145,49 +145,7 @@ fn can_continue_exploration_one_to_one(
     false
 }
 
-fn can_continue_exploration_one_to_many(
-    data_storage: &DataStorage,
-    route: &Route,
-    solutions: &mut FxHashMap<i32, Route>,
-    time_limit: NaiveDateTime,
-) -> bool {
-    fn evaluate_candidate(
-        data_storage: &DataStorage,
-        candidate: Route,
-        solutions: &mut FxHashMap<i32, Route>,
-        time_limit: NaiveDateTime,
-    ) {
-        if candidate.arrival_at() > time_limit {
-            return;
-        }
-
-        let arrival_stop_id = candidate.arrival_stop_id();
-        let solution = solutions.get(&arrival_stop_id);
-
-        if is_improving_solution(data_storage, &candidate, &solution) {
-            solutions.insert(arrival_stop_id, candidate);
-        }
-    }
-
-    if route.last_section().journey_id().is_none() {
-        evaluate_candidate(data_storage, route.clone(), solutions, time_limit);
-    } else {
-        let last_section = route.last_section();
-        let journey = last_section.journey(data_storage).unwrap();
-
-        for route_entry in journey.route_section(
-            last_section.departure_stop_id(),
-            last_section.arrival_stop_id(),
-        ) {
-            let candidate = update_arrival_stop(data_storage, route.clone(), route_entry.stop_id());
-            evaluate_candidate(data_storage, candidate, solutions, time_limit);
-        }
-    }
-
-    route.arrival_at() < time_limit
-}
-
-/// Do not call this function if route.last_section().journey_id() is None.
+/// Do not call this function if route.last_section().trip_id() is None.
 fn update_arrival_stop(
     data_storage: &DataStorage,
     mut route: Route,
@@ -195,8 +153,8 @@ fn update_arrival_stop(
 ) -> Route {
     let last_section = route.last_section();
 
-    let journey = last_section.journey(data_storage).unwrap();
-    let arrival_at = journey.arrival_at_of_with_origin(
+    let trip = last_section.trip(data_storage).unwrap();
+    let arrival_at = trip.arrival_at_of_with_origin(
         arrival_stop_id,
         last_section.arrival_at().date(),
         false,
@@ -223,12 +181,12 @@ fn is_improving_solution(
 ) -> bool {
     fn count_stops(data_storage: &DataStorage, section: &RouteSection) -> usize {
         section
-            .journey(data_storage)
+            .trip(data_storage)
             .unwrap()
             .count_stops(section.departure_stop_id(), section.arrival_stop_id())
     }
 
-    if candidate.sections().len() == 1 && candidate.last_section().journey_id().is_none() {
+    if candidate.sections().len() == 1 && candidate.last_section().trip_id().is_none() {
         // If the candidate contains only a walking trip, it is not a valid solution.
         return false;
     }
@@ -257,8 +215,8 @@ fn is_improving_solution(
         return connection_count_1 < connection_count_2;
     }
 
-    let sections_1 = candidate.sections_having_journey();
-    let sections_2 = solution.sections_having_journey();
+    let sections_1 = candidate.sections_having_trip();
+    let sections_2 = solution.sections_having_trip();
 
     // Compare each connection.
     for i in 0..connection_count_1 {
