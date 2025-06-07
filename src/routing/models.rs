@@ -1,17 +1,33 @@
-use chrono::NaiveDateTime;
-use hrdf_parser::{DataStorage, Trip};
+use std::hash::Hasher;
 
-#[derive(Eq, Hash, PartialEq)]
+use chrono::{NaiveDateTime, NaiveTime};
+use hrdf_parser::{DataStorage, Trip};
+use rustc_hash::FxHashMap;
+
 pub struct RrRoute {
+    id: u64,
     trips: Vec<i32>,
+    stops: Vec<i32>,
+    trip_departure_times: FxHashMap<(i32, i32), NaiveTime>,
+    trip_arrival_times: FxHashMap<(i32, i32), NaiveTime>,
 }
 
 impl RrRoute {
     pub fn new() -> Self {
-        Self { trips: Vec::new() }
+        Self {
+            id: 0,
+            trips: Vec::new(),
+            stops: Vec::new(),
+            trip_departure_times: FxHashMap::default(),
+            trip_arrival_times: FxHashMap::default(),
+        }
     }
 
     // Getters/Setters
+
+    pub fn id(&self) -> u64 {
+        self.id
+    }
 
     pub fn trips(&self) -> &Vec<i32> {
         &self.trips
@@ -21,10 +37,39 @@ impl RrRoute {
         &mut self.trips
     }
 
+    pub fn stops(&self) -> &Vec<i32> {
+        &self.stops
+    }
+
+    pub fn trip_departure_times_mut(&mut self) -> &mut FxHashMap<(i32, i32), NaiveTime> {
+        &mut self.trip_departure_times
+    }
+
+    pub fn trip_arrival_times_mut(&mut self) -> &mut FxHashMap<(i32, i32), NaiveTime> {
+        &mut self.trip_arrival_times
+    }
+
     // Functions
 
     pub fn add_trip(&mut self, trip_id: i32) {
         self.trips.push(trip_id);
+    }
+
+    pub fn add_stop(&mut self, stop_id: i32) {
+        self.stops.push(stop_id);
+    }
+
+    pub fn departure_time(&self, trip_id: i32, stop_id: i32) -> Option<&NaiveTime> {
+        self.trip_departure_times.get(&(trip_id, stop_id))
+    }
+
+    pub fn arrival_time(&self, trip_id: i32, stop_id: i32) -> Option<&NaiveTime> {
+        self.trip_arrival_times.get(&(trip_id, stop_id))
+    }
+
+    pub fn update_id(&mut self, data_storage: &DataStorage) {
+        let trip = data_storage.trips().find(*self.trips().first().unwrap());
+        self.id = trip.hash_route().unwrap();
     }
 }
 
