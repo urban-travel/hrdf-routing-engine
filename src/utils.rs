@@ -1,7 +1,5 @@
 use chrono::{Days, Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
-// TODO: ...
-
 pub fn add_1_day(date: NaiveDate) -> NaiveDate {
     date.checked_add_days(Days::new(1)).unwrap()
 }
