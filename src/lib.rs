@@ -44,7 +44,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, 8587418, 8593027, create_date_time(2024, 6, 1, 12, 30), verbose);
 
         // 2. Petit-Lancy, Les Esserts => Genève-Aéroport
-        // plan_journey(hrdf, 8587418, 8501026, create_date_time(2024, 2, 9, 14, 2), verbose);
+        plan_journey(hrdf, 8587418, 8501026, create_date_time(2024, 2, 9, 14, 2), verbose);
 
         // 3. Avully, village => Pont-Céard, gare
         // plan_journey(hrdf, 8587031, 8593189, create_date_time(2024, 7, 13, 16, 43), verbose);
@@ -62,7 +62,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, 8501008, 8503000, create_date_time(2024, 4, 9, 8, 4), verbose);
 
         // 8. Zürich HB => Lugano, Genzana
-        plan_journey(hrdf, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose);
+        // plan_journey(hrdf, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose);
 
         // 9. Chancy, Douane => Campocologno
         // plan_journey(hrdf, 8587477, 8509368, create_date_time(2024, 5, 29, 17, 29), verbose);

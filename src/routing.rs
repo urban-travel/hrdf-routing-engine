@@ -1,17 +1,15 @@
 mod models;
 mod print;
 
-use std::{
-    cmp::min, process::exit, time::{Duration, Instant}
-};
+use std::{cmp::min, time::Instant};
 
-use hrdf_parser::{DataStorage, Hrdf, Model};
+use hrdf_parser::{DataStorage, Hrdf};
 
-use chrono::NaiveDateTime;
+use chrono::{Duration, NaiveDateTime};
 use models::Journey;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::routing::models::{RrRoute, RrStop, RrStopTime};
+use crate::routing::models::{RrRoute, RrStop, RrStopTime, RrTransfer};
 
 /// Finds the fastest route from the departure stop to the arrival stop.
 /// The departure date and time must be within the timetable period.
@@ -20,11 +18,11 @@ pub fn plan_journey(
     departure_stop_id: i32,
     arrival_stop_id: i32,
     departure_at: NaiveDateTime,
-    verbose: bool,
+    _verbose: bool,
 ) -> Option<Journey> {
     let data_storage = hrdf.data_storage();
     let (routes, stop_times, route_stops) = get_routes(data_storage);
-    let (stops, stop_routes) = get_stops(&routes, &route_stops);
+    let (stops, stop_routes, transfers) = get_stops(data_storage, &routes, &route_stops);
     let route_stops = fix_route_stops(route_stops, &stops);
 
     let start_time = Instant::now();
@@ -150,9 +148,7 @@ pub fn plan_journey(
                         i -= route.stop_count();
 
                         while i >= route.stop_time_first_index() {
-                            if let Some(departure_time) =
-                                stop_times[i].departure_time()
-                            {
+                            if let Some(departure_time) = stop_times[i].departure_time() {
                                 if departure_time > *previous_arrival_time_at_stop_i.unwrap() {
                                     let index = i - stop_i_local_index;
                                     current_trip_index = Some(index);
@@ -186,6 +182,35 @@ pub fn plan_journey(
             }
         }
 
+        let mut additional_marked_stops = FxHashSet::default();
+
+        for stop_index in &marked_stops {
+            let stop = &stops[*stop_index];
+
+            for i in 0..stop.transfer_count() {
+                let transfer = &transfers[stop.transfer_first_index() + i];
+
+                let arrival_time_1 = labels[k].get(&transfer.other_stop_index());
+                let arrival_time_2 = *labels[k].get(stop_index).unwrap()
+                    + Duration::minutes(transfer.duration() as i64);
+
+                let value = if let Some(arrival_time_1) = arrival_time_1 {
+                    min(*arrival_time_1, arrival_time_2)
+                } else {
+                    arrival_time_2
+                };
+
+                if value < departure_at.time() {
+                    continue;
+                }
+
+                labels[k].insert(transfer.other_stop_index(), value);
+                additional_marked_stops.insert(transfer.other_stop_index());
+            }
+        }
+
+        marked_stops.extend(additional_marked_stops);
+
         if marked_stops.is_empty() {
             break;
         }
@@ -206,19 +231,19 @@ pub fn plan_journey(
         }
     }
 
-    println!();
+    // println!();
 
-    let mut dest_stop_index = arrival_stop_index;
-    for k in (0..least_trips_label_index).rev() {
-        let (trip_index, src_stop_index) = *path[k].get(&dest_stop_index).unwrap();
+    // let mut dest_stop_index = arrival_stop_index;
+    // for k in (0..least_trips_label_index).rev() {
+    //     let (trip_index, src_stop_index) = *path[k].get(&dest_stop_index).unwrap();
 
-        let stop_1 = data_storage.stops().find(stops[src_stop_index].id());
-        let stop_2 = data_storage.stops().find(stops[dest_stop_index].id());
+    //     let stop_1 = data_storage.stops().find(stops[src_stop_index].id());
+    //     let stop_2 = data_storage.stops().find(stops[dest_stop_index].id());
 
-        println!("{} => {}", stop_1.name(), stop_2.name());
+    //     println!("{} => {}", stop_1.name(), stop_2.name());
 
-        dest_stop_index = src_stop_index;
-    }
+    //     dest_stop_index = src_stop_index;
+    // }
 
     None
 }
@@ -275,7 +300,11 @@ fn get_routes(data_storage: &DataStorage) -> (Vec<RrRoute>, Vec<RrStopTime>, Vec
     (routes, stop_times, route_stops)
 }
 
-fn get_stops(routes: &Vec<RrRoute>, route_stops: &Vec<i32>) -> (Vec<RrStop>, Vec<usize>) {
+fn get_stops(
+    data_storage: &DataStorage,
+    routes: &Vec<RrRoute>,
+    route_stops: &Vec<i32>,
+) -> (Vec<RrStop>, Vec<usize>, Vec<RrTransfer>) {
     let mut tmp_stops = FxHashMap::default();
 
     for (i, route) in routes.iter().enumerate() {
@@ -292,6 +321,7 @@ fn get_stops(routes: &Vec<RrRoute>, route_stops: &Vec<i32>) -> (Vec<RrStop>, Vec
 
     let mut stops = Vec::new();
     let mut stop_routes = Vec::new();
+    let mut transfers = Vec::new();
 
     for (stop_id, routes) in tmp_stops {
         let route_first_index = stop_routes.len();
@@ -304,7 +334,33 @@ fn get_stops(routes: &Vec<RrRoute>, route_stops: &Vec<i32>) -> (Vec<RrStop>, Vec
         stops.push(RrStop::new(stop_id, route_first_index, route_count));
     }
 
-    (stops, stop_routes)
+    for i in 0..stops.len() {
+        let transfer_first_index = transfers.len();
+
+        let stop_connections = data_storage
+            .stop_connections_by_stop_id()
+            .get(&stops[i].id());
+
+        if stop_connections.is_none() {
+            continue;
+        }
+
+        for stop_connection_id in stop_connections.unwrap() {
+            let stop_connection = data_storage.stop_connections().find(*stop_connection_id);
+            let other_stop_index = stops
+                .iter()
+                .position(|s| s.id() == stop_connection.stop_id_2());
+
+            if let Some(index) = other_stop_index {
+                transfers.push(RrTransfer::new(index, stop_connection.duration()));
+            }
+        }
+
+        stops[i].set_transfer_first_index(transfer_first_index);
+        stops[i].set_transfer_count(transfers.len() - transfer_first_index);
+    }
+
+    (stops, stop_routes, transfers)
 }
 
 fn fix_route_stops(route_stops: Vec<i32>, stops: &Vec<RrStop>) -> Vec<usize> {

@@ -1,4 +1,4 @@
-use chrono::{NaiveDateTime, NaiveTime};
+use chrono::{Duration, NaiveDateTime, NaiveTime};
 use hrdf_parser::{DataStorage, Trip};
 
 #[derive(Debug)]
@@ -77,6 +77,8 @@ pub struct RrStop {
     id: i32,
     route_first_index: usize,
     route_count: usize,
+    transfer_first_index: usize,
+    transfer_count: usize,
 }
 
 impl RrStop {
@@ -85,6 +87,8 @@ impl RrStop {
             id,
             route_first_index,
             route_count,
+            transfer_first_index: 0,
+            transfer_count: 0,
         }
     }
 
@@ -100,6 +104,53 @@ impl RrStop {
 
     pub fn route_count(&self) -> usize {
         self.route_count
+    }
+
+    pub fn transfer_first_index(&self) -> usize {
+        self.transfer_first_index
+    }
+
+    pub fn set_transfer_first_index(&mut self, value: usize) {
+        self.transfer_first_index = value;
+    }
+
+    pub fn transfer_count(&self) -> usize {
+        self.transfer_count
+    }
+
+    pub fn set_transfer_count(&mut self, value: usize) {
+        self.transfer_count = value;
+    }
+
+    // Functions
+}
+
+#[derive(Debug)]
+pub struct RrTransfer {
+    other_stop_index: usize,
+    duration: i16,
+}
+
+impl RrTransfer {
+    pub fn new(other_stop_index: usize, duration: i16) -> Self {
+        Self {
+            other_stop_index,
+            duration,
+        }
+    }
+
+    // Getters/Setters
+
+    pub fn other_stop_index(&self) -> usize {
+        self.other_stop_index
+    }
+
+    pub fn set_other_stop_index(&mut self, value: usize) {
+        self.other_stop_index = value;
+    }
+
+    pub fn duration(&self) -> i16 {
+        self.duration
     }
 
     // Functions
