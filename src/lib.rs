@@ -37,7 +37,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         let verbose = i == 0;
 
         // Test
-        plan_journey(hrdf, 8592688, 8508134, create_date_time(2024, 6, 1, 12, 30), verbose);
+        // plan_journey(hrdf, 8592688, 8508134, create_date_time(2024, 6, 1, 12, 30), verbose);
         // plan_journey(hrdf, 8592688, 8501008, create_date_time(2024, 6, 1, 12, 30), verbose);
 
         // 1. Petit-Lancy, Les Esserts => Onex, Bandol
@@ -62,7 +62,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, 8501008, 8503000, create_date_time(2024, 4, 9, 8, 4), verbose);
 
         // 8. Zürich HB => Lugano, Genzana
-        // plan_journey(hrdf, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose);
+        plan_journey(hrdf, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose);
 
         // 9. Chancy, Douane => Campocologno
         // plan_journey(hrdf, 8587477, 8509368, create_date_time(2024, 5, 29, 17, 29), verbose);
@@ -71,5 +71,5 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, 8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose);
     }
 
-    println!("\n{:.2?}", start_time.elapsed() / N);
+    // println!("\n{:.2?}", start_time.elapsed() / N);
 }
