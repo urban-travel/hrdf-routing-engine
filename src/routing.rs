@@ -331,7 +331,16 @@ fn get_stops(
             stop_routes.push(index);
         }
 
-        stops.push(RrStop::new(stop_id, route_first_index, route_count));
+        let can_be_used_as_exchange_point = data_storage
+            .stops()
+            .find(stop_id)
+            .can_be_used_as_exchange_point();
+        stops.push(RrStop::new(
+            stop_id,
+            route_first_index,
+            route_count,
+            can_be_used_as_exchange_point,
+        ));
     }
 
     for i in 0..stops.len() {

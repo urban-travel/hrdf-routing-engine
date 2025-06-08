@@ -79,16 +79,23 @@ pub struct RrStop {
     route_count: usize,
     transfer_first_index: usize,
     transfer_count: usize,
+    can_be_used_as_exchange_point: bool,
 }
 
 impl RrStop {
-    pub fn new(id: i32, route_first_index: usize, route_count: usize) -> Self {
+    pub fn new(
+        id: i32,
+        route_first_index: usize,
+        route_count: usize,
+        can_be_used_as_exchange_point: bool,
+    ) -> Self {
         Self {
             id,
             route_first_index,
             route_count,
             transfer_first_index: 0,
             transfer_count: 0,
+            can_be_used_as_exchange_point,
         }
     }
 
@@ -120,6 +127,10 @@ impl RrStop {
 
     pub fn set_transfer_count(&mut self, value: usize) {
         self.transfer_count = value;
+    }
+
+    pub fn can_be_used_as_exchange_point(&self) -> bool {
+        self.can_be_used_as_exchange_point
     }
 
     // Functions

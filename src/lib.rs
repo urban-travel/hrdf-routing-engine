@@ -44,10 +44,10 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, 8587418, 8593027, create_date_time(2024, 6, 1, 12, 30), verbose);
 
         // 2. Petit-Lancy, Les Esserts => Genève-Aéroport
-        plan_journey(hrdf, 8587418, 8501026, create_date_time(2024, 2, 9, 14, 2), verbose);
+        // plan_journey(hrdf, 8587418, 8501026, create_date_time(2024, 2, 9, 14, 2), verbose);
 
         // 3. Avully, village => Pont-Céard, gare
-        // plan_journey(hrdf, 8587031, 8593189, create_date_time(2024, 7, 13, 16, 43), verbose);
+        plan_journey(hrdf, 8587031, 8593189, create_date_time(2024, 7, 13, 16, 43), verbose);
 
         // 4. Petit-Lancy, Les Esserts => Vevey, Palud
         // plan_journey(hrdf, 8587418, 8595120, create_date_time(2024, 9, 17, 5, 59), verbose);
