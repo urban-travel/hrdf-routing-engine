@@ -338,7 +338,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 verbose,
             )?;
             let data = serde_json::to_string_pretty(&surfaces).unwrap();
-            let mut f = File::create("res.json").expect("Unable to create file");
+            let fname = format!("hectare_{}_{}.json", departure_at, time_limit);
+            let mut f = File::create(&fname).expect("Unable to create file");
             f.write_all(data.as_bytes()).expect("Unable to write data");
         }
     }

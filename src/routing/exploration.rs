@@ -22,12 +22,16 @@ where
 {
     let mut new_routes = Vec::new();
 
+    let mut old_routes = routes.clone();
     while !routes.is_empty() {
+        // log::debug!("==============================================================");
         let route = routes.remove(0);
+        // log::debug!("ROUTE: {:?}", route);
 
         if !can_continue_exploration(&route) {
             continue;
         }
+        // log::debug!("CONTINUING EXPLORATIONS");
 
         if route.last_section().departure_stop_id() == route.last_section().arrival_stop_id() {
             // Some journeys start and end at the same stop, so it's not possible to know whether the journey has reached its last stop.
@@ -36,13 +40,35 @@ where
         }
 
         explore_last_route_section_more_if_possible(data_storage, &route, &mut routes);
+        // log::debug!("EXPLRED LAST ROUTE MORE IF POSSIBLE: {:?}", routes);
 
         if !can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id) {
+            // In some cases there are stops appearing multiple times in a Journey
+            // for example see: *Z 011709 000801   in FPLAHN
+            // This can lead to an infinite loop. We will therefore check if the same route is explored
+            // a second time
+            if routes == old_routes && routes.len() == 1 {
+                log::debug!("Routes stayed the same: {:?}", routes);
+                let _ = routes.remove(0);
+                // continue;
+            } else {
+                // log::debug!(
+                //     "Routes did not stay the same {:?}, {:?}",
+                //     old_routes,
+                //     routes
+                // );
+                old_routes = routes.clone();
+            }
             continue;
         }
 
+        // log::debug!("EXPLORE NEARBY STOPS");
         explore_nearby_stops(data_storage, &route, &mut routes);
+        // log::debug!("EXPLRED NEARBY STOPS: {:?}", routes);
         explore_connections(data_storage, &route, journeys_to_ignore, &mut new_routes);
+        // log::debug!("EXPLRED CONNECTIONS: {:?}", new_routes);
+
+        // log::debug!("==============================================================");
     }
 
     // All new journeys are recorded as not available for the next connection level.

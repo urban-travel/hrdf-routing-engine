@@ -7,6 +7,7 @@ use chrono::{Duration, NaiveDateTime};
 use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;
+use rayon::iter::IndexedParallelIterator;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use simple_tqdm::ParTqdm;

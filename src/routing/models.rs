@@ -3,7 +3,7 @@ use hrdf_parser::{Coordinates, DataStorage, Journey};
 use rustc_hash::FxHashSet;
 use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RouteSection {
     journey_id: Option<i32>,
     departure_stop_id: i32,
@@ -71,7 +71,7 @@ impl RouteSection {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Route {
     sections: Vec<RouteSection>,
     visited_stops: FxHashSet<i32>,
