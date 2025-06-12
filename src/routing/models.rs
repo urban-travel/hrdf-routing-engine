@@ -1,4 +1,5 @@
 use chrono::NaiveTime;
+use rustc_hash::FxHashMap;
 
 // ------------------------------------------------------------------------------------------------
 // --- RrRoute
@@ -6,57 +7,90 @@ use chrono::NaiveTime;
 
 #[derive(Debug)]
 pub struct RrRoute {
-    stop_time_first_index: usize,
-    stop_time_count: usize,
-    stop_first_index: usize,
-    stop_count: usize,
+    trips: Vec<RrTrip>,
+    stops: Vec<usize>,
+    local_stop_index_by_stop_index: FxHashMap<usize, usize>,
 }
 
 impl RrRoute {
-    pub fn new(
-        stop_time_first_index: usize,
-        stop_time_count: usize,
-        stop_first_index: usize,
-        stop_count: usize,
-    ) -> Self {
+    pub fn new(trips: Vec<RrTrip>, stops: Vec<usize>) -> Self {
         Self {
-            stop_time_first_index,
-            stop_time_count,
-            stop_first_index,
-            stop_count,
+            trips,
+            stops,
+            local_stop_index_by_stop_index: FxHashMap::default(),
         }
     }
 
     // Getters/Setters
 
-    pub fn stop_time_first_index(&self) -> usize {
-        self.stop_time_first_index
+    pub fn trips(&self) -> &Vec<RrTrip> {
+        &self.trips
     }
 
-    pub fn stop_time_count(&self) -> usize {
-        self.stop_time_count
+    pub fn stops(&self) -> &Vec<usize> {
+        &self.stops
     }
 
-    pub fn stop_first_index(&self) -> usize {
-        self.stop_first_index
+    pub fn set_stops(&mut self, value: Vec<usize>) {
+        self.stops = value
     }
 
-    pub fn stop_count(&self) -> usize {
-        self.stop_count
+    pub fn local_stop_index_by_stop_index(&self) -> &FxHashMap<usize, usize> {
+        &self.local_stop_index_by_stop_index
+    }
+
+    pub fn set_local_stop_index_by_stop_index(&mut self, value: FxHashMap<usize, usize>) {
+        self.local_stop_index_by_stop_index = value;
+    }
+
+    // Functions
+
+    pub fn arrival_time(&self, trip_index: usize, stop_index: usize) -> Option<NaiveTime> {
+        self.trips[trip_index].schedule()[stop_index].arrival_time()
+    }
+
+    pub fn departure_time(&self, trip_index: usize, stop_index: usize) -> Option<NaiveTime> {
+        self.trips[trip_index].schedule()[stop_index].departure_time()
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-// --- RrStopTime
+// --- RrTrip
 // ------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
-pub struct RrStopTime {
+pub struct RrTrip {
+    id: i32,
+    schedule: Vec<RrScheduleEntry>,
+}
+
+impl RrTrip {
+    pub fn new(id: i32, schedule: Vec<RrScheduleEntry>) -> Self {
+        Self { id, schedule }
+    }
+
+    // Getters/Setters
+
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+
+    pub fn schedule(&self) -> &Vec<RrScheduleEntry> {
+        &self.schedule
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// --- RrScheduleEntry
+// ------------------------------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct RrScheduleEntry {
     arrival_time: Option<NaiveTime>,
     departure_time: Option<NaiveTime>,
 }
 
-impl RrStopTime {
+impl RrScheduleEntry {
     pub fn new(arrival_time: Option<NaiveTime>, departure_time: Option<NaiveTime>) -> Self {
         Self {
             arrival_time,
@@ -84,18 +118,16 @@ impl RrStopTime {
 #[derive(Debug)]
 pub struct RrStop {
     id: i32,
-    route_first_index: usize,
-    route_count: usize,
+    routes: Vec<usize>,
     transfer_first_index: usize,
     transfer_count: usize,
 }
 
 impl RrStop {
-    pub fn new(id: i32, route_first_index: usize, route_count: usize) -> Self {
+    pub fn new(id: i32, routes: Vec<usize>) -> Self {
         Self {
             id,
-            route_first_index,
-            route_count,
+            routes,
             transfer_first_index: 0,
             transfer_count: 0,
         }
@@ -107,12 +139,8 @@ impl RrStop {
         self.id
     }
 
-    pub fn route_first_index(&self) -> usize {
-        self.route_first_index
-    }
-
-    pub fn route_count(&self) -> usize {
-        self.route_count
+    pub fn routes(&self) -> &Vec<usize> {
+        &self.routes
     }
 
     pub fn transfer_first_index(&self) -> usize {

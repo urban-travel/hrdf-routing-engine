@@ -6,7 +6,7 @@ use std::cmp::min;
 
 use hrdf_parser::Hrdf;
 
-use chrono::{Duration, NaiveDateTime};
+use chrono::{Duration, NaiveDateTime, NaiveTime};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub use storage::RrStorage;
@@ -49,126 +49,24 @@ pub fn plan_journey(
         labels.push(FxHashMap::default());
         path.push(FxHashMap::default());
 
-        let k_routes = get_round_k_routes(rr_storage, &marked_stops);
+        let round_routes = get_round_routes(rr_storage, &marked_stops);
 
         if verbose {
-            println!("{k} : {}", k_routes.len());
+            println!("{k} : {}", round_routes.len());
         }
 
         marked_stops.clear();
 
-        for (_, (route, stop_local_index)) in k_routes {
-            let mut current_trip_index: Option<usize> = None;
-            let mut current_trip_boarded_at = 0;
-
-            for stop_i_local_index in stop_local_index..route.stop_count() {
-                // Index in stops Vec.
-                let stop_i_index =
-                    rr_storage.route_stops()[route.stop_first_index() + stop_i_local_index];
-
-                if let Some(current_trip_index) = current_trip_index {
-                    let index = current_trip_index + stop_i_local_index;
-                    let arrival_time_at_stop_i =
-                        rr_storage.stop_times()[index].arrival_time().unwrap();
-
-                    // Case: Stop A (23:54), Stop B (00:04), ...
-                    if arrival_time_at_stop_i < departure_at.time() {
-                        break;
-                    }
-
-                    let earliest_arrival_time_stop_i = earliest_arrival_times.get(&stop_i_index);
-                    let earliest_arrival_time_arrival_stop =
-                        earliest_arrival_times.get(&arrival_stop_index);
-
-                    let can_label_be_improved = match (
-                        earliest_arrival_time_stop_i,
-                        earliest_arrival_time_arrival_stop,
-                    ) {
-                        (None, None) => true,
-                        (Some(arrival_time_1), None) => arrival_time_at_stop_i < *arrival_time_1,
-                        (None, Some(arrival_time_2)) => arrival_time_at_stop_i < *arrival_time_2,
-                        (Some(arrival_time_1), Some(arrival_time_2)) => {
-                            arrival_time_at_stop_i < min(*arrival_time_1, *arrival_time_2)
-                        }
-                    };
-
-                    if can_label_be_improved {
-                        labels[k].insert(stop_i_index, arrival_time_at_stop_i);
-                        earliest_arrival_times.insert(stop_i_index, arrival_time_at_stop_i);
-                        marked_stops.insert(stop_i_index);
-
-                        path[k - 1]
-                            .insert(stop_i_index, (current_trip_index, current_trip_boarded_at));
-                    }
-                }
-
-                if stop_i_local_index == route.stop_count() - 1 {
-                    // It is not possible to board another trip, as the current stop is the terminus.
-                    continue;
-                }
-
-                let previous_arrival_time_at_stop_i = labels[k - 1].get(&stop_i_index);
-
-                let can_catch_earlier_trip =
-                    match (previous_arrival_time_at_stop_i, current_trip_index) {
-                        (Some(previous_arrival_time_at_stop_i), Some(current_trip_index)) => {
-                            let index = current_trip_index + stop_i_local_index;
-                            match rr_storage.stop_times()[index].departure_time() {
-                                Some(departure_time) => {
-                                    *previous_arrival_time_at_stop_i <= departure_time
-                                }
-                                None => false,
-                            }
-                        }
-                        (Some(_), None) => true,
-                        _ => false,
-                    };
-
-                if !can_catch_earlier_trip {
-                    continue;
-                }
-
-                // WARNING: It will probably crash around 0.
-                let mut i = if let Some(trip_index) = current_trip_index {
-                    trip_index
-                } else {
-                    route.stop_time_first_index() + route.stop_time_count()
-                };
-
-                i += stop_i_local_index;
-
-                if i < route.stop_count() {
-                    continue;
-                }
-                i -= route.stop_count();
-
-                while i >= route.stop_time_first_index() {
-                    let departure_time = rr_storage.stop_times()[i].departure_time();
-
-                    if departure_time.unwrap() < departure_at.time() {
-                        // Case: Stop A (23:54), Stop B (00:04), ...
-                        if i < route.stop_count() {
-                            break;
-                        }
-                        i -= route.stop_count();
-                        continue;
-                    }
-
-                    if departure_time.unwrap() >= *previous_arrival_time_at_stop_i.unwrap() {
-                        current_trip_index = Some(i - stop_i_local_index);
-                        current_trip_boarded_at = stop_i_index;
-                    } else {
-                        break;
-                    }
-
-                    if i < route.stop_count() {
-                        break;
-                    }
-                    i -= route.stop_count();
-                }
-            }
-        }
-
+        scan_routes(
+            departure_at,
+            &mut earliest_arrival_times,
+            round_routes,
+            arrival_stop_index,
+            &mut labels,
+            k,
+            &mut marked_stops,
+            &mut path,
+        );
         scan_transfers(rr_storage, departure_at, k, &mut marked_stops, &mut labels);
 
         if marked_stops.is_empty() {
@@ -205,38 +103,134 @@ pub fn plan_journey(
     // }
 }
 
-fn get_round_k_routes<'a>(
+fn get_round_routes<'a>(
     rr_storage: &'a RrStorage,
     marked_stops: &FxHashSet<usize>,
 ) -> FxHashMap<usize, (&'a RrRoute, usize)> {
-    let mut k_routes = FxHashMap::default();
+    let mut routes = FxHashMap::default();
 
-    for &stop_index in marked_stops {
+    marked_stops.iter().for_each(|&stop_index| {
         let stop = &rr_storage.stops()[stop_index];
 
-        for route_offset in 0..stop.route_count() {
-            let route_index = rr_storage.stop_routes()[stop.route_first_index() + route_offset];
+        for &route_index in stop.routes() {
             let route = &rr_storage.routes()[route_index];
 
-            let mut local_stop_index = 0;
-            for i in 0..route.stop_count() {
-                if rr_storage.route_stops()[route.stop_first_index() + i] == stop_index {
-                    local_stop_index = i;
+            let local_stop_index = *route
+                .local_stop_index_by_stop_index()
+                .get(&stop_index)
+                .unwrap();
+
+            // Same route, different stop index.
+            let other_route: Option<&(&RrRoute, usize)> = routes.get(&route_index);
+
+            if other_route.is_none() || local_stop_index < (*other_route.unwrap()).1 {
+                routes.insert(route_index, (route, local_stop_index));
+            }
+        }
+    });
+
+    routes
+}
+
+fn scan_routes(
+    origin_departure_at: NaiveDateTime,
+    earliest_arrival_times: &mut FxHashMap<usize, NaiveTime>,
+    k_routes: FxHashMap<usize, (&RrRoute, usize)>,
+    arrival_stop_index: usize,
+    labels: &mut Vec<FxHashMap<usize, chrono::NaiveTime>>,
+    k: usize,
+    marked_stops: &mut FxHashSet<usize>,
+    path: &mut Vec<FxHashMap<usize, (usize, usize)>>,
+) {
+    for (_, (route, stop_local_index)) in k_routes {
+        let mut current_trip_index: Option<usize> = None;
+        let mut current_trip_boarded_at = 0;
+
+        for stop_i_local_index in stop_local_index..route.stops().len() {
+            // Index in stops Vec.
+            let stop_i_index = route.stops()[stop_i_local_index];
+
+            if let Some(trip_index) = current_trip_index {
+                let arrival_time_at_stop_i =
+                    route.arrival_time(trip_index, stop_i_local_index).unwrap();
+
+                // Case: Stop A (23:54), Stop B (00:04), ...
+                if arrival_time_at_stop_i < origin_departure_at.time() {
                     break;
+                }
+
+                let earliest_arrival_time_stop_i = earliest_arrival_times.get(&stop_i_index);
+                let earliest_arrival_time_arrival_stop =
+                    earliest_arrival_times.get(&arrival_stop_index);
+
+                let can_label_be_improved = match (
+                    earliest_arrival_time_stop_i,
+                    earliest_arrival_time_arrival_stop,
+                ) {
+                    (None, None) => true,
+                    (Some(arrival_time_1), None) => arrival_time_at_stop_i < *arrival_time_1,
+                    (None, Some(arrival_time_2)) => arrival_time_at_stop_i < *arrival_time_2,
+                    (Some(arrival_time_1), Some(arrival_time_2)) => {
+                        arrival_time_at_stop_i < min(*arrival_time_1, *arrival_time_2)
+                    }
+                };
+
+                if can_label_be_improved {
+                    labels[k].insert(stop_i_index, arrival_time_at_stop_i);
+                    earliest_arrival_times.insert(stop_i_index, arrival_time_at_stop_i);
+                    marked_stops.insert(stop_i_index);
+
+                    path[k - 1].insert(stop_i_index, (trip_index, current_trip_boarded_at));
                 }
             }
 
-            match k_routes.get(&route_index) {
-                Some((_, other_stop_local_index)) if local_stop_index > *other_stop_local_index => {
+            if stop_i_local_index == route.stops().len() - 1 {
+                // It is not possible to board another trip, as the current stop is the terminus.
+                continue;
+            }
+
+            let previous_arrival_time_at_stop_i = labels[k - 1].get(&stop_i_index);
+
+            let can_catch_earlier_trip = match (previous_arrival_time_at_stop_i, current_trip_index)
+            {
+                (Some(previous_arrival_time_at_stop_i), Some(trip_index)) => {
+                    let departure_time = route.departure_time(trip_index, stop_i_local_index);
+                    match departure_time {
+                        Some(departure_time) => *previous_arrival_time_at_stop_i <= departure_time,
+                        None => false,
+                    }
                 }
-                _ => {
-                    k_routes.insert(route_index, (route, local_stop_index));
+                (Some(_), None) => true,
+                _ => false,
+            };
+
+            if !can_catch_earlier_trip {
+                continue;
+            }
+
+            let start_index = if let Some(trip_index) = current_trip_index {
+                trip_index
+            } else {
+                route.trips().len()
+            };
+
+            for i in (0..start_index).rev() {
+                let departure_time = route.departure_time(i, stop_i_local_index);
+
+                if departure_time.unwrap() < origin_departure_at.time() {
+                    // Case: Stop A (23:54), Stop B (00:04), ...
+                    continue;
+                }
+
+                if departure_time.unwrap() >= *previous_arrival_time_at_stop_i.unwrap() {
+                    current_trip_index = Some(i);
+                    current_trip_boarded_at = stop_i_index;
+                } else {
+                    break;
                 }
             }
         }
     }
-
-    k_routes
 }
 
 fn scan_transfers(

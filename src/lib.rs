@@ -57,7 +57,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, &rr_storage, 8587418, 8595120, create_date_time(2024, 9, 17, 5, 59), verbose);
 
         // 5. Genève, gare Cornavin => Avusy, village
-        plan_journey(hrdf, &rr_storage, 8587057, 8587032, create_date_time(2024, 10, 18, 20, 10), verbose);
+        // plan_journey(hrdf, &rr_storage, 8587057, 8587032, create_date_time(2024, 10, 18, 20, 10), verbose);
 
         // 6. Genève => Bern, Bierhübeli
         // plan_journey(hrdf, &rr_storage, 8501008, 8590028, create_date_time(2024, 11, 22, 6, 59), verbose);
@@ -72,7 +72,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, &rr_storage, 8587477, 8509368, create_date_time(2024, 5, 29, 17, 29), verbose);
 
         // 10. Chancy, Douane => Sevelen, Post
-        // plan_journey(hrdf, &rr_storage,8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose);
+        plan_journey(hrdf, &rr_storage,8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose);
     }
 
     println!("\n{:.2?}", start_time.elapsed() / N);
