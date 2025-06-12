@@ -1,5 +1,8 @@
-use chrono::{Duration, NaiveDateTime, NaiveTime};
-use hrdf_parser::{DataStorage, Trip};
+use chrono::NaiveTime;
+
+// ------------------------------------------------------------------------------------------------
+// --- RrRoute
+// ------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
 pub struct RrRoute {
@@ -41,9 +44,11 @@ impl RrRoute {
     pub fn stop_count(&self) -> usize {
         self.stop_count
     }
-
-    // Functions
 }
+
+// ------------------------------------------------------------------------------------------------
+// --- RrStopTime
+// ------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
 pub struct RrStopTime {
@@ -72,6 +77,10 @@ impl RrStopTime {
     // Functions
 }
 
+// ------------------------------------------------------------------------------------------------
+// --- RrStop
+// ------------------------------------------------------------------------------------------------
+
 #[derive(Debug)]
 pub struct RrStop {
     id: i32,
@@ -79,23 +88,16 @@ pub struct RrStop {
     route_count: usize,
     transfer_first_index: usize,
     transfer_count: usize,
-    can_be_used_as_exchange_point: bool,
 }
 
 impl RrStop {
-    pub fn new(
-        id: i32,
-        route_first_index: usize,
-        route_count: usize,
-        can_be_used_as_exchange_point: bool,
-    ) -> Self {
+    pub fn new(id: i32, route_first_index: usize, route_count: usize) -> Self {
         Self {
             id,
             route_first_index,
             route_count,
             transfer_first_index: 0,
             transfer_count: 0,
-            can_be_used_as_exchange_point,
         }
     }
 
@@ -128,13 +130,11 @@ impl RrStop {
     pub fn set_transfer_count(&mut self, value: usize) {
         self.transfer_count = value;
     }
-
-    pub fn can_be_used_as_exchange_point(&self) -> bool {
-        self.can_be_used_as_exchange_point
-    }
-
-    // Functions
 }
+
+// ------------------------------------------------------------------------------------------------
+// --- RrTransfer
+// ------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
 pub struct RrTransfer {
@@ -156,102 +156,96 @@ impl RrTransfer {
         self.other_stop_index
     }
 
-    pub fn set_other_stop_index(&mut self, value: usize) {
-        self.other_stop_index = value;
-    }
-
     pub fn duration(&self) -> i16 {
         self.duration
     }
-
-    // Functions
 }
 
-// ------------------------------------------------------------------------------------------------
-// --- Result
-// ------------------------------------------------------------------------------------------------
+// // ------------------------------------------------------------------------------------------------
+// // --- Result
+// // ------------------------------------------------------------------------------------------------
 
-#[derive(Debug)]
-pub struct Journey {
-    departure_at: NaiveDateTime,
-    arrival_at: NaiveDateTime,
-    legs: Vec<Leg>,
-}
+// #[derive(Debug)]
+// pub struct Journey {
+//     departure_at: NaiveDateTime,
+//     arrival_at: NaiveDateTime,
+//     legs: Vec<Leg>,
+// }
 
-impl Journey {
-    pub fn new(departure_at: NaiveDateTime, arrival_at: NaiveDateTime, legs: Vec<Leg>) -> Self {
-        Self {
-            departure_at,
-            arrival_at,
-            legs,
-        }
-    }
+// impl Journey {
+//     pub fn new(departure_at: NaiveDateTime, arrival_at: NaiveDateTime, legs: Vec<Leg>) -> Self {
+//         Self {
+//             departure_at,
+//             arrival_at,
+//             legs,
+//         }
+//     }
 
-    // Getters/Setters
+//     // Getters/Setters
 
-    pub fn legs(&self) -> &Vec<Leg> {
-        &self.legs
-    }
-}
+//     pub fn legs(&self) -> &Vec<Leg> {
+//         &self.legs
+//     }
+// }
 
-#[derive(Debug)]
-pub struct Leg {
-    trip_id: Option<i32>,
-    departure_stop_id: i32,
-    arrival_stop_id: i32,
-    departure_at: Option<NaiveDateTime>,
-    arrival_at: Option<NaiveDateTime>,
-    duration: Option<i16>,
-}
+// #[derive(Debug)]
+// pub struct Leg {
+//     trip_id: Option<i32>,
+//     departure_stop_id: i32,
+//     arrival_stop_id: i32,
+//     departure_at: Option<NaiveDateTime>,
+//     arrival_at: Option<NaiveDateTime>,
+//     duration: Option<i16>,
+// }
 
-impl Leg {
-    pub fn new(
-        trip_id: Option<i32>,
-        departure_stop_id: i32,
-        departure_at: Option<NaiveDateTime>,
-        arrival_stop_id: i32,
-        arrival_at: Option<NaiveDateTime>,
-        duration: Option<i16>,
-    ) -> Self {
-        Self {
-            trip_id,
-            departure_stop_id,
-            departure_at,
-            arrival_stop_id,
-            arrival_at,
-            duration,
-        }
-    }
+// impl Leg {
+//     pub fn new(
+//         trip_id: Option<i32>,
+//         departure_stop_id: i32,
+//         departure_at: Option<NaiveDateTime>,
+//         arrival_stop_id: i32,
+//         arrival_at: Option<NaiveDateTime>,
+//         duration: Option<i16>,
+//     ) -> Self {
+//         Self {
+//             trip_id,
+//             departure_stop_id,
+//             departure_at,
+//             arrival_stop_id,
+//             arrival_at,
+//             duration,
+//         }
+//     }
 
-    // Getters/Setters
+//     // Getters/Setters
 
-    pub fn departure_stop_id(&self) -> i32 {
-        self.departure_stop_id
-    }
+//     pub fn departure_stop_id(&self) -> i32 {
+//         self.departure_stop_id
+//     }
 
-    pub fn departure_at(&self) -> Option<NaiveDateTime> {
-        self.departure_at
-    }
+//     pub fn departure_at(&self) -> Option<NaiveDateTime> {
+//         self.departure_at
+//     }
 
-    pub fn arrival_stop_id(&self) -> i32 {
-        self.arrival_stop_id
-    }
+//     pub fn arrival_stop_id(&self) -> i32 {
+//         self.arrival_stop_id
+//     }
 
-    pub fn arrival_at(&self) -> Option<NaiveDateTime> {
-        self.arrival_at
-    }
+//     pub fn arrival_at(&self) -> Option<NaiveDateTime> {
+//         self.arrival_at
+//     }
 
-    pub fn duration(&self) -> Option<i16> {
-        self.duration
-    }
+//     pub fn duration(&self) -> Option<i16> {
+//         self.duration
+//     }
 
-    // Functions
+//     // Functions
 
-    pub fn trip<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Trip> {
-        self.trip_id.map(|id| data_storage.trips().find(id))
-    }
+//     pub fn trip<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Trip> {
+//         self.trip_id.map(|id| data_storage.trips().find(id))
+//     }
 
-    pub fn is_transfer(&self) -> bool {
-        self.trip_id.is_none()
-    }
-}
+//     pub fn is_transfer(&self) -> bool {
+//         self.trip_id.is_none()
+//     }
+// }

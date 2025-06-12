@@ -9,6 +9,8 @@ use std::time::Instant;
 
 use hrdf_parser::{Hrdf, Version};
 
+use crate::routing::RrStorage;
+
 pub async fn run() -> Result<(), Box<dyn Error>> {
     let hrdf = Hrdf::new(
         Version::V_5_40_41_2_0_5,
@@ -28,7 +30,9 @@ fn test_plan_journey(hrdf: &Hrdf) {
     // ------------------------------------------------------------------------------------------------
     // --- 2.0.5
     // ------------------------------------------------------------------------------------------------
-    const N: u32 = 1;
+    const N: u32 = 10;
+
+    let rr_storage = RrStorage::new(hrdf.data_storage());
 
     println!();
     let start_time = Instant::now();
@@ -37,39 +41,39 @@ fn test_plan_journey(hrdf: &Hrdf) {
         let verbose = i == 0;
 
         // Test
-        // plan_journey(hrdf, 8592688, 8508134, create_date_time(2024, 6, 1, 12, 30), verbose);
-        // plan_journey(hrdf, 8592688, 8501008, create_date_time(2024, 6, 1, 12, 30), verbose);
+        // plan_journey(hrdf, &rr_storage, 8592688, 8508134, create_date_time(2024, 6, 1, 12, 30), verbose);
+        // plan_journey(hrdf, &rr_storage, 8592688, 8501008, create_date_time(2024, 6, 1, 12, 30), verbose);
 
         // 1. Petit-Lancy, Les Esserts => Onex, Bandol
-        // plan_journey(hrdf, 8587418, 8593027, create_date_time(2024, 6, 1, 12, 30), verbose);
+        // plan_journey(hrdf, &rr_storage, 8587418, 8593027, create_date_time(2024, 6, 1, 12, 30), verbose);
 
         // 2. Petit-Lancy, Les Esserts => Genève-Aéroport
-        // plan_journey(hrdf, 8587418, 8501026, create_date_time(2024, 2, 9, 14, 2), verbose);
+        // plan_journey(hrdf, &rr_storage, 8587418, 8501026, create_date_time(2024, 2, 9, 14, 2), verbose);
 
         // 3. Avully, village => Pont-Céard, gare
-        plan_journey(hrdf, 8587031, 8593189, create_date_time(2024, 7, 13, 16, 43), verbose);
+        // plan_journey(hrdf, &rr_storage, 8587031, 8593189, create_date_time(2024, 7, 13, 16, 43), verbose);
 
         // 4. Petit-Lancy, Les Esserts => Vevey, Palud
-        // plan_journey(hrdf, 8587418, 8595120, create_date_time(2024, 9, 17, 5, 59), verbose);
+        // plan_journey(hrdf, &rr_storage, 8587418, 8595120, create_date_time(2024, 9, 17, 5, 59), verbose);
 
         // 5. Genève, gare Cornavin => Avusy, village
-        // plan_journey(hrdf, 8587057, 8587032, create_date_time(2024, 10, 18, 20, 10), verbose);
+        plan_journey(hrdf, &rr_storage, 8587057, 8587032, create_date_time(2024, 10, 18, 20, 10), verbose);
 
         // 6. Genève => Bern, Bierhübeli
-        // plan_journey(hrdf, 8501008, 8590028, create_date_time(2024, 11, 22, 6, 59), verbose);
+        // plan_journey(hrdf, &rr_storage, 8501008, 8590028, create_date_time(2024, 11, 22, 6, 59), verbose);
 
         // 7. Genève => Zürich HB
-        // plan_journey(hrdf, 8501008, 8503000, create_date_time(2024, 4, 9, 8, 4), verbose);
+        // plan_journey(hrdf, &rr_storage, 8501008, 8503000, create_date_time(2024, 4, 9, 8, 4), verbose);
 
         // 8. Zürich HB => Lugano, Genzana
-        // plan_journey(hrdf, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose);
+        // plan_journey(hrdf, &rr_storage, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose);
 
         // 9. Chancy, Douane => Campocologno
-        // plan_journey(hrdf, 8587477, 8509368, create_date_time(2024, 5, 29, 17, 29), verbose);
+        // plan_journey(hrdf, &rr_storage, 8587477, 8509368, create_date_time(2024, 5, 29, 17, 29), verbose);
 
         // 10. Chancy, Douane => Sevelen, Post
-        // plan_journey(hrdf, 8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose);
+        // plan_journey(hrdf, &rr_storage,8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose);
     }
 
-    // println!("\n{:.2?}", start_time.elapsed() / N);
+    println!("\n{:.2?}", start_time.elapsed() / N);
 }
