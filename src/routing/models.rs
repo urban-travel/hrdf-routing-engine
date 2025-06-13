@@ -1,4 +1,5 @@
 use chrono::{NaiveDateTime, NaiveTime, TimeDelta};
+use hrdf_parser::{DataStorage, Trip};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::routing::RoutingData;
@@ -250,14 +251,14 @@ impl<'a> AlgorithmArgs<'a> {
 // ------------------------------------------------------------------------------------------------
 
 pub type StopIndex = usize;
-pub type TripIndex = usize;
+// pub type TripIndex = usize;
 
 #[derive(Debug)]
 pub struct AlgorithmState {
     labels: Vec<FxHashMap<StopIndex, NaiveTime>>,
     earliest_arrival_times: FxHashMap<StopIndex, NaiveTime>,
     marked_stops: FxHashSet<StopIndex>,
-    predecessors: Vec<FxHashMap<usize, (TripIndex, StopIndex)>>,
+    predecessors: Vec<FxHashMap<usize, (i32, StopIndex)>>,
     current_round: usize,
 }
 
@@ -307,11 +308,11 @@ impl AlgorithmState {
         &mut self.marked_stops
     }
 
-    pub fn predecessors(&self) -> &Vec<FxHashMap<usize, (TripIndex, StopIndex)>> {
+    pub fn predecessors(&self) -> &Vec<FxHashMap<usize, (i32, StopIndex)>> {
         &self.predecessors
     }
 
-    pub fn predecessors_mut(&mut self) -> &mut Vec<FxHashMap<usize, (TripIndex, StopIndex)>> {
+    pub fn predecessors_mut(&mut self) -> &mut Vec<FxHashMap<usize, (i32, StopIndex)>> {
         &mut self.predecessors
     }
 
@@ -338,14 +339,23 @@ impl AlgorithmState {
         self.labels_mut()[k].insert(stop_index, arrival_time);
     }
 
+    pub fn earliest_arrival_time(&self, stop_index: StopIndex) -> Option<NaiveTime> {
+        self.earliest_arrival_times().get(&stop_index).cloned()
+    }
+
+    pub fn set_earliest_arrival_time(&mut self, stop_index: StopIndex, arrival_time: NaiveTime) {
+        self.earliest_arrival_times_mut()
+            .insert(stop_index, arrival_time);
+    }
+
     pub fn set_predecessor(
         &mut self,
         stop_index: StopIndex,
-        trip_index: TripIndex,
+        trip_id: i32,
         trip_boarded_at_stop_index: StopIndex,
     ) {
         let k = self.current_round();
-        self.predecessors_mut()[k - 1].insert(stop_index, (trip_index, trip_boarded_at_stop_index));
+        self.predecessors_mut()[k - 1].insert(stop_index, (trip_id, trip_boarded_at_stop_index));
     }
 
     pub fn mark_stop(&mut self, stop_index: StopIndex) {
@@ -357,91 +367,91 @@ impl AlgorithmState {
     }
 }
 
-// // ------------------------------------------------------------------------------------------------
-// // --- Result
-// // ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+// --- Journey
+// ------------------------------------------------------------------------------------------------
 
-// #[derive(Debug)]
-// pub struct Journey {
-//     departure_at: NaiveDateTime,
-//     arrival_at: NaiveDateTime,
-//     legs: Vec<Leg>,
-// }
+#[derive(Debug)]
+pub struct Journey {
+    departure_at: NaiveDateTime,
+    arrival_at: NaiveDateTime,
+    legs: Vec<Leg>,
+}
 
-// impl Journey {
-//     pub fn new(departure_at: NaiveDateTime, arrival_at: NaiveDateTime, legs: Vec<Leg>) -> Self {
-//         Self {
-//             departure_at,
-//             arrival_at,
-//             legs,
-//         }
-//     }
+impl Journey {
+    pub fn new(departure_at: NaiveDateTime, arrival_at: NaiveDateTime, legs: Vec<Leg>) -> Self {
+        Self {
+            departure_at,
+            arrival_at,
+            legs,
+        }
+    }
 
-//     // Getters/Setters
+    // Getters/Setters
 
-//     pub fn legs(&self) -> &Vec<Leg> {
-//         &self.legs
-//     }
-// }
+    pub fn legs(&self) -> &Vec<Leg> {
+        &self.legs
+    }
+}
 
-// #[derive(Debug)]
-// pub struct Leg {
-//     trip_id: Option<i32>,
-//     departure_stop_id: i32,
-//     arrival_stop_id: i32,
-//     departure_at: Option<NaiveDateTime>,
-//     arrival_at: Option<NaiveDateTime>,
-//     duration: Option<i16>,
-// }
+#[derive(Debug)]
+pub struct Leg {
+    trip_id: Option<i32>,
+    departure_stop_id: i32,
+    arrival_stop_id: i32,
+    departure_at: Option<NaiveDateTime>,
+    arrival_at: Option<NaiveDateTime>,
+    duration: Option<i16>,
+}
 
-// impl Leg {
-//     pub fn new(
-//         trip_id: Option<i32>,
-//         departure_stop_id: i32,
-//         departure_at: Option<NaiveDateTime>,
-//         arrival_stop_id: i32,
-//         arrival_at: Option<NaiveDateTime>,
-//         duration: Option<i16>,
-//     ) -> Self {
-//         Self {
-//             trip_id,
-//             departure_stop_id,
-//             departure_at,
-//             arrival_stop_id,
-//             arrival_at,
-//             duration,
-//         }
-//     }
+impl Leg {
+    pub fn new(
+        trip_id: Option<i32>,
+        departure_stop_id: i32,
+        departure_at: Option<NaiveDateTime>,
+        arrival_stop_id: i32,
+        arrival_at: Option<NaiveDateTime>,
+        duration: Option<i16>,
+    ) -> Self {
+        Self {
+            trip_id,
+            departure_stop_id,
+            departure_at,
+            arrival_stop_id,
+            arrival_at,
+            duration,
+        }
+    }
 
-//     // Getters/Setters
+    // Getters/Setters
 
-//     pub fn departure_stop_id(&self) -> i32 {
-//         self.departure_stop_id
-//     }
+    pub fn departure_stop_id(&self) -> i32 {
+        self.departure_stop_id
+    }
 
-//     pub fn departure_at(&self) -> Option<NaiveDateTime> {
-//         self.departure_at
-//     }
+    pub fn departure_at(&self) -> Option<NaiveDateTime> {
+        self.departure_at
+    }
 
-//     pub fn arrival_stop_id(&self) -> i32 {
-//         self.arrival_stop_id
-//     }
+    pub fn arrival_stop_id(&self) -> i32 {
+        self.arrival_stop_id
+    }
 
-//     pub fn arrival_at(&self) -> Option<NaiveDateTime> {
-//         self.arrival_at
-//     }
+    pub fn arrival_at(&self) -> Option<NaiveDateTime> {
+        self.arrival_at
+    }
 
-//     pub fn duration(&self) -> Option<i16> {
-//         self.duration
-//     }
+    pub fn duration(&self) -> Option<i16> {
+        self.duration
+    }
 
-//     // Functions
+    // Functions
 
-//     pub fn trip<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Trip> {
-//         self.trip_id.map(|id| data_storage.trips().find(id))
-//     }
+    pub fn trip<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Trip> {
+        self.trip_id.map(|id| data_storage.trips().find(id))
+    }
 
-//     pub fn is_transfer(&self) -> bool {
-//         self.trip_id.is_none()
-//     }
-// }
+    pub fn is_transfer(&self) -> bool {
+        self.trip_id.is_none()
+    }
+}
