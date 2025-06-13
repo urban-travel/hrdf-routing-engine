@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use hrdf_parser::{Hrdf, Version};
 
-use crate::routing::RrStorage;
+use crate::routing::{AlgorithmArgs, RoutingData};
 
 pub async fn run() -> Result<(), Box<dyn Error>> {
     let hrdf = Hrdf::new(
@@ -32,7 +32,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
     // ------------------------------------------------------------------------------------------------
     const N: u32 = 10;
 
-    let rr_storage = RrStorage::new(hrdf.data_storage());
+    let routing_data = RoutingData::new(hrdf.data_storage());
 
     println!();
     let start_time = Instant::now();
@@ -72,7 +72,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(hrdf, &rr_storage, 8587477, 8509368, create_date_time(2024, 5, 29, 17, 29), verbose);
 
         // 10. Chancy, Douane => Sevelen, Post
-        plan_journey(hrdf, &rr_storage,8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose);
+        plan_journey(AlgorithmArgs::new(&routing_data, 8587477, 8588197, create_date_time(2024, 9, 10, 13, 37), verbose));
     }
 
     println!("\n{:.2?}", start_time.elapsed() / N);

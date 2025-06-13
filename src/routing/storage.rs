@@ -2,22 +2,23 @@
 // --- RrStorage
 // ------------------------------------------------------------------------------------------------
 
+use chrono::Duration;
 use hrdf_parser::{DataStorage, Model};
 use rustc_hash::FxHashMap;
 
 use crate::routing::models::{RrRoute, RrScheduleEntry, RrStop, RrTransfer, RrTrip};
 
 #[derive(Debug)]
-pub struct RrStorage {
+pub struct RoutingData<'a> {
+    data_storage: &'a DataStorage,
     routes: Vec<RrRoute>,
     stops: Vec<RrStop>,
-    transfers: Vec<RrTransfer>,
 }
 
-impl RrStorage {
-    pub fn new(data_storage: &DataStorage) -> Self {
+impl<'a> RoutingData<'a> {
+    pub fn new(data_storage: &'a DataStorage) -> Self {
         let mut routes = get_routes(data_storage);
-        let (stops, transfers) = get_stops(data_storage, &routes);
+        let stops = get_stops(data_storage, &routes);
         fix_route_stops(&mut routes, &stops);
 
         for route in &mut routes {
@@ -31,13 +32,17 @@ impl RrStorage {
         }
 
         Self {
+            data_storage,
             routes,
             stops,
-            transfers,
         }
     }
 
     // Getters/Setters
+
+    pub fn data_storage(&self) -> &DataStorage {
+        &self.data_storage
+    }
 
     pub fn routes(&self) -> &Vec<RrRoute> {
         &self.routes
@@ -45,10 +50,6 @@ impl RrStorage {
 
     pub fn stops(&self) -> &Vec<RrStop> {
         &self.stops
-    }
-
-    pub fn transfers(&self) -> &Vec<RrTransfer> {
-        &self.transfers
     }
 }
 
@@ -101,7 +102,7 @@ fn get_routes(data_storage: &DataStorage) -> Vec<RrRoute> {
     routes
 }
 
-fn get_stops(data_storage: &DataStorage, routes: &Vec<RrRoute>) -> (Vec<RrStop>, Vec<RrTransfer>) {
+fn get_stops(data_storage: &DataStorage, routes: &Vec<RrRoute>) -> Vec<RrStop> {
     let mut tmp_stops = FxHashMap::default();
 
     for (i, route) in routes.iter().enumerate() {
@@ -117,15 +118,12 @@ fn get_stops(data_storage: &DataStorage, routes: &Vec<RrRoute>) -> (Vec<RrStop>,
     }
 
     let mut stops = Vec::new();
-    let mut transfers = Vec::new();
 
     for (stop_id, stop_routes) in tmp_stops {
         stops.push(RrStop::new(stop_id, stop_routes));
     }
 
     for i in 0..stops.len() {
-        let transfer_first_index = transfers.len();
-
         let stop_connections = data_storage
             .stop_connections_by_stop_id()
             .get(&stops[i].id());
@@ -134,6 +132,8 @@ fn get_stops(data_storage: &DataStorage, routes: &Vec<RrRoute>) -> (Vec<RrStop>,
             continue;
         }
 
+        let mut transfers = Vec::new();
+
         for stop_connection_id in stop_connections.unwrap() {
             let stop_connection = data_storage.stop_connections().find(*stop_connection_id);
             let other_stop_index = stops
@@ -141,15 +141,17 @@ fn get_stops(data_storage: &DataStorage, routes: &Vec<RrRoute>) -> (Vec<RrStop>,
                 .position(|s| s.id() == stop_connection.stop_id_2());
 
             if let Some(index) = other_stop_index {
-                transfers.push(RrTransfer::new(index, stop_connection.duration()));
+                transfers.push(RrTransfer::new(
+                    index,
+                    Duration::minutes(stop_connection.duration() as i64),
+                ));
             }
         }
 
-        stops[i].set_transfer_first_index(transfer_first_index);
-        stops[i].set_transfer_count(transfers.len() - transfer_first_index);
+        stops[i].set_transfers(transfers);
     }
 
-    (stops, transfers)
+    stops
 }
 
 fn fix_route_stops(routes: &mut Vec<RrRoute>, stops: &Vec<RrStop>) {

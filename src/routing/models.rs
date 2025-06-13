@@ -1,5 +1,7 @@
-use chrono::NaiveTime;
-use rustc_hash::FxHashMap;
+use chrono::{NaiveDateTime, NaiveTime, TimeDelta};
+use rustc_hash::{FxHashMap, FxHashSet};
+
+use crate::routing::RoutingData;
 
 // ------------------------------------------------------------------------------------------------
 // --- RrRoute
@@ -119,8 +121,7 @@ impl RrScheduleEntry {
 pub struct RrStop {
     id: i32,
     routes: Vec<usize>,
-    transfer_first_index: usize,
-    transfer_count: usize,
+    transfers: Vec<RrTransfer>,
 }
 
 impl RrStop {
@@ -128,8 +129,7 @@ impl RrStop {
         Self {
             id,
             routes,
-            transfer_first_index: 0,
-            transfer_count: 0,
+            transfers: Vec::new(),
         }
     }
 
@@ -143,20 +143,12 @@ impl RrStop {
         &self.routes
     }
 
-    pub fn transfer_first_index(&self) -> usize {
-        self.transfer_first_index
+    pub fn transfers(&self) -> &Vec<RrTransfer> {
+        &self.transfers
     }
 
-    pub fn set_transfer_first_index(&mut self, value: usize) {
-        self.transfer_first_index = value;
-    }
-
-    pub fn transfer_count(&self) -> usize {
-        self.transfer_count
-    }
-
-    pub fn set_transfer_count(&mut self, value: usize) {
-        self.transfer_count = value;
+    pub fn set_transfers(&mut self, value: Vec<RrTransfer>) {
+        self.transfers = value;
     }
 }
 
@@ -167,11 +159,11 @@ impl RrStop {
 #[derive(Debug)]
 pub struct RrTransfer {
     other_stop_index: usize,
-    duration: i16,
+    duration: TimeDelta,
 }
 
 impl RrTransfer {
-    pub fn new(other_stop_index: usize, duration: i16) -> Self {
+    pub fn new(other_stop_index: usize, duration: TimeDelta) -> Self {
         Self {
             other_stop_index,
             duration,
@@ -184,8 +176,184 @@ impl RrTransfer {
         self.other_stop_index
     }
 
-    pub fn duration(&self) -> i16 {
+    pub fn duration(&self) -> TimeDelta {
         self.duration
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// --- AlgorithmArgs
+// ------------------------------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct AlgorithmArgs<'a> {
+    routing_data: &'a RoutingData<'a>,
+    departure_stop_index: usize,
+    arrival_stop_index: usize,
+    departure_at: NaiveDateTime,
+    verbose: bool,
+}
+
+impl<'a> AlgorithmArgs<'a> {
+    pub fn new(
+        routing_data: &'a RoutingData<'a>,
+        departure_stop_id: i32,
+        arrival_stop_id: i32,
+        departure_at: NaiveDateTime,
+        verbose: bool,
+    ) -> Self {
+        let departure_stop_index = routing_data
+            .stops()
+            .iter()
+            .position(|s| s.id() == departure_stop_id)
+            .unwrap();
+        let arrival_stop_index = routing_data
+            .stops()
+            .iter()
+            .position(|s| s.id() == arrival_stop_id)
+            .unwrap();
+
+        Self {
+            routing_data,
+            departure_stop_index,
+            arrival_stop_index,
+            departure_at,
+            verbose,
+        }
+    }
+
+    // Getters/Setters
+
+    pub fn routing_data(&self) -> &'a RoutingData<'a> {
+        self.routing_data
+    }
+
+    pub fn departure_stop_index(&self) -> usize {
+        self.departure_stop_index
+    }
+
+    pub fn arrival_stop_index(&self) -> usize {
+        self.arrival_stop_index
+    }
+
+    pub fn departure_at(&self) -> NaiveDateTime {
+        self.departure_at
+    }
+
+    pub fn verbose(&self) -> bool {
+        self.verbose
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// --- AlgorithmState
+// ------------------------------------------------------------------------------------------------
+
+pub type StopIndex = usize;
+pub type TripIndex = usize;
+
+#[derive(Debug)]
+pub struct AlgorithmState {
+    labels: Vec<FxHashMap<StopIndex, NaiveTime>>,
+    earliest_arrival_times: FxHashMap<StopIndex, NaiveTime>,
+    marked_stops: FxHashSet<StopIndex>,
+    predecessors: Vec<FxHashMap<usize, (TripIndex, StopIndex)>>,
+    current_round: usize,
+}
+
+impl AlgorithmState {
+    pub fn new(algorithm_args: &AlgorithmArgs) -> Self {
+        let mut labels = vec![FxHashMap::default()];
+        labels[0].insert(
+            algorithm_args.departure_stop_index(),
+            algorithm_args.departure_at().time(),
+        );
+
+        let mut marked_stops = FxHashSet::default();
+        marked_stops.insert(algorithm_args.departure_stop_index());
+
+        Self {
+            labels,
+            earliest_arrival_times: FxHashMap::default(),
+            marked_stops,
+            predecessors: vec![FxHashMap::default()],
+            current_round: 1,
+        }
+    }
+
+    // Getters/Setters
+
+    pub fn labels(&self) -> &Vec<FxHashMap<StopIndex, NaiveTime>> {
+        &self.labels
+    }
+
+    pub fn labels_mut(&mut self) -> &mut Vec<FxHashMap<StopIndex, NaiveTime>> {
+        &mut self.labels
+    }
+
+    pub fn earliest_arrival_times(&self) -> &FxHashMap<StopIndex, NaiveTime> {
+        &self.earliest_arrival_times
+    }
+
+    pub fn earliest_arrival_times_mut(&mut self) -> &mut FxHashMap<StopIndex, NaiveTime> {
+        &mut self.earliest_arrival_times
+    }
+
+    pub fn marked_stops(&self) -> &FxHashSet<StopIndex> {
+        &self.marked_stops
+    }
+
+    pub fn marked_stops_mut(&mut self) -> &mut FxHashSet<StopIndex> {
+        &mut self.marked_stops
+    }
+
+    pub fn predecessors(&self) -> &Vec<FxHashMap<usize, (TripIndex, StopIndex)>> {
+        &self.predecessors
+    }
+
+    pub fn predecessors_mut(&mut self) -> &mut Vec<FxHashMap<usize, (TripIndex, StopIndex)>> {
+        &mut self.predecessors
+    }
+
+    pub fn current_round(&self) -> usize {
+        self.current_round
+    }
+
+    // Functions
+
+    pub fn label(&self, stop_index: StopIndex) -> Option<NaiveTime> {
+        self.labels()[self.current_round()]
+            .get(&stop_index)
+            .cloned()
+    }
+
+    pub fn previous_label(&self, stop_index: StopIndex) -> Option<NaiveTime> {
+        self.labels()[self.current_round() - 1]
+            .get(&stop_index)
+            .cloned()
+    }
+
+    pub fn set_label(&mut self, stop_index: StopIndex, arrival_time: NaiveTime) {
+        let k = self.current_round();
+        self.labels_mut()[k].insert(stop_index, arrival_time);
+    }
+
+    pub fn set_predecessor(
+        &mut self,
+        stop_index: StopIndex,
+        trip_index: TripIndex,
+        trip_boarded_at_stop_index: StopIndex,
+    ) {
+        let k = self.current_round();
+        self.predecessors_mut()[k - 1].insert(stop_index, (trip_index, trip_boarded_at_stop_index));
+    }
+
+    pub fn mark_stop(&mut self, stop_index: StopIndex) {
+        self.marked_stops_mut().insert(stop_index);
+    }
+
+    pub fn next_round(&mut self) {
+        self.current_round += 1
     }
 }
 
