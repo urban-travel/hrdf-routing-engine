@@ -3,7 +3,7 @@ mod print;
 mod storage;
 
 use crate::routing::models::{AlgorithmState, Journey, Leg, RrRoute, StopIndex};
-use chrono::{Local, NaiveDateTime};
+use chrono::NaiveDateTime;
 use hrdf_parser::Model;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -67,7 +67,8 @@ pub fn plan_journey(args: AlgorithmArgs) -> Journey {
     let mut i = earliest_arrival_time_round.unwrap() - 1;
 
     loop {
-        let (trip_id, origin_stop_index) = state.predecessors()[i][&destination_stop_index];
+        let (trip_id, origin_stop_index, duration) =
+            state.predecessors()[i][&destination_stop_index];
 
         let stop_origin = args
             .routing_data()
@@ -87,7 +88,7 @@ pub fn plan_journey(args: AlgorithmArgs) -> Journey {
                 None,
                 stop_destination.id(),
                 None,
-                Some(0),
+                Some(duration),
             ));
         } else {
             let trip = args.routing_data().data_storage().trips().find(trip_id);
@@ -127,11 +128,7 @@ pub fn plan_journey(args: AlgorithmArgs) -> Journey {
         }
     }
 
-    Journey::new(
-        Local::now().naive_local(),
-        Local::now().naive_local(),
-        legs.into_iter().rev().collect(),
-    )
+    Journey::new(legs.into_iter().rev().collect())
 }
 
 fn get_routes<'a>(
@@ -246,6 +243,7 @@ fn evaluate_stop(
             stop_index,
             route.trips()[trip_index].id(),
             trip_boarded_at_stop_index,
+            0,
         );
     }
 
@@ -317,11 +315,21 @@ fn scan_transfers(args: &AlgorithmArgs, state: &mut AlgorithmState) {
             if let Some(current_best_arrival_time) = state.label(transfer.other_stop_index()) {
                 if arrival_time_candidate < current_best_arrival_time {
                     state.set_label(transfer.other_stop_index(), arrival_time_candidate);
-                    state.set_predecessor(transfer.other_stop_index(), 0, stop_index);
+                    state.set_predecessor(
+                        transfer.other_stop_index(),
+                        0,
+                        stop_index,
+                        transfer.duration().num_minutes() as u8,
+                    );
                 }
             } else {
                 state.set_label(transfer.other_stop_index(), arrival_time_candidate);
-                state.set_predecessor(transfer.other_stop_index(), 0, stop_index);
+                state.set_predecessor(
+                    transfer.other_stop_index(),
+                    0,
+                    stop_index,
+                    transfer.duration().num_minutes() as u8,
+                );
             }
 
             additional_marked_stops.insert(transfer.other_stop_index());

@@ -60,7 +60,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // plan_journey(AlgorithmArgs::new(&routing_data, 8501008, 8590028, create_date_time(2024, 11, 22, 6, 59), verbose));
 
         // 7. Genève => Zürich HB
-        // plan_journey(AlgorithmArgs::new(&routing_data, 8501008, 8503000, create_date_time(2024, 4, 9, 8, 4), verbose));
+        // journey = Some(plan_journey(AlgorithmArgs::new(&routing_data, 8501008, 8503000, create_date_time(2024, 4, 9, 8, 4), verbose)));
 
         // 8. Zürich HB => Lugano, Genzana
         // journey = Some(plan_journey(AlgorithmArgs::new(&routing_data, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose)));

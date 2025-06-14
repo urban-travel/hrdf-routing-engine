@@ -6,15 +6,13 @@ impl Journey {
     #[rustfmt::skip]
     pub fn print(&self, data_storage: &DataStorage) {
         for leg in self.legs() {
-            let trip = leg.trip(data_storage);
-
-            if trip.is_none() {
+            if leg.is_transfer() {
                 let stop = data_storage.stops().find(leg.arrival_stop_id());
                 println!("Approx. {}-minute walk to {}", leg.duration().unwrap(), stop.name());
                 continue;
             }
 
-            let trip = trip.unwrap();
+            let trip = leg.trip(data_storage).unwrap();
             println!("Trip #{}", trip.id());
 
             let mut route_iter = trip.route().into_iter().peekable();

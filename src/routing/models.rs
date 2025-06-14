@@ -258,7 +258,7 @@ pub struct AlgorithmState {
     labels: Vec<FxHashMap<StopIndex, NaiveTime>>,
     earliest_arrival_times: FxHashMap<StopIndex, NaiveTime>,
     marked_stops: FxHashSet<StopIndex>,
-    predecessors: Vec<FxHashMap<usize, (i32, StopIndex)>>,
+    predecessors: Vec<FxHashMap<usize, (i32, StopIndex, u8)>>,
     current_round: usize,
 }
 
@@ -308,11 +308,11 @@ impl AlgorithmState {
         &mut self.marked_stops
     }
 
-    pub fn predecessors(&self) -> &Vec<FxHashMap<usize, (i32, StopIndex)>> {
+    pub fn predecessors(&self) -> &Vec<FxHashMap<usize, (i32, StopIndex, u8)>> {
         &self.predecessors
     }
 
-    pub fn predecessors_mut(&mut self) -> &mut Vec<FxHashMap<usize, (i32, StopIndex)>> {
+    pub fn predecessors_mut(&mut self) -> &mut Vec<FxHashMap<usize, (i32, StopIndex, u8)>> {
         &mut self.predecessors
     }
 
@@ -353,9 +353,10 @@ impl AlgorithmState {
         stop_index: StopIndex,
         trip_id: i32,
         trip_boarded_at_stop_index: StopIndex,
+        duration: u8,
     ) {
         let k = self.current_round();
-        self.predecessors_mut()[k - 1].insert(stop_index, (trip_id, trip_boarded_at_stop_index));
+        self.predecessors_mut()[k - 1].insert(stop_index, (trip_id, trip_boarded_at_stop_index, duration));
     }
 
     pub fn mark_stop(&mut self, stop_index: StopIndex) {
@@ -373,18 +374,12 @@ impl AlgorithmState {
 
 #[derive(Debug)]
 pub struct Journey {
-    departure_at: NaiveDateTime,
-    arrival_at: NaiveDateTime,
     legs: Vec<Leg>,
 }
 
 impl Journey {
-    pub fn new(departure_at: NaiveDateTime, arrival_at: NaiveDateTime, legs: Vec<Leg>) -> Self {
-        Self {
-            departure_at,
-            arrival_at,
-            legs,
-        }
+    pub fn new(legs: Vec<Leg>) -> Self {
+        Self { legs }
     }
 
     // Getters/Setters
@@ -401,7 +396,7 @@ pub struct Leg {
     arrival_stop_id: i32,
     departure_at: Option<NaiveDateTime>,
     arrival_at: Option<NaiveDateTime>,
-    duration: Option<i16>,
+    duration: Option<u8>,
 }
 
 impl Leg {
@@ -411,7 +406,7 @@ impl Leg {
         departure_at: Option<NaiveDateTime>,
         arrival_stop_id: i32,
         arrival_at: Option<NaiveDateTime>,
-        duration: Option<i16>,
+        duration: Option<u8>,
     ) -> Self {
         Self {
             trip_id,
@@ -441,7 +436,7 @@ impl Leg {
         self.arrival_at
     }
 
-    pub fn duration(&self) -> Option<i16> {
+    pub fn duration(&self) -> Option<u8> {
         self.duration
     }
 
