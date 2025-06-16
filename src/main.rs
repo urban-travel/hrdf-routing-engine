@@ -26,6 +26,9 @@ struct IsochroneArgs {
     /// Time interval between two isochrone in minutes
     #[arg(short, long, default_value_t = 10)]
     interval: i64,
+    /// Maximum number of connections
+    #[arg(short, long, default_value_t = 10)]
+    max_num_explorable_connections: i32,
     /// Verbose on or off
     #[arg(short, long, default_value_t = true)]
     verbose: bool,
@@ -157,6 +160,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 departure_at,
                 time_limit,
                 interval,
+                max_num_explorable_connections,
                 verbose,
             } = isochrone_args;
             run_optimal(
@@ -169,6 +173,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 Duration::minutes(interval),
                 Duration::minutes(delta_time),
                 mode,
+                max_num_explorable_connections,
                 verbose,
             )?;
         }
@@ -183,6 +188,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 departure_at,
                 time_limit,
                 interval,
+                max_num_explorable_connections,
                 verbose,
             } = isochrone_args;
             run_worst(
@@ -195,6 +201,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 Duration::minutes(interval),
                 Duration::minutes(delta_time),
                 mode,
+                max_num_explorable_connections,
                 verbose,
             )?;
         }
@@ -208,6 +215,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 departure_at,
                 time_limit,
                 interval,
+                max_num_explorable_connections,
                 verbose,
             } = isochrone_args;
 
@@ -220,6 +228,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 Duration::minutes(time_limit),
                 Duration::minutes(interval),
                 mode,
+                max_num_explorable_connections,
                 verbose,
             )?;
         }
@@ -233,6 +242,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 departure_at,
                 time_limit,
                 interval,
+                max_num_explorable_connections,
                 verbose,
             } = isochrone_args;
 
@@ -245,6 +255,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 Duration::minutes(time_limit),
                 Duration::minutes(interval),
                 Duration::minutes(delta_time),
+                max_num_explorable_connections,
                 verbose,
             )?;
         }
@@ -260,6 +271,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 departure_at,
                 time_limit,
                 interval,
+                max_num_explorable_connections,
                 verbose,
             } = isochrone_args;
             let hrdf_2024 = Hrdf::new(
@@ -281,6 +293,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 Duration::minutes(interval),
                 Duration::minutes(delta_time),
                 mode,
+                max_num_explorable_connections,
                 verbose,
             )?;
         }

@@ -4,7 +4,6 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{
     connections::next_departures,
-    constants::MAXIMUM_NUMBER_OF_EXPLORABLE_CONNECTIONS,
     exploration::explore_routes,
     models::{Route, RouteResult, RouteSection, RoutingAlgorithmArgs, RoutingAlgorithmMode},
     utils::{get_stop_connections, sort_routes},
@@ -14,6 +13,7 @@ pub fn compute_routing(
     data_storage: &DataStorage,
     departure_stop_id: i32,
     departure_at: NaiveDateTime,
+    max_num_explorable_connections: i32,
     verbose: bool,
     args: RoutingAlgorithmArgs,
 ) -> FxHashMap<i32, RouteResult> {
@@ -28,9 +28,9 @@ pub fn compute_routing(
         }
     });
 
-    for _ in 0..MAXIMUM_NUMBER_OF_EXPLORABLE_CONNECTIONS {
+    for i in 0..max_num_explorable_connections {
         if verbose {
-            log::info!("{}", routes.len());
+            log::info!("For connection {i}, routes length: {}", routes.len());
         }
 
         let can_continue_exploration: Box<dyn FnMut(&Route) -> bool> = match args.mode() {

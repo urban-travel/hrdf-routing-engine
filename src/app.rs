@@ -20,6 +20,7 @@ pub fn run_simple(
     time_limit: Duration,
     isochrone_interval: Duration,
     display_mode: IsochroneDisplayMode,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let (x, y) = wgs84_to_lv95(latitude, longitude);
@@ -35,6 +36,7 @@ pub fn run_simple(
         time_limit,
         isochrone_interval,
         display_mode,
+        max_num_explorable_connections,
         verbose,
     );
 
@@ -62,6 +64,7 @@ pub fn run_average(
     time_limit: Duration,
     isochrone_interval: Duration,
     delta_time: Duration,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let (x, y) = wgs84_to_lv95(latitude, longitude);
@@ -77,6 +80,7 @@ pub fn run_average(
         time_limit,
         isochrone_interval,
         delta_time,
+        max_num_explorable_connections,
         verbose,
     );
 
@@ -106,6 +110,7 @@ pub fn run_optimal(
     isochrone_interval: Duration,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let (x, y) = wgs84_to_lv95(latitude, longitude);
@@ -121,6 +126,7 @@ pub fn run_optimal(
         isochrone_interval,
         delta_time,
         display_mode,
+        max_num_explorable_connections,
         verbose,
     );
 
@@ -149,6 +155,7 @@ pub fn run_worst(
     isochrone_interval: Duration,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let (x, y) = wgs84_to_lv95(latitude, longitude);
@@ -164,6 +171,7 @@ pub fn run_worst(
         isochrone_interval,
         delta_time,
         display_mode,
+        max_num_explorable_connections,
         verbose,
     );
 
@@ -194,6 +202,7 @@ pub fn run_comparison(
     isochrone_interval: Duration,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
     let (easting, northing) = wgs84_to_lv95(latitude, longitude);
@@ -209,6 +218,7 @@ pub fn run_comparison(
         isochrone_interval,
         delta_time,
         display_mode,
+        max_num_explorable_connections,
         verbose,
     );
     #[cfg(feature = "svg")]
@@ -238,6 +248,7 @@ pub fn run_comparison(
         isochrone_interval,
         delta_time,
         display_mode,
+        max_num_explorable_connections,
         verbose,
     );
     #[cfg(feature = "svg")]

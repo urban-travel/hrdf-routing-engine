@@ -42,6 +42,7 @@ pub fn compute_optimal_isochrones(
     isochrone_interval: Duration,
     delta_time: Duration,
     display_mode: models::DisplayMode,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> IsochroneMap {
     if verbose {
@@ -76,6 +77,7 @@ pub fn compute_optimal_isochrones(
                 time_limit,
                 isochrone_interval,
                 display_mode,
+                max_num_explorable_connections,
                 false,
             );
             let curr_area = isochrone.compute_max_area();
@@ -119,6 +121,7 @@ pub fn compute_worst_isochrones(
     isochrone_interval: Duration,
     delta_time: Duration,
     display_mode: models::DisplayMode,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> IsochroneMap {
     if verbose {
@@ -153,6 +156,7 @@ pub fn compute_worst_isochrones(
                 time_limit,
                 isochrone_interval,
                 display_mode,
+                max_num_explorable_connections,
                 false,
             );
             let curr_area = isochrone.compute_max_area();
@@ -196,6 +200,7 @@ pub fn compute_average_isochrones(
     time_limit: Duration,
     isochrone_interval: Duration,
     delta_time: Duration,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> IsochroneMap {
     if verbose {
@@ -225,8 +230,16 @@ pub fn compute_average_isochrones(
     .collect::<Vec<_>>()
     .par_iter()
     .map(|dep| {
-        let routes =
-            compute_routes_from_origin(hrdf, latitude, longitude, *dep, time_limit, 5, verbose);
+        let routes = compute_routes_from_origin(
+            hrdf,
+            latitude,
+            longitude,
+            *dep,
+            time_limit,
+            5,
+            max_num_explorable_connections,
+            verbose,
+        );
 
         unique_coordinates_from_routes(&routes, departure_at)
     })
@@ -326,11 +339,12 @@ pub fn compute_isochrones(
     time_limit: Duration,
     isochrone_interval: Duration,
     display_mode: models::DisplayMode,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> IsochroneMap {
     if verbose {
         log::info!(
-            "longitude: {longitude}, latitude : {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, verbose: {verbose}",
+            "longitude: {longitude}, latitude : {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, max_num_explorable_connections: {max_num_explorable_connections}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes()
         );
@@ -350,6 +364,7 @@ pub fn compute_isochrones(
         departure_at,
         time_limit,
         5,
+        max_num_explorable_connections,
         verbose,
     );
 
@@ -382,7 +397,9 @@ pub fn compute_isochrones(
             let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
 
             let polygons = match display_mode {
-                IsochroneDisplayMode::Circles => circles::get_polygons(&data, current_time_limit),
+                IsochroneDisplayMode::Circles => {
+                    circles::get_polygons(&data, current_time_limit, num_points_circle)
+                }
                 IsochroneDisplayMode::ContourLine => {
                     let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
                     contour_line::get_polygons(

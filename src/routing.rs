@@ -1,5 +1,4 @@
 mod connections;
-mod constants;
 mod core;
 mod display;
 mod exploration;
@@ -31,12 +30,14 @@ pub fn plan_journey(
     departure_stop_id: i32,
     arrival_stop_id: i32,
     departure_at: NaiveDateTime,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> Option<Route> {
     let result = compute_routing(
         hrdf.data_storage(),
         departure_stop_id,
         departure_at,
+        max_num_explorable_connections,
         verbose,
         RoutingAlgorithmArgs::solve_from_departure_stop_to_arrival_stop(arrival_stop_id),
     )
@@ -60,12 +61,14 @@ pub fn find_reachable_stops_within_time_limit(
     departure_stop_id: i32,
     departure_at: NaiveDateTime,
     time_limit: Duration,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> Vec<Route> {
     let routes = compute_routing(
         hrdf.data_storage(),
         departure_stop_id,
         departure_at,
+        max_num_explorable_connections,
         verbose,
         RoutingAlgorithmArgs::solve_from_departure_stop_to_reachable_arrival_stops(
             departure_at.checked_add_signed(time_limit).unwrap(),
@@ -136,6 +139,7 @@ pub fn compute_routes_from_origin(
     departure_at: NaiveDateTime,
     time_limit: Duration,
     num_starting_points: usize,
+    max_num_explorable_connections: i32,
     verbose: bool,
 ) -> Vec<Route> {
     // Create a list of stops close enough to be of interest
@@ -178,6 +182,7 @@ pub fn compute_routes_from_origin(
                 departure_stop.id(),
                 adjusted_departure_at,
                 adjusted_time_limit,
+        max_num_explorable_connections,
                 verbose,
             );
 

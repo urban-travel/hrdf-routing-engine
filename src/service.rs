@@ -78,6 +78,7 @@ async fn compute_isochrones(
 ) -> Result<Json<IsochroneMap>, StatusCode> {
     // The coordinates are not checked but should be.
 
+    let max_num_explorable_connections = 10;
     let start_date = timetable_start_date(hrdf.data_storage().timetable_metadata()).unwrap();
     let end_date = timetable_end_date(hrdf.data_storage().timetable_metadata()).unwrap();
 
@@ -107,6 +108,7 @@ async fn compute_isochrones(
             Duration::minutes(params.isochrone_interval.into()),
             Duration::minutes(30),
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+            max_num_explorable_connections,
             true,
         )
     } else {
@@ -119,6 +121,7 @@ async fn compute_isochrones(
             Duration::minutes(params.time_limit.into()),
             Duration::minutes(params.isochrone_interval.into()),
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+            max_num_explorable_connections,
             true,
         )
     };
