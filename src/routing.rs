@@ -237,7 +237,10 @@ fn evaluate_stop(
     if can_label_be_improved {
         state.set_label(stop_index, arrival_time);
         state.set_earliest_arrival_time(stop_index, arrival_time);
-        state.mark_stop(stop_index);
+
+        if args.routing_data().stops()[stop_index].can_be_used_as_exchange_point() {
+            state.mark_stop(stop_index);
+        }
 
         state.set_predecessor(
             stop_index,

@@ -30,7 +30,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
     // ------------------------------------------------------------------------------------------------
     // --- 2.0.5
     // ------------------------------------------------------------------------------------------------
-    const N: u32 = 20;
+    const N: u32 = 40;
 
     let routing_data = RoutingData::new(hrdf.data_storage());
 
@@ -42,7 +42,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         let verbose = i == 0;
 
         // 1. Petit-Lancy, Les Esserts => Onex, Bandol
-        // plan_journey(AlgorithmArgs::new(&routing_data, 8587418, 8593027, create_date_time(2024, 6, 1, 12, 30), verbose));
+        // journey = Some(plan_journey(AlgorithmArgs::new(&routing_data, 8587418, 8593027, create_date_time(2024, 6, 1, 12, 30), verbose)));
 
         // 2. Petit-Lancy, Les Esserts => Genève-Aéroport
         // plan_journey(AlgorithmArgs::new(&routing_data, 8587418, 8501026, create_date_time(2024, 2, 9, 14, 2), verbose));
@@ -63,7 +63,7 @@ fn test_plan_journey(hrdf: &Hrdf) {
         // journey = Some(plan_journey(AlgorithmArgs::new(&routing_data, 8501008, 8503000, create_date_time(2024, 4, 9, 8, 4), verbose)));
 
         // 8. Zürich HB => Lugano, Genzana
-        // journey = Some(plan_journey(AlgorithmArgs::new(&routing_data, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose)));
+        // journey = Some(plan_journey(AlgorithmArgs::new(&    routing_data, 8503000, 8575310, create_date_time(2024, 6, 15, 12, 10), verbose)));
 
         // 9. Chancy, Douane => Campocologno
         // plan_journey(AlgorithmArgs::new(&routing_data, 8587477, 8509368, create_date_time(2024, 5, 29, 17, 29), verbose));

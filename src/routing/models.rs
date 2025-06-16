@@ -122,14 +122,16 @@ impl RrScheduleEntry {
 pub struct RrStop {
     id: i32,
     routes: Vec<usize>,
+    can_be_used_as_exchange_point: bool,
     transfers: Vec<RrTransfer>,
 }
 
 impl RrStop {
-    pub fn new(id: i32, routes: Vec<usize>) -> Self {
+    pub fn new(id: i32, routes: Vec<usize>, can_be_used_as_exchange_point: bool) -> Self {
         Self {
             id,
             routes,
+            can_be_used_as_exchange_point,
             transfers: Vec::new(),
         }
     }
@@ -142,6 +144,10 @@ impl RrStop {
 
     pub fn routes(&self) -> &Vec<usize> {
         &self.routes
+    }
+
+    pub fn can_be_used_as_exchange_point(&self) -> bool {
+        self.can_be_used_as_exchange_point
     }
 
     pub fn transfers(&self) -> &Vec<RrTransfer> {
@@ -356,7 +362,8 @@ impl AlgorithmState {
         duration: u8,
     ) {
         let k = self.current_round();
-        self.predecessors_mut()[k - 1].insert(stop_index, (trip_id, trip_boarded_at_stop_index, duration));
+        self.predecessors_mut()[k - 1]
+            .insert(stop_index, (trip_id, trip_boarded_at_stop_index, duration));
     }
 
     pub fn mark_stop(&mut self, stop_index: StopIndex) {

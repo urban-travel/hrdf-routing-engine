@@ -120,7 +120,15 @@ fn get_stops(data_storage: &DataStorage, routes: &Vec<RrRoute>) -> Vec<RrStop> {
     let mut stops = Vec::new();
 
     for (stop_id, stop_routes) in tmp_stops {
-        stops.push(RrStop::new(stop_id, stop_routes));
+        let can_be_used_as_exchange_point = data_storage
+            .stops()
+            .find(stop_id)
+            .can_be_used_as_exchange_point();
+        stops.push(RrStop::new(
+            stop_id,
+            stop_routes,
+            can_be_used_as_exchange_point,
+        ));
     }
 
     for i in 0..stops.len() {
