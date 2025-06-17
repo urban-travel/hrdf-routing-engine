@@ -398,6 +398,7 @@ pub fn compute_isochrones(
 
             let polygons = match display_mode {
                 IsochroneDisplayMode::Circles => {
+                    let num_points_circle = 6;
                     circles::get_polygons(&data, current_time_limit, num_points_circle)
                 }
                 IsochroneDisplayMode::ContourLine => {
