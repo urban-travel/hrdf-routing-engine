@@ -302,6 +302,7 @@ mod tests {
         request_msg_ref: String,
         #[serde(rename="siri:DefaultLanguage")]
         default_lang: String,
+        calc_time: i32,
         trip_response_context: TripResponseContext,
         trip_result: Vec<TripResult>,
     }
@@ -538,7 +539,7 @@ mod tests {
                                                 <PlaceRef>
                                                     <siri:StopPointRef>{from_point_ref}</siri:StopPointRef>
                                                 </PlaceRef>
-                                                <!-- <DepArrTime>{journey_year}-{journey_month}-{journey_day}T{journey_hour}:{journey_minute}:{journey_second}.475Z</DepArrTime> -->
+                                                <DepArrTime>{journey_year}-{journey_month:0>2}-{journey_day:0>2}T{journey_hour:0>2}:{journey_minute:0>2}:{journey_second:0>2}.475Z</DepArrTime>
                                             </Origin>
                                             <Destination>
                                                 <PlaceRef>
