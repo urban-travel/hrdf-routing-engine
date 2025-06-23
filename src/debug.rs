@@ -428,7 +428,7 @@ mod tests {
         stop_point_name: Text,
         name_suffix: Text,
         planned_quay: Text,
-        estimated_quay: Text,
+        estimated_quay: Option<Text>,
         service_departure: ServiceTime,
         order: i32
     }
@@ -440,7 +440,7 @@ mod tests {
         stop_point_name: Text,
         name_suffix: Text,
         planned_quay: Text,
-        estimated_quay: Text,
+        estimated_quay: Option<Text>,
         service_arrival: ServiceTime,
         order: i32
     }
@@ -493,7 +493,7 @@ mod tests {
     #[serde(rename_all = "PascalCase")]
     struct ServiceTime {
         timetabled_time: DateTime<Local>,
-        estimated_time: DateTime<Local>,
+        estimated_time: Option<DateTime<Local>>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -518,7 +518,7 @@ mod tests {
         let to_point_ref = 8501120; // Lausanne
         let expected_result_nb = 3;
         let journey_year = 2025;
-        let journey_month = 6;
+        let journey_month = 7;
         let journey_day = 1;
         let journey_hour = 11;
         let journey_minute = 16;
