@@ -37,6 +37,7 @@ pub struct IsochroneArgs {
     pub time_limit: Duration,
     pub interval: Duration,
     pub max_num_explorable_connections: i32,
+    pub num_starting_points: usize,
     pub verbose: bool,
 }
 
@@ -56,6 +57,7 @@ pub fn compute_optimal_isochrones(
         time_limit,
         interval: isochrone_interval,
         max_num_explorable_connections,
+        num_starting_points,
         verbose,
     } = isochrone_args;
 
@@ -92,6 +94,7 @@ pub fn compute_optimal_isochrones(
                     time_limit,
                     interval: isochrone_interval,
                     max_num_explorable_connections,
+                    num_starting_points,
                     verbose,
                 },
                 display_mode,
@@ -141,6 +144,7 @@ pub fn compute_worst_isochrones(
         time_limit,
         interval: isochrone_interval,
         max_num_explorable_connections,
+        num_starting_points,
         verbose,
     } = isochrone_args;
 
@@ -177,6 +181,7 @@ pub fn compute_worst_isochrones(
                     time_limit,
                     interval: isochrone_interval,
                     max_num_explorable_connections,
+                    num_starting_points,
                     verbose,
                 },
                 display_mode,
@@ -226,6 +231,7 @@ pub fn compute_average_isochrones(
         time_limit,
         interval: isochrone_interval,
         max_num_explorable_connections,
+        num_starting_points,
         verbose,
     } = isochrone_args;
 
@@ -262,7 +268,7 @@ pub fn compute_average_isochrones(
             longitude,
             *dep,
             time_limit,
-            5,
+            num_starting_points,
             max_num_explorable_connections,
             verbose,
         );
@@ -369,6 +375,7 @@ pub fn compute_isochrones(
         time_limit,
         interval: isochrone_interval,
         max_num_explorable_connections,
+        num_starting_points,
         verbose,
     } = isochrone_args;
 
@@ -393,7 +400,7 @@ pub fn compute_isochrones(
         longitude,
         departure_at,
         time_limit,
-        5,
+        num_starting_points,
         max_num_explorable_connections,
         verbose,
     );

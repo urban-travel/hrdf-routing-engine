@@ -82,6 +82,7 @@ async fn compute_isochrones(
     // The coordinates are not checked but should be.
 
     let max_num_explorable_connections = 10;
+    let num_starting_points = 5;
     let start_date = timetable_start_date(hrdf.data_storage().timetable_metadata()).unwrap();
     let end_date = timetable_end_date(hrdf.data_storage().timetable_metadata()).unwrap();
 
@@ -106,6 +107,7 @@ async fn compute_isochrones(
         time_limit: Duration::minutes(params.time_limit.into()),
         interval: Duration::minutes(params.isochrone_interval.into()),
         max_num_explorable_connections,
+        num_starting_points,
         verbose: true,
     };
     let result = if params.find_optimal {

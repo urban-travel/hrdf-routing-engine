@@ -29,6 +29,9 @@ struct IsochroneArgsBuilder {
     /// Maximum number of connections
     #[arg(short, long, default_value_t = 10)]
     max_num_explorable_connections: i32,
+    /// Number of starting points
+    #[arg(short, long, default_value_t = 5)]
+    num_starting_points: usize,
     /// Verbose on or off
     #[arg(short, long, default_value_t = true)]
     verbose: bool,
@@ -48,6 +51,7 @@ impl IsochroneArgsBuilder {
             time_limit,
             interval,
             max_num_explorable_connections,
+            num_starting_points,
             verbose,
         } = self;
 
@@ -58,6 +62,7 @@ impl IsochroneArgsBuilder {
             time_limit: Duration::minutes(time_limit),
             interval: Duration::minutes(interval),
             max_num_explorable_connections,
+            num_starting_points,
             verbose,
         })
     }
@@ -152,6 +157,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_module_level("hrdf_routing_engine", LevelFilter::Info)
         .env()
         .init()
+        .unwrap();
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(4)
+        .build_global()
         .unwrap();
 
     let cli = Cli::parse();
