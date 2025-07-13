@@ -11,7 +11,10 @@ use hrdf_parser::{Hrdf, timetable_end_date, timetable_start_date};
 use serde::{Deserialize, Serialize};
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::isochrone::{self, IsochroneDisplayMode, IsochroneMap};
+use crate::{
+    IsochroneArgs,
+    isochrone::{self, IsochroneDisplayMode, IsochroneMap},
+};
 
 pub async fn run_service(
     hrdf: Hrdf,
@@ -96,33 +99,29 @@ async fn compute_isochrones(
         // The display mode is incorrect.
         return Err(StatusCode::BAD_REQUEST);
     }
-
+    let isochrone_args = IsochroneArgs {
+        latitude: params.origin_point_latitude,
+        longitude: params.origin_point_longitude,
+        departure_at: NaiveDateTime::new(params.departure_date, params.departure_time),
+        time_limit: Duration::minutes(params.time_limit.into()),
+        interval: Duration::minutes(params.isochrone_interval.into()),
+        max_num_explorable_connections,
+        verbose: true,
+    };
     let result = if params.find_optimal {
         isochrone::compute_optimal_isochrones(
             &hrdf,
             &excluded_polygons,
-            params.origin_point_longitude,
-            params.origin_point_latitude,
-            NaiveDateTime::new(params.departure_date, params.departure_time),
-            Duration::minutes(params.time_limit.into()),
-            Duration::minutes(params.isochrone_interval.into()),
+            isochrone_args,
             Duration::minutes(30),
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-            max_num_explorable_connections,
-            true,
         )
     } else {
         isochrone::compute_isochrones(
             &hrdf,
             &excluded_polygons,
-            params.origin_point_longitude,
-            params.origin_point_latitude,
-            NaiveDateTime::new(params.departure_date, params.departure_time),
-            Duration::minutes(params.time_limit.into()),
-            Duration::minutes(params.isochrone_interval.into()),
+            isochrone_args,
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-            max_num_explorable_connections,
-            true,
         )
     };
     Ok(Json(result))

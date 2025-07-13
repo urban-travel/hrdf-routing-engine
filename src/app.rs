@@ -1,7 +1,8 @@
 use std::error::Error;
 
+use crate::IsochroneArgs;
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
-use chrono::{Duration, NaiveDateTime};
+use chrono::Duration;
 use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;
@@ -14,39 +15,21 @@ use self::isochrone::utils::wgs84_to_lv95;
 pub fn run_simple(
     hrdf: Hrdf,
     excluded_polygons: MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
+    isochrone_args: IsochroneArgs,
     display_mode: IsochroneDisplayMode,
-    max_num_explorable_connections: i32,
-    verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let (x, y) = wgs84_to_lv95(latitude, longitude);
+    let time_limit = isochrone_args.time_limit.num_minutes();
+    let isochrone_interval = isochrone_args.interval.num_minutes();
+
+    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
     let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
 
     #[cfg(feature = "svg")]
-    let iso = compute_isochrones(
-        &hrdf,
-        &excluded_polygons,
-        longitude,
-        latitude,
-        departure_at,
-        time_limit,
-        isochrone_interval,
-        display_mode,
-        max_num_explorable_connections,
-        verbose,
-    );
+    let iso = compute_isochrones(&hrdf, &excluded_polygons, isochrone_args, display_mode);
 
     #[cfg(feature = "svg")]
     iso.write_svg(
-        &format!(
-            "isochrones_{}_{}.svg",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes()
-        ),
+        &format!("isochrones_{}_{}.svg", time_limit, isochrone_interval),
         1.0 / 100.0,
         Some(coord),
     )?;
@@ -58,38 +41,24 @@ pub fn run_simple(
 pub fn run_average(
     hrdf: Hrdf,
     excluded_polygons: MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
+    isochrone_args: IsochroneArgs,
     delta_time: Duration,
-    max_num_explorable_connections: i32,
-    verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let (x, y) = wgs84_to_lv95(latitude, longitude);
+    let time_limit = isochrone_args.time_limit.num_minutes();
+    let isochrone_interval = isochrone_args.interval.num_minutes();
+
+    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
     let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
 
     #[cfg(feature = "svg")]
-    let iso = compute_average_isochrones(
-        &hrdf,
-        &excluded_polygons,
-        longitude,
-        latitude,
-        departure_at,
-        time_limit,
-        isochrone_interval,
-        delta_time,
-        max_num_explorable_connections,
-        verbose,
-    );
+    let iso = compute_average_isochrones(&hrdf, &excluded_polygons, isochrone_args, delta_time);
 
     #[cfg(feature = "svg")]
     iso.write_svg(
         &format!(
             "average_isochrones_{}_{}_{}.svg",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes(),
+            time_limit,
+            isochrone_interval,
             delta_time.num_minutes()
         ),
         1.0 / 100.0,
@@ -103,39 +72,29 @@ pub fn run_average(
 pub fn run_optimal(
     hrdf: Hrdf,
     excluded_polygons: MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
+    isochrone_args: IsochroneArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
-    max_num_explorable_connections: i32,
-    verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let (x, y) = wgs84_to_lv95(latitude, longitude);
+    let time_limit = isochrone_args.time_limit.num_minutes();
+    let isochrone_interval = isochrone_args.interval.num_minutes();
+
+    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
     let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
 
     let opt_iso = compute_optimal_isochrones(
         &hrdf,
         &excluded_polygons,
-        longitude,
-        latitude,
-        departure_at,
-        time_limit,
-        isochrone_interval,
+        isochrone_args,
         delta_time,
         display_mode,
-        max_num_explorable_connections,
-        verbose,
     );
 
     #[cfg(feature = "svg")]
     opt_iso.write_svg(
         &format!(
             "optimal_isochrones_{}_{}.svg",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes()
+            time_limit, isochrone_interval
         ),
         1.0 / 100.0,
         Some(coord),
@@ -144,44 +103,30 @@ pub fn run_optimal(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn run_worst(
     hrdf: Hrdf,
     excluded_polygons: MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
+    isochrone_args: IsochroneArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
-    max_num_explorable_connections: i32,
-    verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let (x, y) = wgs84_to_lv95(latitude, longitude);
+    let time_limit = isochrone_args.time_limit.num_minutes();
+    let isochrone_interval = isochrone_args.interval.num_minutes();
+
+    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
     let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
 
     let opt_iso = compute_worst_isochrones(
         &hrdf,
         &excluded_polygons,
-        longitude,
-        latitude,
-        departure_at,
-        time_limit,
-        isochrone_interval,
+        isochrone_args,
         delta_time,
         display_mode,
-        max_num_explorable_connections,
-        verbose,
     );
 
     #[cfg(feature = "svg")]
     opt_iso.write_svg(
-        &format!(
-            "worst_isochrones_{}_{}.svg",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes()
-        ),
+        &format!("worst_isochrones_{}_{}.svg", time_limit, isochrone_interval),
         1.0 / 100.0,
         Some(coord),
     )?;
@@ -194,40 +139,27 @@ pub fn run_comparison(
     hrdf_2024: Hrdf,
     hrdf_2025: Hrdf,
     excluded_polygons: MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at_2024: NaiveDateTime,
-    departure_at_2025: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
+    isochrone_args_2024: IsochroneArgs,
+    isochrone_args_2025: IsochroneArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
-    max_num_explorable_connections: i32,
-    verbose: bool,
 ) -> Result<(), Box<dyn Error>> {
-    let (easting, northing) = wgs84_to_lv95(latitude, longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, easting, northing);
+    let time_limit = isochrone_args_2024.time_limit.num_minutes();
+    let isochrone_interval = isochrone_args_2024.interval.num_minutes();
+
+    let (x, y) = wgs84_to_lv95(isochrone_args_2024.latitude, isochrone_args_2024.longitude);
+    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
 
     let isochrones_2024 = compute_optimal_isochrones(
         &hrdf_2024,
         &excluded_polygons,
-        longitude,
-        latitude,
-        departure_at_2024,
-        time_limit,
-        isochrone_interval,
+        isochrone_args_2024,
         delta_time,
         display_mode,
-        max_num_explorable_connections,
-        verbose,
     );
     #[cfg(feature = "svg")]
     isochrones_2024.write_svg(
-        &format!(
-            "isochrones_2024_{}_{}.svg",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes()
-        ),
+        &format!("isochrones_2024_{}_{}.svg", time_limit, isochrone_interval),
         1.0 / 100.0,
         Some(coord),
     )?;
@@ -241,23 +173,13 @@ pub fn run_comparison(
     let isochrones_2025 = compute_optimal_isochrones(
         &hrdf_2025,
         &excluded_polygons,
-        longitude,
-        latitude,
-        departure_at_2025,
-        time_limit,
-        isochrone_interval,
+        isochrone_args_2025,
         delta_time,
         display_mode,
-        max_num_explorable_connections,
-        verbose,
     );
     #[cfg(feature = "svg")]
     isochrones_2025.write_svg(
-        &format!(
-            "isochrones_2025_{}_{}.svg",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes()
-        ),
+        &format!("isochrones_2025_{}_{}.svg", time_limit, isochrone_interval),
         1.0 / 100.0,
         Some(coord),
     )?;
