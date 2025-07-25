@@ -90,7 +90,7 @@ enum Mode {
         #[arg(short, long, default_value_t = String::from("2024-04-11 15:36:00"))]
         departure_at_old: String,
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
         /// The +/- duration on which to compute the average (in minutes)
         #[arg(short, long, default_value_t = 30)]
@@ -104,7 +104,7 @@ enum Mode {
         #[arg(short, long, default_value_t = 30)]
         delta_time: i64,
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
     /// Compute the optimal isochrones
@@ -115,7 +115,7 @@ enum Mode {
         #[arg(short, long, default_value_t = 30)]
         delta_time: i64,
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
     /// Simple isochrone
@@ -123,7 +123,7 @@ enum Mode {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
     /// Average isochrone
