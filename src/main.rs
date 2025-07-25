@@ -86,14 +86,14 @@ enum Mode {
     Compare {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
-        /// Departure date and time
+        /// Second departure date and time
         #[arg(short, long, default_value_t = String::from("2024-04-11 15:36:00"))]
-        departure_at_old: String,
+        old_departure_at: String,
         /// Display mode of the isochrones: circles or contour_line
         #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
     },
     /// Compute the optimal isochrones
@@ -101,7 +101,7 @@ enum Mode {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
         /// Display mode of the isochrones: circles or contour_line
         #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
@@ -112,7 +112,7 @@ enum Mode {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
         /// Display mode of the isochrones: circles or contour_line
         #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
@@ -131,7 +131,7 @@ enum Mode {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
     },
 }
@@ -238,12 +238,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Mode::Compare {
             isochrone_args,
             mode,
-            departure_at_old,
+            old_departure_at,
             delta_time,
         } => {
             let args_2025 = isochrone_args.clone().finalize()?;
             let args_2024 = isochrone_args
-                .set_departure_at(departure_at_old)
+                .set_departure_at(old_departure_at)
                 .finalize()?;
 
             let hrdf_2024 = Hrdf::new(
