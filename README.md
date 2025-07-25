@@ -30,7 +30,7 @@ It can be used in server mode or as a standalone program.
 The CLI has therefore several modes: `serve`, `debug`, `compare`, `optimal`, `worst`, `simple`, and `average`
 
 ```console
- $ cargo run -- --help
+$ cargo run -- --help
 Public transport routing engine based on Swiss HRDF data.
 
 Usage: hrdf-routing-engine [OPTIONS] <COMMAND>
