@@ -82,7 +82,7 @@ enum Mode {
     },
     /// Debug mode used to check if the examples still run
     Debug,
-    /// Compare between two years
+    /// Compare between two years for the optimal isochrone for a given duration
     Compare {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
@@ -96,7 +96,7 @@ enum Mode {
         #[arg(long, default_value_t = 30)]
         delta_time: i64,
     },
-    /// Compute the optimal isochrones
+    /// Compute the optimal isochrones (largest surface)
     Optimal {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
@@ -107,7 +107,7 @@ enum Mode {
         #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
-    /// Compute the optimal isochrones
+    /// Compute the worst isochrones (smallest surface)
     Worst {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
@@ -118,7 +118,7 @@ enum Mode {
         #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
-    /// Simple isochrone
+    /// Single isochrone at a specific location and date-time
     Simple {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
@@ -126,7 +126,7 @@ enum Mode {
         #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
-    /// Average isochrone
+    /// Average surface isochrone given a specific location, date-time, and duration
     Average {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
