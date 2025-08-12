@@ -225,6 +225,10 @@ impl RouteResult {
         self.arrival_at
     }
 
+    pub fn departure_at(&self) -> NaiveDateTime {
+        self.departure_at
+    }
+
     pub fn sections(&self) -> &Vec<RouteSectionResult> {
         &self.sections
     }

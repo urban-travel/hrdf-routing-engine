@@ -639,6 +639,7 @@ mod tests {
         let journey_hour = 11;
         let journey_minute = 16;
         let journey_second = 17;
+        let acceptable_loss = 0.2;
         
         let client = reqwest::Client::new();
         // reqwest et serde pour récupérer les infos
@@ -700,8 +701,9 @@ mod tests {
         }).unwrap().trip;
         let min_duration = &ref_trip.duration;
         println!("{:#?}", min_duration);
+
+
         // Do the path search
-        
         let our_route = plan_journey(
             &hrdf,
             from_point_ref,
@@ -711,7 +713,16 @@ mod tests {
         ).unwrap();
 
         // compare path duration
-        println!("{:#?}",our_route.arrival_at());
-        println!("{:#?}",ref_trip.end_time);
+        println!("Our route departs at : {:#?}",our_route.departure_at());
+        println!("Our route arrives at : {:#?}",our_route.arrival_at());
+        println!("Our route duration = {:#?}",our_route.arrival_at() - our_route.departure_at());
+        println!("Ref route departs at : {:#?}",ref_trip.start_time);
+        println!("Ref route arrives at : {:#?}",ref_trip.end_time);
+        println!("Ref route duration = {:#?}",ref_trip.end_time - ref_trip.start_time);
+
+        let ref_trip_duration = ref_trip.end_time - ref_trip.start_time;
+        let our_trip_duration = our_route.arrival_at() - our_route.departure_at();
+
+        assert!((ref_trip_duration - our_trip_duration).as_seconds_f64() < acceptable_loss * ref_trip_duration.as_seconds_f64());
     }
 }
