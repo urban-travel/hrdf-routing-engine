@@ -310,13 +310,129 @@ mod tests {
     #[serde(rename_all = "PascalCase")]
     struct TripResponseContext{
         places: Place,
-        situations: ()
+        situations: Situations,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
     struct Place{
         place: Vec<PlaceCnt>
     }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct Situations{
+        pt_situation: Vec<PtSituation>
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct PtSituation{
+        #[serde(rename="siri:CreationTime")]
+        creation_time: DateTime<Local>,
+        #[serde(rename="siri:ParticipantRef")]
+        participant_ref: String,
+        #[serde(rename="siri:SituationNumber")]
+        situation_number: String,
+        #[serde(rename="siri:Version")]
+        version: i32,
+        #[serde(rename="siri:Source")]
+        source: SourceType,
+        #[serde(rename="siri:ValidityPeriod")]
+        validity_period: Vec<TimePeriod>,
+        #[serde(rename="siri:AlertCause")]
+        alert_cause: String,
+        #[serde(rename="siri:Priority")]
+        priority: String,
+        #[serde(rename="siri:ScopeType")]
+        scope_type: String,
+        #[serde(rename="siri:Language")]
+        language: String,
+        #[serde(rename="siri:PublishingActions")]
+        publishing_actions: PublishingActions,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct SourceType{
+        #[serde(rename="siri:SourceType")]
+        source_type: String,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct TimePeriod{
+        #[serde(rename="siri:StartTime")]
+        start_time: DateTime<Local>,
+        #[serde(rename="siri:EndTime")]
+        end_time: DateTime<Local>,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct PublishingActions{
+        #[serde(rename="siri:PublishingAction")]
+        publishing_action: Vec<PublishingAction>,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct PublishingAction{
+        #[serde(rename="siri:PublishAtScope")]
+        publishing_at_scope: PublishAtScope,
+        #[serde(rename="siri:PassengerInformationAction")]
+        passenger_information_action: PassengerInformationAction,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct PublishAtScope{
+        #[serde(rename="siri:ScopeType")]
+        scope_type: String,
+        #[serde(rename="siri:Affects")]
+        affects: (),
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct PassengerInformationAction{
+        #[serde(rename="siri:ActionRef")]
+        action_ref: (),
+        #[serde(rename="siri:RecordedAtTime")]
+        record_at_time: DateTime<Local>,
+        #[serde(rename="siri:Perspective")]
+        perspective: String,
+        #[serde(rename="siri:TextualContent")]
+        recommendation_content: TextualContent,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct TextualContent{
+        #[serde(rename="siri:SummaryContent")]
+        summary_content: SummaryContent,
+        #[serde(rename="siri:ReasonContent")]
+        reason_content: ReasonContent,
+        #[serde(rename="siri:RecommendationContent")]
+        recommendation_content: RecommendationContent,
+        #[serde(rename="siri:DurationContent")]
+        duration_content: DurationContent,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct SummaryContent{
+        #[serde(rename="siri:SummaryText")]
+        summary_text: String,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct RecommendationContent{
+        #[serde(rename="siri:RecommendationText")]
+        recommendation_text: String,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct DurationContent{
+        #[serde(rename="siri:DurationText")]
+        duration_text: String,
+    }
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct ReasonContent{
+        #[serde(rename="siri:ReasonText")]
+        reason_text: String,
+    }
+
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
     struct PlaceCnt {
@@ -518,7 +634,7 @@ mod tests {
         let to_point_ref = 8501120; // Lausanne
         let expected_result_nb = 3;
         let journey_year = 2025;
-        let journey_month = 7;
+        let journey_month = 9;
         let journey_day = 1;
         let journey_hour = 11;
         let journey_minute = 16;
