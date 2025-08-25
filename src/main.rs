@@ -6,13 +6,14 @@ use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
 use hrdf_routing_engine::{
-    ExcludedPolygons, HectareData, IsochroneDisplayMode, LAKES_GEOJSON_URLS, run_average,
-    run_comparison, run_debug, run_optimal, run_service, run_simple, run_surface_per_ha, run_worst,
+    ExcludedPolygons, HectareData, IsochroneArgs, IsochroneDisplayMode, LAKES_GEOJSON_URLS,
+    run_average, run_comparison, run_debug, run_optimal, run_service, run_simple,
+    run_surface_per_ha, run_worst,
 };
 use log::LevelFilter;
 
-#[derive(Parser, Debug)]
-struct IsochroneArgs {
+#[derive(Parser, Debug, Clone)]
+struct IsochroneArgsBuilder {
     /// Departure latitude
     #[arg(long, default_value_t = 46.20956654)]
     latitude: f64,
@@ -28,22 +29,85 @@ struct IsochroneArgs {
     /// Time interval between two isochrone in minutes
     #[arg(short, long, default_value_t = 10)]
     interval: i64,
+    /// Maximum number of connections
+    #[arg(short, long, default_value_t = 10)]
+    max_num_explorable_connections: i32,
+    /// Number of starting points
+    #[arg(short, long, default_value_t = 5)]
+    num_starting_points: usize,
     /// Verbose on or off
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
 }
 
+impl IsochroneArgsBuilder {
+    pub(crate) fn set_departure_at(mut self, departure_at: String) -> Self {
+        self.departure_at = departure_at;
+        self
+    }
+
+    pub(crate) fn finalize(self) -> Result<IsochroneArgs, Box<dyn Error>> {
+        let Self {
+            latitude,
+            longitude,
+            departure_at,
+            time_limit,
+            interval,
+            max_num_explorable_connections,
+            num_starting_points,
+            verbose,
+        } = self;
+
+        Ok(IsochroneArgs {
+            latitude,
+            longitude,
+            departure_at: NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
+            time_limit: Duration::minutes(time_limit),
+            interval: Duration::minutes(interval),
+            max_num_explorable_connections,
+            num_starting_points,
+            verbose,
+        })
+    }
+}
+
 #[derive(Parser, Debug)]
-struct IsochroneHectareArgs {
+struct IsochroneHectareArgsBuilder {
     /// Departure date and time
     #[arg(short, long, default_value_t = String::from("2025-04-10 07:30:00"))]
     departure_at: String,
     /// Maximum time of the isochrone in minutes
     #[arg(short, long, default_value_t = 60)]
     time_limit: i64,
+    /// Maximum number of connections
+    #[arg(short, long, default_value_t = 10)]
+    max_num_explorable_connections: i32,
+    /// Number of starting points
+    #[arg(short, long, default_value_t = 5)]
+    num_starting_points: usize,
     /// Verbose on or off
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
+}
+
+impl IsochroneHectareArgsBuilder {
+    pub(crate) fn finalize(self) -> Result<IsochroneHectareArgs, Box<dyn Error>> {
+        let Self {
+            departure_at,
+            time_limit,
+            max_num_explorable_connections,
+            num_starting_points,
+            verbose,
+        } = self;
+
+        Ok(IsochroneHectareArgs {
+            departure_at: NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
+            time_limit: Duration::minutes(time_limit),
+            max_num_explorable_connections,
+            num_starting_points,
+            verbose,
+        })
+    }
 }
 
 #[derive(Subcommand)]
@@ -60,56 +124,56 @@ enum Mode {
     },
     /// Debug mode used to check if the examples still run
     Debug,
-    /// Compare between two years
+    /// Compare between two years for the optimal isochrone for a given duration
     Compare {
         #[command(flatten)]
-        isochrone_args: IsochroneArgs,
-        /// Departure date and time
+        isochrone_args: IsochroneArgsBuilder,
+        /// Second departure date and time
         #[arg(short, long, default_value_t = String::from("2024-04-11 15:36:00"))]
-        departure_at_old: String,
+        old_departure_at: String,
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
     },
-    /// Compute the optimal isochrones
+    /// Compute the optimal isochrones (largest surface)
     Optimal {
         #[command(flatten)]
-        isochrone_args: IsochroneArgs,
+        isochrone_args: IsochroneArgsBuilder,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
-    /// Compute the optimal isochrones
+    /// Compute the worst isochrones (smallest surface)
     Worst {
         #[command(flatten)]
-        isochrone_args: IsochroneArgs,
+        isochrone_args: IsochroneArgsBuilder,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
-    /// Simple isochrone
+    /// Single isochrone at a specific location and date-time
     Simple {
         #[command(flatten)]
-        isochrone_args: IsochroneArgs,
+        isochrone_args: IsochroneArgsBuilder,
         /// Display mode of the isochrones: circles or contour_line
-        #[arg(short, long, default_value_t = IsochroneDisplayMode::Circles)]
+        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
         mode: IsochroneDisplayMode,
     },
-    /// Average isochrone
+    /// Average surface isochrone given a specific location, date-time, and duration
     Average {
         #[command(flatten)]
-        isochrone_args: IsochroneArgs,
+        isochrone_args: IsochroneArgsBuilder,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
     },
     /// Surface per Hectare
@@ -147,6 +211,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .env()
         .init()
         .unwrap();
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(4)
+        .build_global()
+        .unwrap();
 
     let cli = Cli::parse();
     rayon::ThreadPoolBuilder::new()
@@ -181,25 +249,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             delta_time,
             mode,
         } => {
-            let IsochroneArgs {
-                latitude,
-                longitude,
-                departure_at,
-                time_limit,
-                interval,
-                verbose,
-            } = isochrone_args;
             run_optimal(
                 hrdf_2025,
                 excluded_polygons,
-                longitude,
-                latitude,
-                NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-                Duration::minutes(time_limit),
-                Duration::minutes(interval),
+                isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
                 mode,
-                verbose,
             )?;
         }
         Mode::Worst {
@@ -207,91 +262,47 @@ async fn main() -> Result<(), Box<dyn Error>> {
             delta_time,
             mode,
         } => {
-            let IsochroneArgs {
-                latitude,
-                longitude,
-                departure_at,
-                time_limit,
-                interval,
-                verbose,
-            } = isochrone_args;
             run_worst(
                 hrdf_2025,
                 excluded_polygons,
-                longitude,
-                latitude,
-                NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-                Duration::minutes(time_limit),
-                Duration::minutes(interval),
+                isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
                 mode,
-                verbose,
             )?;
         }
         Mode::Simple {
             isochrone_args,
             mode,
         } => {
-            let IsochroneArgs {
-                latitude,
-                longitude,
-                departure_at,
-                time_limit,
-                interval,
-                verbose,
-            } = isochrone_args;
-
             run_simple(
                 hrdf_2025,
                 excluded_polygons,
-                longitude,
-                latitude,
-                NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-                Duration::minutes(time_limit),
-                Duration::minutes(interval),
+                isochrone_args.finalize()?,
                 mode,
-                verbose,
             )?;
         }
         Mode::Average {
             isochrone_args,
             delta_time,
         } => {
-            let IsochroneArgs {
-                latitude,
-                longitude,
-                departure_at,
-                time_limit,
-                interval,
-                verbose,
-            } = isochrone_args;
-
             run_average(
                 hrdf_2025,
                 excluded_polygons,
-                longitude,
-                latitude,
-                NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-                Duration::minutes(time_limit),
-                Duration::minutes(interval),
+                isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
-                verbose,
             )?;
         }
         Mode::Compare {
             isochrone_args,
             mode,
-            departure_at_old,
+            old_departure_at,
             delta_time,
         } => {
-            let IsochroneArgs {
-                latitude,
-                longitude,
-                departure_at,
-                time_limit,
-                interval,
-                verbose,
-            } = isochrone_args;
+            let args_2025 = isochrone_args.clone().finalize()?;
+            let args_2024 = isochrone_args
+                .set_departure_at(old_departure_at)
+                .finalize()?;
+
             let hrdf_2024 = Hrdf::new(
                 Version::V_5_40_41_2_0_7,
                 "https://data.opentransportdata.swiss/en/dataset/timetable-54-2024-hrdf/permalink",
@@ -303,15 +314,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 hrdf_2024,
                 hrdf_2025,
                 excluded_polygons,
-                longitude,
-                latitude,
-                NaiveDateTime::parse_from_str(&departure_at_old, "%Y-%m-%d %H:%M:%S")?,
-                NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-                Duration::minutes(time_limit),
-                Duration::minutes(interval),
+                args_2024,
+                args_2025,
                 Duration::minutes(delta_time),
                 mode,
-                verbose,
             )?;
         }
 
@@ -320,7 +326,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             delta_time,
             url,
         } => {
-            let IsochroneHectareArgs {
+            let IsochroneHectareArgsBuilder {
                 departure_at,
                 time_limit,
                 verbose,
@@ -331,14 +337,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 hrdf_2025,
                 excluded_polygons,
                 hectare,
-                NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-                Duration::minutes(time_limit),
-                Duration::minutes(delta_time),
+                isochrone_args.finalize()?,
                 IsochroneDisplayMode::Circles,
-                verbose,
             )?;
+
             let data = serde_json::to_string_pretty(&surfaces).unwrap();
-            let fname = format!("hectare_{}_{}.json", departure_at, time_limit);
+            let fname = format!(
+                "hectare_{}_{}.json",
+                isochrone_args.departure_at, isochrone_args.time_limit
+            );
             let mut f = File::create(&fname).expect("Unable to create file");
             f.write_all(data.as_bytes()).expect("Unable to write data");
         }

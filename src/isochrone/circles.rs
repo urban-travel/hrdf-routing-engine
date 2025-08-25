@@ -11,7 +11,11 @@ use super::{
     utils::{lv95_to_wgs84, time_to_distance},
 };
 
-pub fn get_polygons(data: &[(Coordinates, Duration)], time_limit: Duration) -> MultiPolygon {
+pub fn get_polygons(
+    data: &[(Coordinates, Duration)],
+    time_limit: Duration,
+    num_circle_points: usize,
+) -> MultiPolygon {
     data.par_iter()
         .filter(|(_, duration)| *duration <= time_limit)
         .map(|(center_lv95, duration)| {
@@ -22,7 +26,7 @@ pub fn get_polygons(data: &[(Coordinates, Duration)], time_limit: Duration) -> M
                 center_lv95.easting().expect("Wrong coordinate system"),
                 center_lv95.northing().expect("Wrong coordinate system"),
                 distance,
-                18,
+                num_circle_points,
             )
             .into_iter()
             .map(|lv95| {

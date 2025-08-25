@@ -29,21 +29,52 @@ use utils::time_to_distance;
 use self::utils::NaiveDateTimeRange;
 use self::utils::wgs84_to_lv95;
 
+#[derive(Clone, Debug)]
+pub struct IsochroneHectareArgs {
+    /// Departure date and time
+    pub departure_at: NaiveDateTime,
+    /// Maximum time of the isochrone in minutes
+    pub time_limit: Duration,
+    /// Maximum number of connections
+    pub max_num_explorable_connections: i32,
+    /// Number of starting points
+    pub num_starting_points: usize,
+    /// Verbose on or off
+    pub verbose: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct IsochroneArgs {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub departure_at: NaiveDateTime,
+    pub time_limit: Duration,
+    pub interval: Duration,
+    pub max_num_explorable_connections: i32,
+    pub num_starting_points: usize,
+    pub verbose: bool,
+}
+
 /// Computes the best isochrone in [departure_at - delta_time; departure_at + delta_time)
 /// Best is defined by the maximal surface covered by the largest isochrone
-#[allow(clippy::too_many_arguments)]
 pub fn compute_optimal_isochrones(
     hrdf: &Hrdf,
     excluded_polygons: &MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
+    isochrone_args: IsochroneArgs,
     delta_time: Duration,
     display_mode: models::DisplayMode,
-    verbose: bool,
 ) -> IsochroneMap {
+    let IsochroneArgs {
+        latitude,
+        longitude,
+        departure_at,
+        time_limit,
+        interval: isochrone_interval,
+        max_num_explorable_connections,
+        num_starting_points,
+        verbose,
+    } = isochrone_args;
+
     if verbose {
         log::info!(
             "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
@@ -70,13 +101,17 @@ pub fn compute_optimal_isochrones(
             let isochrone = compute_isochrones(
                 hrdf,
                 excluded_polygons,
-                longitude,
-                latitude,
-                *dep,
-                time_limit,
-                isochrone_interval,
+                IsochroneArgs {
+                    latitude,
+                    longitude,
+                    departure_at: *dep,
+                    time_limit,
+                    interval: isochrone_interval,
+                    max_num_explorable_connections,
+                    num_starting_points,
+                    verbose,
+                },
                 display_mode,
-                verbose,
             );
             let curr_area = isochrone.compute_max_area();
             if curr_area > area_max {
@@ -112,15 +147,21 @@ pub fn compute_optimal_isochrones(
 pub fn compute_worst_isochrones(
     hrdf: &Hrdf,
     excluded_polygons: &MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
+    isochrone_args: IsochroneArgs,
     delta_time: Duration,
     display_mode: models::DisplayMode,
-    verbose: bool,
 ) -> IsochroneMap {
+    let IsochroneArgs {
+        latitude,
+        longitude,
+        departure_at,
+        time_limit,
+        interval: isochrone_interval,
+        max_num_explorable_connections,
+        num_starting_points,
+        verbose,
+    } = isochrone_args;
+
     if verbose {
         log::info!(
             "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
@@ -147,13 +188,17 @@ pub fn compute_worst_isochrones(
             let isochrone = compute_isochrones(
                 hrdf,
                 excluded_polygons,
-                longitude,
-                latitude,
-                *dep,
-                time_limit,
-                isochrone_interval,
+                IsochroneArgs {
+                    latitude,
+                    longitude,
+                    departure_at: *dep,
+                    time_limit,
+                    interval: isochrone_interval,
+                    max_num_explorable_connections,
+                    num_starting_points,
+                    verbose,
+                },
                 display_mode,
-                false,
             );
             let curr_area = isochrone.compute_max_area();
             if curr_area < area_max {
@@ -190,14 +235,20 @@ pub fn compute_worst_isochrones(
 pub fn compute_average_isochrones(
     hrdf: &Hrdf,
     excluded_polygons: &MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
+    isochrone_args: IsochroneArgs,
     delta_time: Duration,
-    verbose: bool,
 ) -> IsochroneMap {
+    let IsochroneArgs {
+        latitude,
+        longitude,
+        departure_at,
+        time_limit,
+        interval: isochrone_interval,
+        max_num_explorable_connections,
+        num_starting_points,
+        verbose,
+    } = isochrone_args;
+
     if verbose {
         log::info!(
             "Computing average isochrone:\n longitude: {longitude}, latitude: {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, verbose: {verbose}",
@@ -225,8 +276,16 @@ pub fn compute_average_isochrones(
     .collect::<Vec<_>>()
     .par_iter()
     .map(|dep| {
-        let routes =
-            compute_routes_from_origin(hrdf, latitude, longitude, *dep, time_limit, 5, verbose);
+        let routes = compute_routes_from_origin(
+            hrdf,
+            latitude,
+            longitude,
+            *dep,
+            time_limit,
+            num_starting_points,
+            max_num_explorable_connections,
+            verbose,
+        );
 
         unique_coordinates_from_routes(&routes, departure_at)
     })
@@ -320,17 +379,23 @@ pub fn compute_average_isochrones(
 pub fn compute_isochrones(
     hrdf: &Hrdf,
     excluded_polygons: &MultiPolygon,
-    longitude: f64,
-    latitude: f64,
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    isochrone_interval: Duration,
-    display_mode: models::DisplayMode,
-    verbose: bool,
+    isochrone_args: IsochroneArgs,
+    display_mode: IsochroneDisplayMode,
 ) -> IsochroneMap {
+    let IsochroneArgs {
+        latitude,
+        longitude,
+        departure_at,
+        time_limit,
+        interval: isochrone_interval,
+        max_num_explorable_connections,
+        num_starting_points,
+        verbose,
+    } = isochrone_args;
+
     if verbose {
         log::info!(
-            "longitude: {longitude}, latitude : {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, verbose: {verbose}",
+            "longitude: {longitude}, latitude : {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, max_num_explorable_connections: {max_num_explorable_connections}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes()
         );
@@ -349,7 +414,8 @@ pub fn compute_isochrones(
         longitude,
         departure_at,
         time_limit,
-        5,
+        num_starting_points,
+        max_num_explorable_connections,
         verbose,
     );
 
@@ -382,7 +448,10 @@ pub fn compute_isochrones(
             let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
 
             let polygons = match display_mode {
-                IsochroneDisplayMode::Circles => circles::get_polygons(&data, current_time_limit),
+                IsochroneDisplayMode::Circles => {
+                    let num_points_circle = 6;
+                    circles::get_polygons(&data, current_time_limit, num_points_circle)
+                }
                 IsochroneDisplayMode::ContourLine => {
                     let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
                     contour_line::get_polygons(
