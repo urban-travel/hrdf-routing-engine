@@ -6,9 +6,9 @@ use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
 use hrdf_routing_engine::{
-    ExcludedPolygons, HectareData, IsochroneArgs, IsochroneDisplayMode, LAKES_GEOJSON_URLS,
-    run_average, run_comparison, run_debug, run_optimal, run_service, run_simple,
-    run_surface_per_ha, run_worst,
+    ExcludedPolygons, HectareData, IsochroneArgs, IsochroneDisplayMode, IsochroneHectareArgs,
+    LAKES_GEOJSON_URLS, run_average, run_comparison, run_debug, run_optimal, run_service,
+    run_simple, run_surface_per_ha, run_worst,
 };
 use log::LevelFilter;
 
@@ -179,7 +179,7 @@ enum Mode {
     /// Surface per Hectare
     Hectare {
         #[command(flatten)]
-        isochrone_args: IsochroneHectareArgs,
+        isochrone_args: IsochroneHectareArgsBuilder,
         /// The +/- duration on which to compute the average (in minutes)
         #[arg(short, long, default_value_t = 30)]
         delta_time: i64,
@@ -326,18 +326,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             delta_time,
             url,
         } => {
-            let IsochroneHectareArgsBuilder {
-                departure_at,
-                time_limit,
-                verbose,
-            } = isochrone_args;
+            let isochrone_args = isochrone_args.finalize()?;
             let hectare =
                 HectareData::new(&url, cli.force_rebuild, cli.cache_prefix.clone()).await?;
             let surfaces = run_surface_per_ha(
                 hrdf_2025,
                 excluded_polygons,
                 hectare,
-                isochrone_args.finalize()?,
+                isochrone_args.clone(),
+                Duration::minutes(delta_time),
                 IsochroneDisplayMode::Circles,
             )?;
 

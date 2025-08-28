@@ -4,7 +4,7 @@ use std::time::Instant;
 use crate::isochrone::externals::{HectareData, HectareRecord};
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
 use crate::{IsochroneArgs, IsochroneHectareArgs};
-use chrono::{Duration, NaiveDateTime};
+use chrono::Duration;
 use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;

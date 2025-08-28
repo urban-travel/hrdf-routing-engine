@@ -43,11 +43,9 @@ pub fn plan_journey(
     )
     .remove(&arrival_stop_id);
 
-    if verbose {
-        if let Some(rou) = &result {
-            println!();
-            rou.print(hrdf.data_storage());
-        }
+    if verbose && let Some(rou) = &result {
+        println!();
+        rou.print(hrdf.data_storage());
     }
 
     result
