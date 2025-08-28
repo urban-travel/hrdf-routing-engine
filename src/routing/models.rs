@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{Duration, NaiveDateTime};
 use hrdf_parser::{Coordinates, DataStorage, Journey};
 use rustc_hash::FxHashSet;
 use serde::Serialize;
@@ -225,8 +225,32 @@ impl RouteResult {
         self.arrival_at
     }
 
+    pub fn departure_at(&self) -> NaiveDateTime {
+        self.departure_at
+    }
+
     pub fn sections(&self) -> &Vec<RouteSectionResult> {
         &self.sections
+    }
+
+    pub fn number_changes(&self) -> u32 {
+        todo!()
+    }
+
+    pub fn total_walking_time(&self) -> Duration {
+        todo!()
+    }
+
+    pub fn departure_stop_name(&self, data_storage: &DataStorage) -> String {
+        todo!()
+    }
+
+    pub fn arrival_stop_name(&self, data_storage: &DataStorage) -> String {
+        todo!()
+    }
+
+    pub fn total_time(&self) -> Duration {
+        todo!()
     }
 
     //pub fn merge(&self, other: &RouteResult) -> RouteResult {}
