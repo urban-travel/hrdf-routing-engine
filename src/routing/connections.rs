@@ -312,12 +312,14 @@ fn exchange_time_journey_pair(
         let exchange_time = data_storage
             .exchange_times_journey()
             .find(id)
+            // .expect(format!("Exchange times journey {id} not found").as_str());
             .unwrap_or_else(|| panic!("Exchange time journey {:?} not found.", id));
 
         if let Some(bit_field_id) = exchange_time.bit_field_id() {
             let bit_field = data_storage
                 .bit_fields()
                 .find(bit_field_id)
+                // .expect(format!("Bit field {bit_field_id} not found").as_str());
                 .unwrap_or_else(|| panic!("Bitfield {:?} not found.", bit_field_id));
 
             if bit_field.bits()[index] == 1 {

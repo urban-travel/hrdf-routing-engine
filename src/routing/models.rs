@@ -61,6 +61,8 @@ impl RouteSection {
 
     // Functions
 
+    // pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
+    //     self.journey_id.map(|id| data_storage.journeys().find(id))?
     pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
         self.journey_id.map(|id| {
             data_storage
@@ -189,22 +191,22 @@ impl RoutingAlgorithmArgs {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RouteResult {
     departure_at: NaiveDateTime,
     arrival_at: NaiveDateTime,
     sections: Vec<RouteSectionResult>,
 }
 
-impl Clone for RouteResult {
-    fn clone(&self) -> Self {
-        RouteResult {
-            departure_at: self.departure_at,
-            arrival_at: self.arrival_at,
-            sections: self.sections.clone(),
-        }
-    }
-}
+// impl Clone for RouteResult {
+//     fn clone(&self) -> Self {
+//         RouteResult {
+//             departure_at: self.departure_at,
+//             arrival_at: self.arrival_at,
+//             sections: self.sections.clone(),
+//         }
+//     }
+// }
 
 impl RouteResult {
     pub fn new(
@@ -221,39 +223,74 @@ impl RouteResult {
 
     // Getters/Setters
 
-    pub fn arrival_at(&self) -> NaiveDateTime {
-        self.arrival_at
-    }
-
     pub fn departure_at(&self) -> NaiveDateTime {
         self.departure_at
+    }
+
+    pub fn arrival_at(&self) -> NaiveDateTime {
+        self.arrival_at
     }
 
     pub fn sections(&self) -> &Vec<RouteSectionResult> {
         &self.sections
     }
 
-    pub fn number_changes(&self) -> u32 {
-        todo!()
+    pub fn number_changes(&self) -> usize {
+        if !self.sections().is_empty() {
+            self.sections()
+                .iter()
+                .filter(|s| !s.is_walking_trip())
+                .count()
+                - 1
+        } else {
+            0
+        }
     }
 
     pub fn total_walking_time(&self) -> Duration {
-        todo!()
-    }
-
-    pub fn departure_stop_name(&self, data_storage: &DataStorage) -> String {
-        todo!()
-    }
-
-    pub fn arrival_stop_name(&self, data_storage: &DataStorage) -> String {
-        todo!()
+        self.sections()
+            .iter()
+            .filter(|s| s.is_walking_trip())
+            .fold(Duration::minutes(0), |total, d| {
+                total + Duration::minutes(d.duration().unwrap_or(0i16) as i64)
+            })
     }
 
     pub fn total_time(&self) -> Duration {
-        todo!()
+        self.arrival_at - self.departure_at
     }
 
-    //pub fn merge(&self, other: &RouteResult) -> RouteResult {}
+    pub fn departure_stop_id(&self) -> Option<i32> {
+        self.sections().first().map(|s| s.departure_stop_id)
+    }
+
+    pub fn arrival_stop_id(&self) -> Option<i32> {
+        self.sections().last().map(|s| s.arrival_stop_id())
+    }
+
+    pub fn departure_stop_name(&self, data_storage: &DataStorage) -> Option<String> {
+        self.departure_stop_id().map(|id| {
+            String::from(
+                data_storage
+                    .stops()
+                    .find(id)
+                    .unwrap_or_else(|| panic!("stop {id} not found"))
+                    .name(),
+            )
+        })
+    }
+
+    pub fn arrival_stop_name(&self, data_storage: &DataStorage) -> Option<String> {
+        self.arrival_stop_id().map(|id| {
+            String::from(
+                data_storage
+                    .stops()
+                    .find(id)
+                    .unwrap_or_else(|| panic!("stop {id} not found"))
+                    .name(),
+            )
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Copy, Clone)]
@@ -330,6 +367,8 @@ impl RouteSectionResult {
 
     // Functions
 
+    // pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
+    //     self.journey_id.map(|id| data_storage.journeys().find(id))?
     pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
         self.journey_id.map(|id| {
             data_storage

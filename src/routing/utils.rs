@@ -22,6 +22,7 @@ pub fn get_stop_connections(
     data_storage
         .stop_connections_by_stop_id()
         .get(&stop_id)
+        // .map(|ids| data_storage.stop_connections().resolve_ids(ids))?
         .map(|ids| {
             data_storage
                 .stop_connections()
