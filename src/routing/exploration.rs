@@ -42,7 +42,7 @@ where
         }
 
         explore_nearby_stops(data_storage, &route, &mut routes);
-        explore_connections(data_storage, &route, &journeys_to_ignore, &mut new_routes);
+        explore_connections(data_storage, &route, journeys_to_ignore, &mut new_routes);
     }
 
     // All new journeys are recorded as not available for the next connection level.
@@ -79,10 +79,13 @@ fn can_explore_connections(
     earliest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
 ) -> bool {
     let stop_id = route.arrival_stop_id();
-    let stop = data_storage
-        .stops()
-        .find(stop_id)
-        .expect(format!("Exchange times journey {stop_id} not found").as_str());
+    let stop = data_storage.stops().find(stop_id);
+    let stop = if let Some(stop) = stop {
+        stop
+    } else {
+        log::warn!("Stop: {} not found.", stop_id);
+        return false;
+    };
 
     if !stop.can_be_used_as_exchange_point() {
         // The arrival stop of the last RouteSection of a journey is not necessarily usable for exchange, hence the check.
@@ -113,7 +116,7 @@ fn explore_connections(
     journeys_to_ignore: &FxHashSet<i32>,
     new_routes: &mut Vec<Route>,
 ) {
-    new_routes.extend(get_connections(data_storage, &route, journeys_to_ignore));
+    new_routes.extend(get_connections(data_storage, route, journeys_to_ignore));
 }
 
 fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut Vec<Route>) {

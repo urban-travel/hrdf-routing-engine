@@ -61,8 +61,15 @@ impl RouteSection {
 
     // Functions
 
-    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
-        self.journey_id.map(|id| data_storage.journeys().find(id))?
+    // pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
+    //     self.journey_id.map(|id| data_storage.journeys().find(id))?
+    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
+        self.journey_id.map(|id| {
+            data_storage
+                .journeys()
+                .find(id)
+                .unwrap_or_else(|| panic!("Journey {:?} not found.", id))
+        })
     }
 }
 
@@ -191,6 +198,16 @@ pub struct RouteResult {
     sections: Vec<RouteSectionResult>,
 }
 
+// impl Clone for RouteResult {
+//     fn clone(&self) -> Self {
+//         RouteResult {
+//             departure_at: self.departure_at,
+//             arrival_at: self.arrival_at,
+//             sections: self.sections.clone(),
+//         }
+//     }
+// }
+
 impl RouteResult {
     pub fn new(
         departure_at: NaiveDateTime,
@@ -276,7 +293,7 @@ impl RouteResult {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Serialize, Copy, Clone)]
 pub struct RouteSectionResult {
     journey_id: Option<i32>,
     departure_stop_id: i32,
@@ -291,6 +308,7 @@ pub struct RouteSectionResult {
 }
 
 impl RouteSectionResult {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         journey_id: Option<i32>,
         departure_stop_id: i32,
@@ -349,8 +367,15 @@ impl RouteSectionResult {
 
     // Functions
 
-    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
-        self.journey_id.map(|id| data_storage.journeys().find(id))?
+    // pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
+    //     self.journey_id.map(|id| data_storage.journeys().find(id))?
+    pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
+        self.journey_id.map(|id| {
+            data_storage
+                .journeys()
+                .find(id)
+                .unwrap_or_else(|| panic!("Journey {:?} not found.", id))
+        })
     }
 
     pub fn is_walking_trip(&self) -> bool {

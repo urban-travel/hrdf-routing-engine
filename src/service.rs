@@ -1,20 +1,34 @@
-use std::{str::FromStr, sync::Arc};
+use std::{
+    net::{Ipv4Addr, SocketAddr},
+    str::FromStr,
+    sync::Arc,
+};
 
-use axum::{extract::Query, http::StatusCode, routing::get, Json, Router};
+use axum::{Json, Router, extract::Query, http::StatusCode, routing::get};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
-use hrdf_parser::{timetable_end_date, timetable_start_date, Hrdf};
+use geo::MultiPolygon;
+use hrdf_parser::{Hrdf, timetable_end_date, timetable_start_date};
 use serde::{Deserialize, Serialize};
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::isochrone::{self, IsochroneDisplayMode, IsochroneMap};
+use crate::{
+    IsochroneArgs,
+    isochrone::{self, IsochroneDisplayMode, IsochroneMap},
+};
 
-pub async fn run_service(hrdf: Hrdf) {
+pub async fn run_service(
+    hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
+    ip_addr: Ipv4Addr,
+    port: u16,
+) {
     log::info!("Starting the server...");
 
     let hrdf = Arc::new(hrdf);
     let hrdf_1 = Arc::clone(&hrdf);
     let hrdf_2 = Arc::clone(&hrdf);
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
+    let excluded_polygons = Arc::new(excluded_polygons);
 
     #[rustfmt::skip]
     let app = Router::new()
@@ -24,12 +38,13 @@ pub async fn run_service(hrdf: Hrdf) {
         )
         .route(
             "/isochrones",
-            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), params)),
+            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), Arc::clone(&excluded_polygons), params)),
         )
         .layer(cors);
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8100").await.unwrap();
+    let address = SocketAddr::from((ip_addr, port));
+    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
 
-    log::info!("Listening on 0.0.0.0:8100...");
+    log::info!("Listening on {ip_addr}:{port}...");
 
     axum::serve(listener, app).await.unwrap();
 }
@@ -56,14 +71,18 @@ struct ComputeIsochronesRequest {
     time_limit: u32,
     isochrone_interval: u32,
     display_mode: String,
+    find_optimal: bool,
 }
 
 async fn compute_isochrones(
     hrdf: Arc<Hrdf>,
+    excluded_polygons: Arc<MultiPolygon>,
     Query(params): Query<ComputeIsochronesRequest>,
 ) -> Result<Json<IsochroneMap>, StatusCode> {
     // The coordinates are not checked but should be.
 
+    let max_num_explorable_connections = 10;
+    let num_starting_points = 5;
     let start_date = timetable_start_date(hrdf.data_storage().timetable_metadata()).unwrap();
     let end_date = timetable_end_date(hrdf.data_storage().timetable_metadata()).unwrap();
 
@@ -81,16 +100,31 @@ async fn compute_isochrones(
         // The display mode is incorrect.
         return Err(StatusCode::BAD_REQUEST);
     }
-
-    let result = isochrone::compute_isochrones(
-        &hrdf,
-        params.origin_point_latitude,
-        params.origin_point_longitude,
-        NaiveDateTime::new(params.departure_date, params.departure_time),
-        Duration::minutes(params.time_limit.into()),
-        Duration::minutes(params.isochrone_interval.into()),
-        IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-        false,
-    );
+    let isochrone_args = IsochroneArgs {
+        latitude: params.origin_point_latitude,
+        longitude: params.origin_point_longitude,
+        departure_at: NaiveDateTime::new(params.departure_date, params.departure_time),
+        time_limit: Duration::minutes(params.time_limit.into()),
+        interval: Duration::minutes(params.isochrone_interval.into()),
+        max_num_explorable_connections,
+        num_starting_points,
+        verbose: true,
+    };
+    let result = if params.find_optimal {
+        isochrone::compute_optimal_isochrones(
+            &hrdf,
+            &excluded_polygons,
+            isochrone_args,
+            Duration::minutes(30),
+            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+        )
+    } else {
+        isochrone::compute_isochrones(
+            &hrdf,
+            &excluded_polygons,
+            isochrone_args,
+            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+        )
+    };
     Ok(Json(result))
 }

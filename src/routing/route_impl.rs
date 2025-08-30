@@ -18,16 +18,14 @@ impl Route {
         let journey = data_storage
             .journeys()
             .find(journey_id)
-            .expect(format!("Jounrey {journey_id} not found").as_str());
+            // .expect(format!("Jounrey {journey_id} not found").as_str());
+            .unwrap_or_else(|| panic!("Journey {:?} not found.", journey_id));
 
         if journey.is_last_stop(self.arrival_stop_id(), false) {
             return None;
         }
 
-        let is_same_journey = self
-            .last_section()
-            .journey_id()
-            .map_or(false, |id| id == journey_id);
+        let is_same_journey = self.last_section().journey_id() == Some(journey_id);
 
         RouteSection::find_next(
             data_storage,
@@ -93,7 +91,7 @@ impl RouteSection {
     ) -> Option<(RouteSection, FxHashSet<i32>)> {
         let mut route_iter = journey.route().iter();
 
-        while let Some(route_entry) = route_iter.next() {
+        for route_entry in route_iter.by_ref() {
             if route_entry.stop_id() == departure_stop_id {
                 break;
             }
@@ -101,7 +99,7 @@ impl RouteSection {
 
         let mut visited_stops = FxHashSet::default();
 
-        while let Some(route_entry) = route_iter.next() {
+        for route_entry in route_iter.by_ref() {
             let stop = route_entry.stop(data_storage);
             visited_stops.insert(stop.id());
 
@@ -138,6 +136,13 @@ impl RouteSection {
             .stops()
             .find(self.arrival_stop_id())
             .expect(format!("Arrival stop {} not found.", self.arrival_stop_id()).as_str());
+        // ||||||| b144f73
+        //     .unwrap_or_else(|| panic!("Stop {:?} not found.", self.departure_stop_id()));
+        // let arrival_stop = data_storage
+        //     .stops()
+        //     .find(self.arrival_stop_id())
+        //     .unwrap_or_else(|| panic!("Stop {:?} not found.", self.arrival_stop_id()));
+        // >>>>>>> main
 
         let (departure_at, arrival_at) = if self.journey_id().is_some() {
             let departure_at = self

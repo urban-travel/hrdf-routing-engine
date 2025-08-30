@@ -1,5 +1,5 @@
 use chrono::{Duration, NaiveDate, NaiveDateTime};
-use hrdf_parser::{timetable_end_date, DataStorage, Journey, Model, TransportType};
+use hrdf_parser::{DataStorage, Journey, Model, TransportType, timetable_end_date};
 use rustc_hash::FxHashSet;
 
 use crate::utils::{
@@ -17,7 +17,7 @@ pub fn get_connections(
         data_storage,
         route.arrival_stop_id(),
         route.arrival_at(),
-        Some(get_routes_to_ignore(data_storage, &route)),
+        Some(get_routes_to_ignore(data_storage, route)),
         route.last_section().journey_id(),
     )
     .into_iter()
@@ -34,13 +34,13 @@ pub fn get_connections(
     .collect()
 }
 
-pub fn next_departures<'a>(
-    data_storage: &'a DataStorage,
+pub fn next_departures(
+    data_storage: &DataStorage,
     departure_stop_id: i32,
     departure_at: NaiveDateTime,
     routes_to_ignore: Option<FxHashSet<u64>>,
     previous_journey_id: Option<i32>,
-) -> Vec<(&'a Journey, NaiveDateTime)> {
+) -> Vec<(&Journey, NaiveDateTime)> {
     fn get_journeys(
         data_storage: &DataStorage,
         date: NaiveDate,
@@ -100,7 +100,7 @@ pub fn next_departures<'a>(
     // Journeys are sorted by ascending departure time, allowing them to be filtered correctly afterwards.
     journeys.sort_by_key(|(_, journey_departure_at)| *journey_departure_at);
 
-    let mut routes_to_ignore = routes_to_ignore.unwrap_or_else(FxHashSet::default);
+    let mut routes_to_ignore = routes_to_ignore.unwrap_or_default();
 
     journeys
         .into_iter()
@@ -119,15 +119,36 @@ pub fn next_departures<'a>(
         })
         .filter(|&(journey, journey_departure_at)| {
             // It is checked that there is enough time to embark on the journey (exchange time).
-            previous_journey_id.map_or(true, |id| {
-                let exchange_time = get_exchange_time(
+            previous_journey_id.is_none_or(|id| {
+                let previous_journey = data_storage
+                    .journeys()
+                    .find(id)
+                    .expect("Error: previous journey not found");
+
+                // We check if the pair legagy_id is the same because it indicates
+                // that it is the same train continuing the journey although they are stored as
+                // separated journey in the hrdf format for an unknown reason
+                if !has_through_service(
                     data_storage,
+                    departure_at.date(),
+                    previous_journey.legacy_id(),
+                    previous_journey.administration(),
+                    journey.legacy_id(),
+                    journey.administration(),
                     departure_stop_id,
-                    id,
-                    journey.id(),
-                    journey_departure_at,
-                );
-                add_minutes_to_date_time(departure_at, exchange_time.into()) <= journey_departure_at
+                ) {
+                    let exchange_time = get_exchange_time(
+                        data_storage,
+                        departure_stop_id,
+                        id,
+                        journey.id(),
+                        journey_departure_at,
+                    );
+                    add_minutes_to_date_time(departure_at, exchange_time.into())
+                        <= journey_departure_at
+                } else {
+                    true
+                }
             })
         })
         .collect()
@@ -143,25 +164,46 @@ pub fn get_operating_journeys(
         .get(&stop_id)
         .map_or(Vec::new(), |bit_fields_1| {
             let bit_fields_2 = data_storage.bit_fields_by_day().get(&date).unwrap();
-            let bit_fields: Vec<_> = bit_fields_1.intersection(&bit_fields_2).collect();
+            let bit_fields: Vec<_> = bit_fields_1.intersection(bit_fields_2).collect();
 
             bit_fields
                 .into_iter()
-                .map(|&bit_field_id| {
+                .flat_map(|&bit_field_id| {
                     data_storage
                         .journeys_by_stop_id_and_bit_field_id()
                         .get(&(stop_id, bit_field_id))
                         .unwrap()
                 })
-                .flatten()
                 .map(|&journey_id| {
                     data_storage
                         .journeys()
                         .find(journey_id)
-                        .expect(format!("Journey {journey_id} not found.").as_str())
+                        .unwrap_or_else(|| panic!("Journey {:?} not found.", journey_id))
                 })
                 .collect()
         })
+}
+
+fn has_through_service(
+    data_storage: &DataStorage,
+    date: NaiveDate,
+    journey_1_legacy_id: i32,
+    journey_1_admin: &str,
+    journey_2_legacy_id: i32,
+    journey_2_admin: &str,
+    stop_id: i32,
+) -> bool {
+    let through_service_bitfield = data_storage
+        .bit_field_id_for_through_service_by_journey_id_stop_id()
+        .get(&(
+            (journey_1_legacy_id, journey_1_admin.to_string()),
+            (journey_2_legacy_id, journey_2_admin.to_string()),
+            stop_id,
+        ));
+    through_service_bitfield.is_some_and(|bf| {
+        let bit_fields_2 = data_storage.bit_fields_by_day().get(&date).unwrap();
+        bit_fields_2.contains(bf)
+    })
 }
 
 pub fn get_exchange_time(
@@ -174,22 +216,24 @@ pub fn get_exchange_time(
     let stop = data_storage
         .stops()
         .find(stop_id)
-        .expect(format!("Stop {stop_id} not found.").as_str());
+        .unwrap_or_else(|| panic!("Stop {:?} not found.", stop_id));
     let journey_1 = data_storage
         .journeys()
         .find(journey_id_1)
-        .expect(format!("Journey 1 {journey_id_1} nor found").as_str());
+        .unwrap_or_else(|| panic!("Journey {:?} not found.", journey_id_1));
     let journey_2 = data_storage
         .journeys()
         .find(journey_id_2)
-        .expect(format!("Journey 2 {journey_id_2} nor found").as_str());
+        .unwrap_or_else(|| panic!("Journey {:?} not found.", journey_id_2));
 
     // Fahrtpaarbezogene Umsteigezeiten /-\ Journey pair-related exchange times.
     if let Some(exchange_time) = exchange_time_journey_pair(
         data_storage,
         stop_id,
-        journey_id_1,
-        journey_id_2,
+        journey_1.legacy_id(),
+        journey_1.administration(),
+        journey_2.legacy_id(),
+        journey_2.administration(),
         departure_at,
     ) {
         return exchange_time;
@@ -206,7 +250,7 @@ pub fn get_exchange_time(
         return data_storage
             .exchange_times_administration()
             .find(id)
-            .expect(format!("Exchange time administration {id} not found").as_str())
+            .unwrap_or_else(|| panic!("Exchange time administration {:?} not found.", id))
             .duration();
     }
 
@@ -230,7 +274,7 @@ pub fn get_exchange_time(
         return data_storage
             .exchange_times_administration()
             .find(id)
-            .expect(format!("Exchange times administration {id} not found").as_str())
+            .unwrap_or_else(|| panic!("Exchange time administration {:?} not found.", id))
             .duration();
     }
 
@@ -245,17 +289,17 @@ pub fn get_exchange_time(
 fn exchange_time_journey_pair(
     data_storage: &DataStorage,
     stop_id: i32,
-    journey_id_1: i32,
-    journey_id_2: i32,
+    journey_legacy_id_1: i32,
+    administration_1: &str,
+    journey_legacy_id_2: i32,
+    administration_2: &str,
     departure_at: NaiveDateTime,
 ) -> Option<i16> {
-    let Some(exchange_times) =
-        data_storage
-            .exchange_times_journey_map()
-            .get(&(stop_id, journey_id_1, journey_id_2))
-    else {
-        return None;
-    };
+    let exchange_times = data_storage.exchange_times_journey_map().get(&(
+        stop_id,
+        (journey_legacy_id_1, administration_1.to_string()),
+        (journey_legacy_id_2, administration_2.to_string()),
+    ))?;
 
     // "2 +" because a 2-bit offset is mandatory.
     // "- 1" to obtain an index.
@@ -268,13 +312,15 @@ fn exchange_time_journey_pair(
         let exchange_time = data_storage
             .exchange_times_journey()
             .find(id)
-            .expect(format!("Exchange times journey {id} not found").as_str());
+            // .expect(format!("Exchange times journey {id} not found").as_str());
+            .unwrap_or_else(|| panic!("Exchange time journey {:?} not found.", id));
 
         if let Some(bit_field_id) = exchange_time.bit_field_id() {
             let bit_field = data_storage
                 .bit_fields()
                 .find(bit_field_id)
-                .expect(format!("Bit field {bit_field_id} not found").as_str());
+                // .expect(format!("Bit field {bit_field_id} not found").as_str());
+                .unwrap_or_else(|| panic!("Bitfield {:?} not found.", bit_field_id));
 
             if bit_field.bits()[index] == 1 {
                 return Some(exchange_time.duration());

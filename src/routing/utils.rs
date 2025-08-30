@@ -22,13 +22,19 @@ pub fn get_stop_connections(
     data_storage
         .stop_connections_by_stop_id()
         .get(&stop_id)
-        .map(|ids| data_storage.stop_connections().resolve_ids(ids))?
+        // .map(|ids| data_storage.stop_connections().resolve_ids(ids))?
+        .map(|ids| {
+            data_storage
+                .stop_connections()
+                .resolve_ids(ids)
+                .unwrap_or_else(|| panic!("Ids {:?} not found.", ids))
+        })
 }
 
 pub fn get_routes_to_ignore(data_storage: &DataStorage, route: &Route) -> FxHashSet<u64> {
     route
         .sections()
-        .into_iter()
+        .iter()
         .filter_map(|section| {
             section
                 .journey(data_storage)
@@ -37,14 +43,14 @@ pub fn get_routes_to_ignore(data_storage: &DataStorage, route: &Route) -> FxHash
         .collect()
 }
 
-pub fn sort_routes(routes: &mut Vec<Route>) {
+pub fn sort_routes(routes: &mut [Route]) {
     routes.sort_by_key(|route| route.arrival_at());
 }
 
 pub fn sorted_insert(routes: &mut Vec<Route>, route_to_insert: Route) {
     let index = routes
-        .into_iter()
+        .iter_mut()
         .position(|route| route_to_insert.arrival_at() < route.arrival_at())
-        .unwrap_or_else(|| routes.len());
+        .unwrap_or(routes.len());
     routes.insert(index, route_to_insert);
 }
