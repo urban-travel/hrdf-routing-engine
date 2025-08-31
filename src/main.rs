@@ -181,7 +181,7 @@ enum Mode {
         #[command(flatten)]
         isochrone_args: IsochroneHectareArgsBuilder,
         /// The +/- duration on which to compute the average (in minutes)
-        #[arg(short, long, default_value_t = 30)]
+        #[arg(long, default_value_t = 30)]
         delta_time: i64,
         /// The +/- duration on which to compute the average (in minutes)
         #[arg(short, long, default_value_t = String::from("https://dam-api.bfs.admin.ch/hub/api/dam/assets/32686751/master"))]
@@ -217,10 +217,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .unwrap();
 
     let cli = Cli::parse();
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(50)
-        .build_global()
-        .unwrap();
 
     let hrdf_2025 = Hrdf::new(
         Version::V_5_40_41_2_0_7,
