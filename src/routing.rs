@@ -44,6 +44,7 @@ pub fn plan_journey(
     .remove(&arrival_stop_id);
 
     if verbose && let Some(rou) = &result {
+        println!();
         rou.print(hrdf.data_storage());
     }
 

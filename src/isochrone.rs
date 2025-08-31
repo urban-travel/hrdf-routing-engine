@@ -29,6 +29,20 @@ use utils::time_to_distance;
 use self::utils::NaiveDateTimeRange;
 use self::utils::wgs84_to_lv95;
 
+#[derive(Clone, Debug)]
+pub struct IsochroneHectareArgs {
+    /// Departure date and time
+    pub departure_at: NaiveDateTime,
+    /// Maximum time of the isochrone in minutes
+    pub time_limit: Duration,
+    /// Maximum number of connections
+    pub max_num_explorable_connections: i32,
+    /// Number of starting points
+    pub num_starting_points: usize,
+    /// Verbose on or off
+    pub verbose: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct IsochroneArgs {
     pub latitude: f64,

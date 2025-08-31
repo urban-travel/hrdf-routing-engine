@@ -22,6 +22,7 @@ where
 {
     let mut new_routes = Vec::new();
 
+    let mut old_routes = routes.clone();
     while !routes.is_empty() {
         let route = routes.remove(0);
 
@@ -38,11 +39,26 @@ where
         explore_last_route_section_more_if_possible(data_storage, &route, &mut routes);
 
         if !can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id) {
+            // In some cases there are stops appearing multiple times in a Journey
+            // for example see: *Z 011709 000801   in FPLAHN
+            // This can lead to an infinite loop. We will therefore check if the same route is explored
+            // a second time
+            if routes.len() == 1 && routes == old_routes {
+                log::debug!("Routes stayed the same: {:?}", routes);
+                let _ = routes.remove(0);
+            } else if routes.len() == 1 {
+                old_routes = routes.clone();
+            }
             continue;
         }
 
+        // log::debug!("EXPLORE NEARBY STOPS");
         explore_nearby_stops(data_storage, &route, &mut routes);
+        // log::debug!("EXPLRED NEARBY STOPS: {:?}", routes);
         explore_connections(data_storage, &route, journeys_to_ignore, &mut new_routes);
+        // log::debug!("EXPLRED CONNECTIONS: {:?}", new_routes);
+
+        // log::debug!("==============================================================");
     }
 
     // All new journeys are recorded as not available for the next connection level.

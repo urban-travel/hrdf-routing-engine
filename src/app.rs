@@ -1,11 +1,16 @@
 use std::error::Error;
+use std::time::Instant;
 
-use crate::IsochroneArgs;
+use crate::isochrone::externals::{HectareData, HectareRecord};
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
+use crate::{IsochroneArgs, IsochroneHectareArgs};
 use chrono::Duration;
 use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
+use simple_tqdm::ParTqdm;
 
 use self::isochrone::compute_average_isochrones;
 use self::isochrone::compute_worst_isochrones;
@@ -66,6 +71,81 @@ pub fn run_average(
     )?;
 
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn run_surface_per_ha(
+    hrdf: Hrdf,
+    excluded_polygons: MultiPolygon,
+    hectare: HectareData,
+    isochrone_args: IsochroneHectareArgs,
+    delta_time: Duration,
+    display_mode: IsochroneDisplayMode,
+) -> Result<Vec<HectareRecord>, Box<dyn Error>> {
+    let id_pos_surf = hectare
+        .data()
+        .into_par_iter()
+        .tqdm()
+        .map(|record| {
+            let start = Instant::now();
+            let HectareRecord {
+                reli,
+                longitude,
+                latitude,
+                population,
+                area,
+            } = record;
+            log::debug!(
+                "Computing max area for {reli} (longitude, latitude) = ({longitude}, {latitude})"
+            );
+
+            let he_re = if area.is_some() {
+                record
+            } else {
+                let IsochroneHectareArgs {
+                    departure_at,
+                    time_limit,
+                    max_num_explorable_connections,
+                    num_starting_points,
+                    verbose,
+                } = isochrone_args;
+                let isochrone_args = IsochroneArgs {
+                    latitude,
+                    longitude,
+                    departure_at,
+                    time_limit,
+                    interval: time_limit,
+                    max_num_explorable_connections,
+                    num_starting_points,
+                    verbose,
+                };
+                let opt_iso = compute_optimal_isochrones(
+                    &hrdf,
+                    &excluded_polygons,
+                    isochrone_args,
+                    delta_time,
+                    display_mode,
+                );
+
+                let area = opt_iso.compute_max_area();
+                HectareRecord {
+                    reli,
+                    longitude,
+                    latitude,
+                    population,
+                    area: Some(area),
+                }
+            };
+            let time = start.elapsed();
+            log::debug!(
+                "Done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {:.2?}",
+                time
+            );
+            he_re
+        })
+        .collect();
+
+    Ok(id_pos_surf)
 }
 
 #[allow(clippy::too_many_arguments)]
