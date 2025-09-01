@@ -6,10 +6,11 @@ use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use hrdf_parser::{Hrdf, Version};
 use hrdf_routing_engine::{
-    ExcludedPolygons, HectareData, IsochroneArgs, IsochroneDisplayMode, IsochroneHectareArgs,
-    LAKES_GEOJSON_URLS, run_average, run_comparison, run_debug, run_optimal, run_service,
-    run_simple, run_surface_per_ha, run_worst,
+    ExcludedPolygons, IsochroneArgs, IsochroneDisplayMode, LAKES_GEOJSON_URLS, run_average,
+    run_comparison, run_debug, run_optimal, run_service, run_simple, run_worst,
 };
+#[cfg(feature = "hectare")]
+use hrdf_routing_engine::{HectareData, IsochroneHectareArgs, run_surface_per_ha};
 use log::LevelFilter;
 
 #[derive(Parser, Debug, Clone)]
@@ -71,6 +72,7 @@ impl IsochroneArgsBuilder {
     }
 }
 
+#[cfg(feature = "hectare")]
 #[derive(Parser, Debug)]
 struct IsochroneHectareArgsBuilder {
     /// Departure date and time
@@ -90,6 +92,7 @@ struct IsochroneHectareArgsBuilder {
     verbose: bool,
 }
 
+#[cfg(feature = "hectare")]
 impl IsochroneHectareArgsBuilder {
     pub(crate) fn finalize(self) -> Result<IsochroneHectareArgs, Box<dyn Error>> {
         let Self {
@@ -177,6 +180,7 @@ enum Mode {
         delta_time: i64,
     },
     /// Surface per Hectare
+    #[cfg(feature = "hectare")]
     Hectare {
         #[command(flatten)]
         isochrone_args: IsochroneHectareArgsBuilder,
@@ -317,6 +321,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )?;
         }
 
+        #[cfg(feature = "hectare")]
         Mode::Hectare {
             isochrone_args,
             delta_time,

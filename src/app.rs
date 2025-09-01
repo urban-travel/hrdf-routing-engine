@@ -1,7 +1,6 @@
 use std::error::Error;
 use std::time::Instant;
 
-use crate::isochrone::externals::{HectareData, HectareRecord};
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
 use crate::{IsochroneArgs, IsochroneHectareArgs};
 use chrono::Duration;
@@ -10,6 +9,10 @@ use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
+
+#[cfg(feature = "hectare")]
+use crate::isochrone::externals::{HectareData, HectareRecord};
+#[cfg(feature = "hectare")]
 use simple_tqdm::ParTqdm;
 
 use self::isochrone::compute_average_isochrones;
@@ -73,6 +76,7 @@ pub fn run_average(
     Ok(())
 }
 
+#[cfg(feature = "hectare")]
 #[allow(clippy::too_many_arguments)]
 pub fn run_surface_per_ha(
     hrdf: Hrdf,

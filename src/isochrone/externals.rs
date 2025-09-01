@@ -10,6 +10,8 @@ use geojson::{FeatureCollection, GeoJson};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use url::Url;
+
+#[cfg(feature = "hectare")]
 use zip::ZipArchive;
 
 use super::utils::lv95_to_wgs84;
@@ -146,11 +148,13 @@ impl ExcludedPolygons {
     }
 }
 
+#[cfg(feature = "hectare")]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HectareData {
     data: Vec<HectareRecord>,
 }
 
+#[cfg(feature = "hectare")]
 impl HectareData {
     /// Loads and parses the data.
     /// If an URL is provided, the data containing the population per hectare is loaded from the specified URL which is downloaded automatically.
@@ -278,6 +282,7 @@ impl HectareData {
     }
 }
 
+#[cfg(feature = "hectare")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HectareRecord {
     pub reli: u64,
