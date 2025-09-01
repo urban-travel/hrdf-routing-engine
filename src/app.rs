@@ -1,3 +1,4 @@
+use orx_parallel::*;
 use std::error::Error;
 use std::time::Instant;
 
@@ -7,16 +8,12 @@ use chrono::Duration;
 use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
 use isochrone::compute_optimal_isochrones;
-use rayon::iter::IntoParallelIterator;
-use rayon::iter::ParallelIterator;
 
 #[cfg(feature = "hectare")]
 use crate::{
     IsochroneHectareArgs,
     isochrone::externals::{HectareData, HectareRecord},
 };
-#[cfg(feature = "hectare")]
-use simple_tqdm::ParTqdm;
 
 use self::isochrone::compute_average_isochrones;
 use self::isochrone::compute_worst_isochrones;
@@ -89,10 +86,15 @@ pub fn run_surface_per_ha(
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
 ) -> Result<Vec<HectareRecord>, Box<dyn Error>> {
-    let id_pos_surf = hectare
-        .data()
-        .into_par_iter()
-        .tqdm()
+    use std::sync::RwLock;
+
+    let total_time = RwLock::new(Instant::now());
+    let locked_counter = RwLock::new(0);
+    let data = hectare.data();
+    let total = data.len();
+    let id_pos_surf = data
+        .into_par()
+        // .tqdm()
         .map(|record| {
             let start = Instant::now();
             let HectareRecord {
@@ -144,10 +146,20 @@ pub fn run_surface_per_ha(
                 }
             };
             let time = start.elapsed();
-            log::debug!(
-                "Done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {:.2?}",
-                time
-            );
+            {
+
+                let  elapsed = total_time.read().unwrap().elapsed();
+                {
+                    let mut w = locked_counter.write().unwrap();
+                    *w += 1;
+                    let avg_time = elapsed / *w;
+                    let remaining_time = avg_time * (total as i32 - *w as i32) as u32;
+                    log::debug!(
+                        "{} / {} done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {:.2?}. Remaging {:.2?}",
+                        *w, total, time, remaining_time
+                    );
+                }
+            }
             he_re
         })
         .collect();

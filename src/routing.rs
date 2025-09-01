@@ -15,8 +15,9 @@ use hrdf_parser::Stop;
 use hrdf_parser::{CoordinateSystem, Coordinates};
 pub use models::RouteResult as Route;
 pub use models::RouteSectionResult as RouteSection;
-use rayon::iter::IntoParallelRefIterator;
-use rayon::iter::ParallelIterator;
+use orx_parallel::*;
+// use rayon::iter::IntoParallelRefIterator;
+// use rayon::iter::ParallelIterator;
 
 use core::compute_routing;
 
@@ -156,7 +157,8 @@ pub fn compute_routes_from_origin(
 
     // then go over all these stops to compute each attainable route
     let mut routes = departure_stops
-        .par_iter()
+        // .par_iter()
+        .par()
         .map(|departure_stop| {
             // The departure time is calculated according to the time it takes to walk to the departure stop.
             let (adjusted_departure_at, adjusted_time_limit) = adjust_departure_at(

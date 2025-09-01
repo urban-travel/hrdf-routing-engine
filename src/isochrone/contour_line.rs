@@ -3,13 +3,12 @@ use contour::ContourBuilder;
 use geo::{BooleanOps, MapCoordsInPlace, MultiPolygon};
 use hrdf_parser::{CoordinateSystem, Coordinates};
 use kd_tree::{KdPoint, KdTree};
+use orx_parallel::*;
 
 use super::{
     constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR,
     utils::{distance_between_2_points, distance_to_time, lv95_to_wgs84, time_to_distance},
 };
-
-use rayon::prelude::*;
 
 pub fn create_grid(
     data: &[(Coordinates, Duration)],
@@ -39,7 +38,7 @@ pub fn create_grid(
     );
 
     let grid = (0..num_points_y)
-        .into_par_iter()
+        .into_par()
         .map(|y| {
             let mut result = Vec::new();
             let y = bounding_box.0.1 + dx * y as f64;

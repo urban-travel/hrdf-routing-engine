@@ -20,7 +20,6 @@ geojson = "0.24.2"
 hrdf-parser = "0.5.1"
 kd-tree = "0.6.0"
 log = "0.4.22"
-rayon = "1.10.0"
 reqwest = "0.12.15"
 rustc-hash = "2.0.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -41,6 +40,7 @@ zip = { version = "4.0.0", optional = true }
 # For -Zminimal-versions
 native-tls = "0.2.14"
 flate2 = "1.0.35"
+orx-parallel = "3.1.0"
 
 [features]
 default = ["svg", "hectare"]

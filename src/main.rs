@@ -215,10 +215,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .env()
         .init()
         .unwrap();
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(4)
-        .build_global()
-        .unwrap();
+    // rayon::ThreadPoolBuilder::new()
+    //     .num_threads(4)
+    //     .build_global()
+    //     .unwrap();
 
     let cli = Cli::parse();
 
