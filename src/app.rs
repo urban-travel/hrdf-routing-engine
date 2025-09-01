@@ -1,8 +1,8 @@
 use std::error::Error;
 use std::time::Instant;
 
+use crate::IsochroneArgs;
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
-use crate::{IsochroneArgs, IsochroneHectareArgs};
 use chrono::Duration;
 use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
@@ -11,7 +11,10 @@ use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 
 #[cfg(feature = "hectare")]
-use crate::isochrone::externals::{HectareData, HectareRecord};
+use crate::{
+    IsochroneHectareArgs,
+    isochrone::externals::{HectareData, HectareRecord},
+};
 #[cfg(feature = "hectare")]
 use simple_tqdm::ParTqdm;
 

@@ -29,6 +29,7 @@ use utils::time_to_distance;
 use self::utils::NaiveDateTimeRange;
 use self::utils::wgs84_to_lv95;
 
+#[cfg(feature = "hectare")]
 #[derive(Clone, Debug)]
 pub struct IsochroneHectareArgs {
     /// Departure date and time
