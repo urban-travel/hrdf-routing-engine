@@ -202,7 +202,7 @@ struct Cli {
     /// Force to rebuild the cache
     #[arg(short, long, default_value_t = false)]
     force_rebuild: bool,
-    // Maximum number of cores used
+    // Maximum number of cores used. If 0 is given all cores are automatically assigned
     #[arg(long, default_value_t = 4)]
     num_threads: usize,
     /// What mode is used
@@ -241,7 +241,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             run_debug(hrdf_2025);
         }
         Mode::Serve { address, port } => {
-            run_service(hrdf_2025, excluded_polygons, address, port).await;
+            run_service(hrdf_2025, cli.num_threads, excluded_polygons, address, port).await;
         }
         Mode::Optimal {
             isochrone_args,
@@ -254,6 +254,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
                 mode,
+                cli.num_threads,
             )?;
         }
         Mode::Worst {
@@ -267,6 +268,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
                 mode,
+                cli.num_threads,
             )?;
         }
         Mode::Simple {
@@ -278,6 +280,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 excluded_polygons,
                 isochrone_args.finalize()?,
                 mode,
+                cli.num_threads,
             )?;
         }
         Mode::Average {
@@ -289,6 +292,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 excluded_polygons,
                 isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
+                cli.num_threads,
             )?;
         }
         Mode::Compare {
@@ -317,6 +321,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 args_2025,
                 Duration::minutes(delta_time),
                 mode,
+                cli.num_threads,
             )?;
         }
 
@@ -336,6 +341,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 isochrone_args.clone(),
                 Duration::minutes(delta_time),
                 IsochroneDisplayMode::Circles,
+                cli.num_threads,
             )?;
 
             let data = serde_json::to_string_pretty(&surfaces).unwrap();

@@ -27,3 +27,14 @@ pub fn create_time(hour: u32, minute: u32) -> NaiveTime {
 pub fn create_date_time(year: i32, month: u32, day: u32, hour: u32, minute: u32) -> NaiveDateTime {
     NaiveDateTime::new(create_date(year, month, day), create_time(hour, minute))
 }
+
+pub fn compute_remaining_threads(num_threads: usize, used_threads: usize) -> usize {
+    let remaining_threads = num_threads as isize - used_threads as isize;
+    if num_threads == 0 {
+        0
+    } else if remaining_threads > 1 {
+        remaining_threads as usize
+    } else {
+        1usize
+    }
+}

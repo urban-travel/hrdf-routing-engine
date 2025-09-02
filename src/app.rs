@@ -25,6 +25,7 @@ pub fn run_simple(
     excluded_polygons: MultiPolygon,
     isochrone_args: IsochroneArgs,
     display_mode: IsochroneDisplayMode,
+    num_threads: usize,
 ) -> Result<(), Box<dyn Error>> {
     let time_limit = isochrone_args.time_limit.num_minutes();
     let isochrone_interval = isochrone_args.interval.num_minutes();
@@ -33,7 +34,13 @@ pub fn run_simple(
     let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
 
     #[cfg(feature = "svg")]
-    let iso = compute_isochrones(&hrdf, &excluded_polygons, isochrone_args, display_mode);
+    let iso = compute_isochrones(
+        &hrdf,
+        &excluded_polygons,
+        isochrone_args,
+        display_mode,
+        num_threads,
+    );
 
     #[cfg(feature = "svg")]
     iso.write_svg(
@@ -51,6 +58,7 @@ pub fn run_average(
     excluded_polygons: MultiPolygon,
     isochrone_args: IsochroneArgs,
     delta_time: Duration,
+    num_threads: usize,
 ) -> Result<(), Box<dyn Error>> {
     let time_limit = isochrone_args.time_limit.num_minutes();
     let isochrone_interval = isochrone_args.interval.num_minutes();
@@ -59,7 +67,13 @@ pub fn run_average(
     let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
 
     #[cfg(feature = "svg")]
-    let iso = compute_average_isochrones(&hrdf, &excluded_polygons, isochrone_args, delta_time);
+    let iso = compute_average_isochrones(
+        &hrdf,
+        &excluded_polygons,
+        isochrone_args,
+        delta_time,
+        num_threads,
+    );
 
     #[cfg(feature = "svg")]
     iso.write_svg(
@@ -85,6 +99,7 @@ pub fn run_surface_per_ha(
     isochrone_args: IsochroneHectareArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
+    num_threads: usize,
 ) -> Result<Vec<HectareRecord>, Box<dyn Error>> {
     use std::sync::RwLock;
 
@@ -93,7 +108,7 @@ pub fn run_surface_per_ha(
     let data = hectare.data();
     let total = data.len();
     let id_pos_surf = data
-        .into_par()
+        .into_par().num_threads(num_threads)
         // .tqdm()
         .map(|record| {
             let start = Instant::now();
@@ -111,6 +126,8 @@ pub fn run_surface_per_ha(
             let he_re = if area.is_some() {
                 record
             } else {
+                use crate::utils::compute_remaining_threads;
+
                 let IsochroneHectareArgs {
                     departure_at,
                     time_limit,
@@ -134,6 +151,7 @@ pub fn run_surface_per_ha(
                     isochrone_args,
                     delta_time,
                     display_mode,
+                    compute_remaining_threads(num_threads, total)
                 );
 
                 let area = opt_iso.compute_max_area();
@@ -174,6 +192,7 @@ pub fn run_optimal(
     isochrone_args: IsochroneArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
+    num_threads: usize,
 ) -> Result<(), Box<dyn Error>> {
     let time_limit = isochrone_args.time_limit.num_minutes();
     let isochrone_interval = isochrone_args.interval.num_minutes();
@@ -187,6 +206,7 @@ pub fn run_optimal(
         isochrone_args,
         delta_time,
         display_mode,
+        num_threads,
     );
 
     #[cfg(feature = "svg")]
@@ -208,6 +228,7 @@ pub fn run_worst(
     isochrone_args: IsochroneArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
+    num_threads: usize,
 ) -> Result<(), Box<dyn Error>> {
     let time_limit = isochrone_args.time_limit.num_minutes();
     let isochrone_interval = isochrone_args.interval.num_minutes();
@@ -221,6 +242,7 @@ pub fn run_worst(
         isochrone_args,
         delta_time,
         display_mode,
+        num_threads,
     );
 
     #[cfg(feature = "svg")]
@@ -242,6 +264,7 @@ pub fn run_comparison(
     isochrone_args_2025: IsochroneArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
+    num_threads: usize,
 ) -> Result<(), Box<dyn Error>> {
     let time_limit = isochrone_args_2024.time_limit.num_minutes();
     let isochrone_interval = isochrone_args_2024.interval.num_minutes();
@@ -255,6 +278,7 @@ pub fn run_comparison(
         isochrone_args_2024,
         delta_time,
         display_mode,
+        num_threads,
     );
     #[cfg(feature = "svg")]
     isochrones_2024.write_svg(
@@ -275,6 +299,7 @@ pub fn run_comparison(
         isochrone_args_2025,
         delta_time,
         display_mode,
+        num_threads,
     );
     #[cfg(feature = "svg")]
     isochrones_2025.write_svg(

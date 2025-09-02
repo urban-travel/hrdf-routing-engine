@@ -18,6 +18,7 @@ use crate::{
 
 pub async fn run_service(
     hrdf: Hrdf,
+    num_threads: usize,
     excluded_polygons: MultiPolygon,
     ip_addr: Ipv4Addr,
     port: u16,
@@ -38,7 +39,7 @@ pub async fn run_service(
         )
         .route(
             "/isochrones",
-            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), Arc::clone(&excluded_polygons), params)),
+            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), num_threads, Arc::clone(&excluded_polygons), params)),
         )
         .layer(cors);
     let address = SocketAddr::from((ip_addr, port));
@@ -76,6 +77,7 @@ struct ComputeIsochronesRequest {
 
 async fn compute_isochrones(
     hrdf: Arc<Hrdf>,
+    num_threads: usize,
     excluded_polygons: Arc<MultiPolygon>,
     Query(params): Query<ComputeIsochronesRequest>,
 ) -> Result<Json<IsochroneMap>, StatusCode> {
@@ -117,6 +119,7 @@ async fn compute_isochrones(
             isochrone_args,
             Duration::minutes(30),
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+            num_threads,
         )
     } else {
         isochrone::compute_isochrones(
@@ -124,6 +127,7 @@ async fn compute_isochrones(
             &excluded_polygons,
             isochrone_args,
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
+            num_threads,
         )
     };
     Ok(Json(result))
