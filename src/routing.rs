@@ -158,8 +158,8 @@ pub fn compute_routes_from_origin(
 
     // then go over all these stops to compute each attainable route
     let mut routes = departure_stops
-        // .par_iter()
-        .par().num_threads(num_threads)
+        .par()
+        .num_threads(num_threads)
         .map(|departure_stop| {
             // The departure time is calculated according to the time it takes to walk to the departure stop.
             let (adjusted_departure_at, adjusted_time_limit) = adjust_departure_at(

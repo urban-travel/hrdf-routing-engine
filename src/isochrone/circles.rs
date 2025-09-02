@@ -15,8 +15,10 @@ pub fn get_polygons(
     data: &[(Coordinates, Duration)],
     time_limit: Duration,
     num_circle_points: usize,
+    num_threads: usize,
 ) -> MultiPolygon {
     data.par()
+        .num_threads(num_threads)
         .filter(|(_, duration)| *duration <= time_limit)
         .map(|(center_lv95, duration)| {
             let distance =

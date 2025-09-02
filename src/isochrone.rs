@@ -96,18 +96,11 @@ pub fn compute_optimal_isochrones(
     )
     .into_iter()
     .collect::<Vec<_>>();
-    let remaining_threads = num_threads as isize - isochrone_map.len() as isize;
-    let remaining_threads = if remaining_threads > 1 {
-        remaining_threads as usize
-    } else if num_threads == 0 {
-        num_threads
-    } else {
-        1_usize
-    };
+    let num_dates = isochrone_map.len();
 
     let isochrone_map = isochrone_map
         .into_par()
-        .num_threads(remaining_threads)
+        .num_threads(num_threads)
         .map(|dep| {
             compute_isochrones(
                 hrdf,
@@ -123,7 +116,7 @@ pub fn compute_optimal_isochrones(
                     verbose,
                 },
                 display_mode,
-                num_threads,
+                compute_remaining_threads(num_threads, num_dates),
             )
         })
         .reduce(|lhs, rhs| {
@@ -188,6 +181,7 @@ pub fn compute_worst_isochrones(
 
     let isochrone_map = isochrone_map
         .into_par()
+        .num_threads(num_threads)
         .map(|dep| {
             compute_isochrones(
                 hrdf,
@@ -307,7 +301,7 @@ pub fn compute_average_isochrones(
     let num_points = 1500;
     let mut grids = data
         .into_iter()
-        .map(|d| contour_line::create_grid(&d, bounding_box, time_limit, num_points))
+        .map(|d| contour_line::create_grid(&d, bounding_box, time_limit, num_points, num_threads))
         .collect::<Vec<_>>();
     let timesteps = grids.len();
     let grid_ini = grids.pop().expect("Grids was empty");
@@ -441,6 +435,7 @@ pub fn compute_isochrones(
             bounding_box,
             time_limit,
             num_points,
+            num_threads,
         ))
     } else {
         None
@@ -454,7 +449,7 @@ pub fn compute_isochrones(
             let polygons = match display_mode {
                 IsochroneDisplayMode::Circles => {
                     let num_points_circle = 6;
-                    circles::get_polygons(&data, current_time_limit, num_points_circle)
+                    circles::get_polygons(&data, current_time_limit, num_points_circle, num_threads)
                 }
                 IsochroneDisplayMode::ContourLine => {
                     let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();

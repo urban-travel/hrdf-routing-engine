@@ -15,6 +15,7 @@ pub fn create_grid(
     bounding_box: ((f64, f64), (f64, f64)),
     time_limit: Duration,
     num_points: usize,
+    num_threads: usize,
 ) -> (Vec<(Coordinates, Duration)>, usize, usize, f64) {
     let dist_x = bounding_box.1.0 - bounding_box.0.0;
     let dist_y = bounding_box.1.1 - bounding_box.0.1;
@@ -39,6 +40,7 @@ pub fn create_grid(
 
     let grid = (0..num_points_y)
         .into_par()
+        .num_threads(num_threads)
         .map(|y| {
             let mut result = Vec::new();
             let y = bounding_box.0.1 + dx * y as f64;

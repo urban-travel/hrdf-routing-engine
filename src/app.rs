@@ -108,8 +108,8 @@ pub fn run_surface_per_ha(
     let data = hectare.data();
     let total = data.len();
     let id_pos_surf = data
-        .into_par().num_threads(num_threads)
-        // .tqdm()
+        .into_par()
+        .num_threads(num_threads)
         .map(|record| {
             let start = Instant::now();
             let HectareRecord {

@@ -35,6 +35,6 @@ pub fn compute_remaining_threads(num_threads: usize, used_threads: usize) -> usi
     } else if remaining_threads > 1 {
         remaining_threads as usize
     } else {
-        1usize
+        0usize
     }
 }
