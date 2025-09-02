@@ -202,6 +202,9 @@ struct Cli {
     /// Force to rebuild the cache
     #[arg(short, long, default_value_t = false)]
     force_rebuild: bool,
+    // Maximum number of cores used
+    #[arg(long, default_value_t = 4)]
+    num_threads: usize,
     /// What mode is used
     #[command(subcommand)]
     mode: Mode,
@@ -215,10 +218,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .env()
         .init()
         .unwrap();
-    // rayon::ThreadPoolBuilder::new()
-    //     .num_threads(4)
-    //     .build_global()
-    //     .unwrap();
 
     let cli = Cli::parse();
 
