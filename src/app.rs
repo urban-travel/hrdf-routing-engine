@@ -182,8 +182,8 @@ pub fn run_surface_per_ha(
                             "Isochrone done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {time:.2?}"
                         );
                         log::info!(
-                            "{} / {} done in {:.2?}. Remaining {}h:{}m:{}s. Avg time per isochrone: {avg_time:?}",
-                            *w, total, time, remaining_time.num_hours(), remaining_minutes.num_minutes(), remaining_seconds.num_seconds()
+                            "{w} / {total} done in {time:.2?}. Remaining {}h:{}m:{}s. Avg time per isochrone: {avg_time:.2?}.",
+                            remaining_time.num_hours(), remaining_minutes.num_minutes(), remaining_seconds.num_seconds()
                         );
                     }
                 }
