@@ -119,9 +119,11 @@ pub fn run_surface_per_ha(
                 population,
                 area,
             } = record;
-            log::debug!(
-                "Computing max area for {reli} (longitude, latitude) = ({longitude}, {latitude})"
-            );
+
+            let verbose =  isochrone_args.verbose;
+            if verbose {
+                log::debug!("Computing max area for {reli} (longitude, latitude) = ({longitude}, {latitude}");
+            }
 
             let he_re = if area.is_some() {
                 record
@@ -163,19 +165,27 @@ pub fn run_surface_per_ha(
                     area: Some(area),
                 }
             };
-            let time = start.elapsed();
-            {
-
-                let  elapsed = total_time.read().unwrap().elapsed();
+            if verbose {
+                let time = start.elapsed();
                 {
-                    let mut w = locked_counter.write().unwrap();
-                    *w += 1;
-                    let avg_time = elapsed / *w;
-                    let remaining_time = avg_time * (total as i32 - *w as i32) as u32;
-                    log::debug!(
-                        "{} / {} done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {:.2?}. Remaging {:.2?}",
-                        *w, total, time, remaining_time
-                    );
+
+                    let  elapsed = total_time.read().unwrap().elapsed();
+                    {
+                        let mut w = locked_counter.write().unwrap();
+                        *w += 1;
+                        let avg_time = elapsed / *w;
+                        let remaining_time = avg_time * (total as i32 - *w as i32) as u32;
+                        let remaining_time = Duration::from_std(remaining_time).expect("Unable to convert to a duration.");
+                        let remaining_minutes = remaining_time - Duration::hours(remaining_time.num_hours());
+                        let remaining_seconds = remaining_minutes - Duration::minutes(remaining_minutes.num_minutes());
+                        log::debug!(
+                            "Isochrone done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {time:.2?}"
+                        );
+                        log::info!(
+                            "{} / {} done in {:.2?}. Remaining {}h:{}m:{}s. Avg time per isochrone: {avg_time:?}",
+                            *w, total, time, remaining_time.num_hours(), remaining_minutes.num_minutes(), remaining_seconds.num_seconds()
+                        );
+                    }
                 }
             }
             he_re

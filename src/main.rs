@@ -214,7 +214,7 @@ struct Cli {
 async fn main() -> Result<(), Box<dyn Error>> {
     simple_logger::SimpleLogger::new()
         .with_level(LevelFilter::Off)
-        .with_module_level("hrdf_routing_engine", LevelFilter::Debug)
+        .with_module_level("hrdf_routing_engine", LevelFilter::Info)
         .env()
         .init()
         .unwrap();

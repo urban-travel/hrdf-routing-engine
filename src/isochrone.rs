@@ -78,7 +78,7 @@ pub fn compute_optimal_isochrones(
     } = isochrone_args;
 
     if verbose {
-        log::info!(
+        log::debug!(
             "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes(),
@@ -128,7 +128,7 @@ pub fn compute_optimal_isochrones(
         });
 
     if verbose {
-        log::info!(
+        log::debug!(
             "Time computing the optimal solution : {:.2?}",
             start_time.elapsed()
         );
@@ -159,7 +159,7 @@ pub fn compute_worst_isochrones(
     } = isochrone_args;
 
     if verbose {
-        log::info!(
+        log::debug!(
             "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes(),
@@ -209,7 +209,7 @@ pub fn compute_worst_isochrones(
         });
 
     if verbose {
-        log::info!(
+        log::debug!(
             "Time computing the optimal solution : {:.2?}",
             start_time.elapsed()
         );
@@ -240,7 +240,7 @@ pub fn compute_average_isochrones(
     } = isochrone_args;
 
     if verbose {
-        log::info!(
+        log::debug!(
             "Computing average isochrone:\n longitude: {longitude}, latitude: {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes(),
@@ -353,7 +353,7 @@ pub fn compute_average_isochrones(
         .collect();
 
     if verbose {
-        log::info!(
+        log::debug!(
             "Time for finding the isochrones : {:.2?}",
             start_time.elapsed()
         );
@@ -391,7 +391,7 @@ pub fn compute_isochrones(
     } = isochrone_args;
 
     if verbose {
-        log::info!(
+        log::debug!(
             "longitude: {longitude}, latitude : {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, max_num_explorable_connections: {max_num_explorable_connections}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes()
@@ -418,7 +418,7 @@ pub fn compute_isochrones(
     );
 
     if verbose {
-        log::info!("Time for finding the routes : {:.2?}", start_time.elapsed());
+        log::debug!("Time for finding the routes : {:.2?}", start_time.elapsed());
     }
 
     let start_time = Instant::now();
@@ -483,7 +483,7 @@ pub fn compute_isochrones(
         .collect();
 
     if verbose {
-        log::info!(
+        log::debug!(
             "Time for finding the isochrones : {:.2?}",
             start_time.elapsed()
         );

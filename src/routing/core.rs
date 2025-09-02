@@ -30,7 +30,7 @@ pub fn compute_routing(
 
     for i in 0..max_num_explorable_connections {
         if verbose {
-            log::info!("For connection {i}, routes length: {}", routes.len());
+            log::debug!("For connection {i}, routes length: {}", routes.len());
         }
 
         let can_continue_exploration: Box<dyn FnMut(&Route) -> bool> = match args.mode() {
