@@ -307,7 +307,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .finalize()?;
 
             let hrdf_2024 = Hrdf::new(
-                Version::V_5_40_41_2_0_7,
+                Version::V_5_40_41_2_0_6,
                 "https://data.opentransportdata.swiss/en/dataset/timetable-54-2024-hrdf/permalink",
                 cli.force_rebuild,
                 cli.cache_prefix,
