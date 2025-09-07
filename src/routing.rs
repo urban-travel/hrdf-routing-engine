@@ -160,7 +160,7 @@ pub fn compute_routes_from_origin(
     let mut routes = departure_stops
         .par()
         .num_threads(num_threads)
-        .map(|departure_stop| {
+        .flat_map(|departure_stop| {
             // The departure time is calculated according to the time it takes to walk to the departure stop.
             let (adjusted_departure_at, adjusted_time_limit) = adjust_departure_at(
                 departure_at,
@@ -189,9 +189,6 @@ pub fn compute_routes_from_origin(
 
             local_routes
         })
-        .collect::<Vec<_>>()
-        .into_iter()
-        .flatten()
         .collect::<Vec<_>>();
 
     // A false route is created to represent the point of origin in the results.

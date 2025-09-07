@@ -41,7 +41,7 @@ pub fn create_grid(
     let grid = (0..num_points_y)
         .into_par()
         .num_threads(num_threads)
-        .map(|y| {
+        .flat_map(|y| {
             let mut result = Vec::new();
             let y = bounding_box.0.1 + dx * y as f64;
 
@@ -79,7 +79,6 @@ pub fn create_grid(
 
             result
         })
-        .flatten()
         .collect::<Vec<(Coordinates, Duration)>>();
 
     (grid, num_points_x, num_points_y, dx)
