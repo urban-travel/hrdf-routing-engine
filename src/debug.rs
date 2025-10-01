@@ -202,21 +202,21 @@ pub fn test_find_reachable_stops_within_time_limit(hrdf: &Hrdf) {
     println!("{:.2?}", start_time.elapsed());
 }
 
-
-
 #[cfg(test)]
 mod tests {
-    use std::cmp::Ordering;
-    use chrono::{DateTime, Local, NaiveDate};
     use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
+    use chrono::{DateTime, Local, NaiveDate};
+    use rand::prelude::IndexedRandom;
+    use std::cmp::Ordering;
 
-    use hrdf_parser::{Hrdf, Version};
-    use serde::{Deserialize, Serialize};
-    use test_log::test;
-    use xml::{EventReader, ParserConfig};
-    use serde_xml_rs::{de::Deserializer};
     use crate::routing::plan_journey;
     use crate::utils::create_date_time;
+    use hrdf_parser::{Hrdf, Version};
+    use reqwest::{Error, Response};
+    use serde::{Deserialize, Serialize};
+    use serde_xml_rs::de::Deserializer;
+    use test_log::test;
+    use xml::{EventReader, ParserConfig};
 
     #[test(tokio::test)]
     async fn debug() {
@@ -235,29 +235,29 @@ mod tests {
 
     // request structure
     #[derive(Serialize, Deserialize)]
-    struct OJP{
-        ojp_req: OJPReq
+    struct OJP {
+        ojp_req: OJPReq,
     }
     #[derive(Serialize, Deserialize)]
-    struct OJPReq{
-        service_req: ServiceReq
+    struct OJPReq {
+        service_req: ServiceReq,
     }
     #[derive(Serialize, Deserialize)]
-    struct ServiceReq{
+    struct ServiceReq {
         req_timestamp: DateTime<Local>,
         req_ref: String,
         ojp_trip_req: OJPTripReq,
     }
     #[derive(Serialize, Deserialize)]
-    struct OJPTripReq{
+    struct OJPTripReq {
         req_timestamp: DateTime<Local>,
         msg_id: String,
         origin: PlaceRef,
         destination: PlaceRef,
-        params: ReqParams
+        params: ReqParams,
     }
     #[derive(Serialize, Deserialize)]
-    struct PlaceRef{
+    struct PlaceRef {
         stop_pt_ref: i32,
         name: String,
     }
@@ -267,7 +267,7 @@ mod tests {
         result_nb: i32,
     }
     #[derive(Serialize, Deserialize)]
-    struct ModeFilter{
+    struct ModeFilter {
         exclude: bool,
         pt_mode: String,
     }
@@ -275,184 +275,230 @@ mod tests {
     // response structures
 
     #[derive(Serialize, Deserialize)]
-    struct OJPResponse{
-        #[serde(rename="OJPResponse")]
-        ojp_response: OJPResp
+    struct OJPResponse {
+        #[serde(rename = "OJPResponse")]
+        ojp_response: OJPResp,
     }
     #[derive(Serialize, Deserialize)]
-    struct OJPResp{
-        #[serde(rename="siri:ServiceDelivery")]
-        siri_service_delivery: ServiceDelivery
+    struct OJPResp {
+        #[serde(rename = "siri:ServiceDelivery")]
+        siri_service_delivery: ServiceDelivery,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct ServiceDelivery{
-        #[serde(rename="siri:ResponseTimestamp")]
+    struct ServiceDelivery {
+        #[serde(rename = "siri:ResponseTimestamp")]
         response_timestamp: DateTime<Local>,
-        #[serde(rename="siri:ProducerRef")]
+        #[serde(rename = "siri:ProducerRef")]
         producer_ref: String,
-        o_j_p_trip_delivery: OJPTripDelivery
+        #[serde(rename = "#content")]
+        response_specific: ResponseType,
     }
+
+    #[derive(Serialize, Deserialize)]
+    enum ResponseType {
+        #[serde(rename_all = "PascalCase")]
+        OJPLocationInformationDelivery {
+            #[serde(rename = "siri:ResponseTimestamp")]
+            response_timestamp: DateTime<Local>,
+            #[serde(rename = "siri:RequestMessageRef")]
+            request_msg_ref: String,
+            #[serde(rename = "siri:DefaultLanguage")]
+            default_lang: String,
+            place_result: Vec<Place>,
+        },
+        #[serde(rename_all = "PascalCase")]
+        OJPTripDelivery {
+            #[serde(rename = "siri:ResponseTimestamp")]
+            response_timestamp: DateTime<Local>,
+            #[serde(rename = "siri:RequestMessageRef")]
+            request_msg_ref: String,
+            #[serde(rename = "siri:DefaultLanguage")]
+            default_lang: String,
+            calc_time: i32,
+            trip_response_context: TripResponseContext,
+            trip_result: Vec<TripResult>,
+        },
+    }
+
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct OJPTripDelivery{
-        #[serde(rename="siri:ResponseTimestamp")]
+    struct OJPLocationInformationDelivery {
+        #[serde(rename = "siri:ResponseTimestamp")]
         response_timestamp: DateTime<Local>,
-        #[serde(rename="siri:RequestMessageRef")]
+        #[serde(rename = "siri:RequestMessageRef")]
         request_msg_ref: String,
-        #[serde(rename="siri:DefaultLanguage")]
+        #[serde(rename = "siri:DefaultLanguage")]
+        default_lang: String,
+        place_result: Vec<Place>,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct OJPTripDelivery {
+        #[serde(rename = "siri:ResponseTimestamp")]
+        response_timestamp: DateTime<Local>,
+        #[serde(rename = "siri:RequestMessageRef")]
+        request_msg_ref: String,
+        #[serde(rename = "siri:DefaultLanguage")]
         default_lang: String,
         calc_time: i32,
         trip_response_context: TripResponseContext,
         trip_result: Vec<TripResult>,
     }
+
+
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct TripResponseContext{
+    struct TripResponseContext {
         places: Place,
         situations: Situations,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct Place{
-        place: Vec<PlaceCnt>
+    struct Place {
+        place: Vec<PlaceCnt>,
+        complete: Option<bool>,
+        probability: Option<f64>,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct Situations{
-        pt_situation: Vec<PtSituation>
+    struct Situations {
+        pt_situation: Vec<PtSituation>,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct PtSituation{
-        #[serde(rename="siri:CreationTime")]
+    struct PtSituation {
+        #[serde(rename = "siri:CreationTime")]
         creation_time: DateTime<Local>,
-        #[serde(rename="siri:ParticipantRef")]
+        #[serde(rename = "siri:ParticipantRef")]
         participant_ref: String,
-        #[serde(rename="siri:SituationNumber")]
+        #[serde(rename = "siri:SituationNumber")]
         situation_number: String,
-        #[serde(rename="siri:Version")]
+        #[serde(rename = "siri:Version")]
         version: i32,
-        #[serde(rename="siri:Source")]
+        #[serde(rename = "siri:Source")]
         source: SourceType,
-        #[serde(rename="siri:ValidityPeriod")]
+        #[serde(rename = "siri:ValidityPeriod")]
         validity_period: Vec<TimePeriod>,
-        #[serde(rename="siri:AlertCause")]
+        #[serde(rename = "siri:AlertCause")]
         alert_cause: String,
-        #[serde(rename="siri:Priority")]
+        #[serde(rename = "siri:Priority")]
         priority: String,
-        #[serde(rename="siri:ScopeType")]
+        #[serde(rename = "siri:ScopeType")]
         scope_type: String,
-        #[serde(rename="siri:Language")]
+        #[serde(rename = "siri:Language")]
         language: String,
-        #[serde(rename="siri:PublishingActions")]
+        #[serde(rename = "siri:PublishingActions")]
         publishing_actions: PublishingActions,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct SourceType{
-        #[serde(rename="siri:SourceType")]
+    struct SourceType {
+        #[serde(rename = "siri:SourceType")]
         source_type: String,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct TimePeriod{
-        #[serde(rename="siri:StartTime")]
+    struct TimePeriod {
+        #[serde(rename = "siri:StartTime")]
         start_time: DateTime<Local>,
-        #[serde(rename="siri:EndTime")]
+        #[serde(rename = "siri:EndTime")]
         end_time: DateTime<Local>,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct PublishingActions{
-        #[serde(rename="siri:PublishingAction")]
+    struct PublishingActions {
+        #[serde(rename = "siri:PublishingAction")]
         publishing_action: Vec<PublishingAction>,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct PublishingAction{
-        #[serde(rename="siri:PublishAtScope")]
+    struct PublishingAction {
+        #[serde(rename = "siri:PublishAtScope")]
         publishing_at_scope: PublishAtScope,
-        #[serde(rename="siri:PassengerInformationAction")]
+        #[serde(rename = "siri:PassengerInformationAction")]
         passenger_information_action: PassengerInformationAction,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct PublishAtScope{
-        #[serde(rename="siri:ScopeType")]
+    struct PublishAtScope {
+        #[serde(rename = "siri:ScopeType")]
         scope_type: String,
-        #[serde(rename="siri:Affects")]
+        #[serde(rename = "siri:Affects")]
         affects: (),
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct PassengerInformationAction{
-        #[serde(rename="siri:ActionRef")]
+    struct PassengerInformationAction {
+        #[serde(rename = "siri:ActionRef")]
         action_ref: (),
-        #[serde(rename="siri:RecordedAtTime")]
+        #[serde(rename = "siri:RecordedAtTime")]
         record_at_time: DateTime<Local>,
-        #[serde(rename="siri:Perspective")]
+        #[serde(rename = "siri:Perspective")]
         perspective: String,
-        #[serde(rename="siri:TextualContent")]
+        #[serde(rename = "siri:TextualContent")]
         recommendation_content: TextualContent,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct TextualContent{
-        #[serde(rename="siri:SummaryContent")]
+    struct TextualContent {
+        #[serde(rename = "siri:SummaryContent")]
         summary_content: SummaryContent,
-        #[serde(rename="siri:ReasonContent")]
+        #[serde(rename = "siri:ReasonContent")]
         reason_content: ReasonContent,
-        #[serde(rename="siri:RecommendationContent")]
+        #[serde(rename = "siri:RecommendationContent")]
         recommendation_content: RecommendationContent,
-        #[serde(rename="siri:DurationContent")]
+        #[serde(rename = "siri:DurationContent")]
         duration_content: DurationContent,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct SummaryContent{
-        #[serde(rename="siri:SummaryText")]
+    struct SummaryContent {
+        #[serde(rename = "siri:SummaryText")]
         summary_text: String,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct RecommendationContent{
-        #[serde(rename="siri:RecommendationText")]
+    struct RecommendationContent {
+        #[serde(rename = "siri:RecommendationText")]
         recommendation_text: String,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct DurationContent{
-        #[serde(rename="siri:DurationText")]
+    struct DurationContent {
+        #[serde(rename = "siri:DurationText")]
         duration_text: String,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct ReasonContent{
-        #[serde(rename="siri:ReasonText")]
+    struct ReasonContent {
+        #[serde(rename = "siri:ReasonText")]
         reason_text: String,
     }
 
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
     struct PlaceCnt {
+        name: Text,
+        geo_position: GeoPosition,
         #[serde(rename = "#content")]
         place: PlaceType,
-        name: Text,
-        geo_position: GeoPosition
+        #[serde(skip)]
+        mode: String,
     }
     #[derive(Serialize, Deserialize)]
-    enum PlaceType{
+    enum PlaceType {
         #[serde(rename_all = "PascalCase")]
-        StopPlace{
+        StopPlace {
             stop_place_ref: i32,
             stop_place_name: Text,
             private_code: PrivateCode,
             topographic_place_ref: String,
         },
         #[serde(rename_all = "PascalCase")]
-        StopPoint{
-            #[serde(rename="siri:StopPointRef")]
+        StopPoint {
+            #[serde(rename = "siri:StopPointRef")]
             stop_point_ref: String,
             stop_point_name: Text,
             private_code: PrivateCode,
@@ -460,10 +506,10 @@ mod tests {
             topographic_place_ref: String,
         },
         #[serde(rename_all = "PascalCase")]
-        TopographicPlace{
+        TopographicPlace {
             topographic_place_code: String,
             topographic_place_name: Text,
-        }
+        },
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
@@ -474,101 +520,101 @@ mod tests {
 
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct GeoPosition{
-        #[serde(rename="siri:Longitude")]
+    struct GeoPosition {
+        #[serde(rename = "siri:Longitude")]
         longitude: f64,
-        #[serde(rename="siri:Latitude")]
+        #[serde(rename = "siri:Latitude")]
         latitude: f64,
     }
 
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct TripResult{
+    struct TripResult {
         id: String,
         trip: Trip,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct Trip{
+    struct Trip {
         id: String,
-        duration: String, //Duration,
+        duration: String,            //Duration,
         start_time: DateTime<Local>, // todo use this to compute duration
         end_time: DateTime<Local>,
         transfers: i32,
         distance: i32,
-        leg: Vec<Leg>
+        leg: Vec<Leg>,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct Leg{
+    struct Leg {
         id: i32,
         duration: String, //Duration,
         #[serde(rename = "#content")]
-        timed_leg: TypeLeg,
+        timed_leg: Vec<TypeLeg>,
         emission_c_o2: EmissionCO2,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct EmissionCO2{
-        kilogram_per_person_km: f64
+    struct EmissionCO2 {
+        kilogram_per_person_km: f64,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    enum TypeLeg{
+    enum TypeLeg {
         #[serde(rename_all = "PascalCase")]
-        TimedLeg{
+        TimedLeg {
             leg_board: LegBoard,
             leg_alight: LegAlight,
             service: Service,
         },
         #[serde(rename_all = "PascalCase")]
-        TransferLeg{
+        TransferLeg {
             transfer_type: String,
             leg_start: LegPoint,
             leg_end: LegPoint,
             duration: String,
-        }
+        },
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct LegPoint{
-        #[serde(rename="siri:StopPointRef")]
+    struct LegPoint {
+        #[serde(rename = "siri:StopPointRef")]
         stop_point_ref: String,
         name: Text,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct LegBoard{
-        #[serde(rename="siri:StopPointRef")]
+    struct LegBoard {
+        #[serde(rename = "siri:StopPointRef")]
         stop_point_ref: String,
         stop_point_name: Text,
         name_suffix: Text,
         planned_quay: Text,
         estimated_quay: Option<Text>,
         service_departure: ServiceTime,
-        order: i32
+        order: i32,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
     struct LegAlight {
-        #[serde(rename="siri:StopPointRef")]
+        #[serde(rename = "siri:StopPointRef")]
         stop_point_ref: String,
         stop_point_name: Text,
         name_suffix: Text,
         planned_quay: Text,
         estimated_quay: Option<Text>,
         service_arrival: ServiceTime,
-        order: i32
+        order: i32,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct Service{
+    struct Service {
         operating_day_ref: NaiveDate,
         journey_ref: String,
         public_code: String,
-        #[serde(rename="siri:LineRef")]
+        #[serde(rename = "siri:LineRef")]
         line_ref: String,
-        #[serde(rename="siri:DirectionRef")]
+        #[serde(rename = "siri:DirectionRef")]
         direction_ref: String,
         mode: Mode,
         product_category: ProductCategory,
@@ -576,7 +622,7 @@ mod tests {
         train_number: i32,
         attribute: Vec<Attribute>,
         origin_text: Text,
-        #[serde(rename="siri:OperatorRef")]
+        #[serde(rename = "siri:OperatorRef")]
         operation_ref: i32,
         destination_stop_point_ref: i32,
         destination_text: Text,
@@ -584,23 +630,23 @@ mod tests {
 
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct Mode{
+    struct Mode {
         pt_mode: String,
-        #[serde(rename="siri:RailSubmode")]
+        #[serde(rename = "siri:RailSubmode")]
         rail_submodule: String, // todo check if always there
         name: Text,
         short_name: Text,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct ProductCategory{
+    struct ProductCategory {
         name: Text,
         short_name: Text,
         product_category_ref: i32,
     }
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct Attribute{
+    struct Attribute {
         user_text: Text,
         code: String,
     }
@@ -614,12 +660,12 @@ mod tests {
 
     #[derive(Serialize, Deserialize)]
     #[serde(rename_all = "PascalCase")]
-    struct Text{
+    struct Text {
         text: String,
     }
 
     #[test(tokio::test)]
-    pub async fn test_paths_validity(){
+    pub async fn test_paths_validity() {
         // First build hrdf file
         let hrdf = Hrdf::new(
             Version::V_5_40_41_2_0_7,
@@ -627,23 +673,102 @@ mod tests {
             false,
             None,
         )
-            .await
-            .unwrap();
-        
-        let from_point_ref = 8501008; // Geneva
-        let to_point_ref = 8501120; // Lausanne
-        let expected_result_nb = 3;
+        .await
+        .unwrap();
+
+        let mut point_ref: Vec<i32> = Vec::new();
+
+        let test_cities = [
+            "Bern", "Genève", "Basel", "Lausanne", "Sion", "Fribourg", "Zürich", "Glaris", "Zug",
+            "Lugano",
+        ];
         let journey_year = 2025;
-        let journey_month = 9;
+        let journey_month = 11;
         let journey_day = 1;
         let journey_hour = 11;
         let journey_minute = 16;
         let journey_second = 17;
-        let acceptable_loss = 0.2;
-        
+
         let client = reqwest::Client::new();
-        // reqwest et serde pour récupérer les infos
-        let content = format!{"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+        let token = "eyJvcmciOiI2NDA2NTFhNTIyZmEwNTAwMDEyOWJiZTEiLCJpZCI6IjQ2NWE4N2MwOThkMzRlMzFiN2I5YmRmMDg1MGFjZWQxIiwiaCI6Im11cm11cjEyOCJ9";
+        let url = "https://api.opentransportdata.swiss/ojp20";
+
+        for c in test_cities {
+            let id_request = format! {"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+                            <OJP xmlns=\"http://www.vdv.de/ojp\" xmlns:siri=\"http://www.siri.org.uk/siri\" version=\"2.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.vdv.de/ojp ../../../../Downloads/OJP-changes_for_v1.1%20(1)/OJP-changes_for_v1.1/OJP.xsd\">
+                             	<OJPRequest>
+                                    <siri:ServiceRequest>
+                                        <siri:RequestTimestamp>{journey_year}-{journey_month:0>2}-{journey_day:0>2}T{journey_hour:0>2}:{journey_minute:0>2}:{journey_second:0>2}.475Z</siri:RequestTimestamp>
+                                        <siri:RequestorRef>Hepisochrone</siri:RequestorRef>
+                                        <OJPLocationInformationRequest>
+                                        <siri:RequestTimestamp>2024-06-01T11:16:59.475Z</siri:RequestTimestamp>
+                                        <siri:MessageIdentifier>LIR-1a</siri:MessageIdentifier>
+                                        <InitialInput>
+                                            <Name>{c}</Name>
+                                        </InitialInput>
+                                        <Restrictions>
+                                            <Type>stop</Type>
+                                            <NumberOfResults>10</NumberOfResults>
+                                        </Restrictions>
+                                    </OJPLocationInformationRequest>
+                                    </siri:ServiceRequest>
+                                </OJPRequest>
+                            </OJP>
+                            "};
+            let res = client
+                .post(url)
+                .header("Content-Type", "application/xml")
+                .header("accept", "*/*")
+                .bearer_auth(token)
+                .body(id_request)
+                .send()
+                .await;
+
+            let response = match res {
+                Ok(res) => res.text().await,
+                Err(e) => Err(e),
+            }
+            .unwrap();
+
+            println!("{:#?}", response);
+
+            let config = ParserConfig::new()
+                .trim_whitespace(false)
+                .whitespace_to_characters(true);
+            let event_reader = EventReader::new_with_config(response.as_bytes(), config);
+            let item = OJPResponse::deserialize(&mut Deserializer::new(event_reader)).unwrap();
+            let place_result = match item.ojp_response.siri_service_delivery.response_specific {
+                ResponseType::OJPLocationInformationDelivery {
+                    response_timestamp: _,
+                    request_msg_ref: _,
+                    default_lang: _,
+                    place_result: pr,
+                } => Some(pr),
+                ResponseType::OJPTripDelivery { .. } => None,
+            }
+            .unwrap();
+            for p in place_result {
+                match p.place.first().unwrap().place {
+                    PlaceType::StopPlace {
+                        stop_place_ref: r,
+                        stop_place_name: _,
+                        private_code: _,
+                        topographic_place_ref: _,
+                    } => point_ref.push(r),
+                    PlaceType::StopPoint { .. } => {}
+                    PlaceType::TopographicPlace { .. } => {}
+                };
+            }
+            println!("Done one extraction")
+        }
+
+        for _ in 0..15 {
+            let from_point_ref = *point_ref.choose(&mut rand::rng()).unwrap();
+            let to_point_ref = *point_ref.choose(&mut rand::rng()).unwrap();
+            let expected_result_nb = 3;
+            let acceptable_loss = 0.2;
+
+            let journey_request = format! {"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
                             <OJP xmlns=\"http://www.vdv.de/ojp\" xmlns:siri=\"http://www.siri.org.uk/siri\" version=\"2.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.vdv.de/ojp ../../../../Downloads/OJP-changes_for_v1.1%20(1)/OJP-changes_for_v1.1/OJP.xsd\">
                              	<OJPRequest>
                                     <siri:ServiceRequest>
@@ -671,58 +796,94 @@ mod tests {
                                 </OJPRequest>
                             </OJP>
                             "};
-        let token = "eyJvcmciOiI2NDA2NTFhNTIyZmEwNTAwMDEyOWJiZTEiLCJpZCI6IjQ2NWE4N2MwOThkMzRlMzFiN2I5YmRmMDg1MGFjZWQxIiwiaCI6Im11cm11cjEyOCJ9";
-        let url = "https://api.opentransportdata.swiss/ojp20";
-        let res = client.post(url)
-            .header("Content-Type", "application/xml")
-            .header("accept", "*/*")
-            .bearer_auth(token)
-            .body(content)
-            .send()
-            .await;
-        
-        let response = match res{
-            Ok(res) => {res.text().await},
-            Err(e) => {Err(e)}
-        }.unwrap();
-        println!("{:#?}", response);
-        let config = ParserConfig::new()
-            .trim_whitespace(false)
-            .whitespace_to_characters(true);
-        let event_reader = EventReader::new_with_config(response.as_bytes(), config);
-        let item = OJPResponse::deserialize(&mut Deserializer::new(event_reader)).unwrap();
+            let res = client
+                .post(url)
+                .header("Content-Type", "application/xml")
+                .header("accept", "*/*")
+                .bearer_auth(token)
+                .body(journey_request)
+                .send()
+                .await;
 
-        println!("{:#?}", item.ojp_response.siri_service_delivery.producer_ref);
-        let ref_trip = &item.ojp_response.siri_service_delivery.o_j_p_trip_delivery.trip_result.
-            iter().min_by(|i: &&TripResult, j: &&TripResult| -> Ordering {
-            let a = (i.trip.end_time - i.trip.start_time).as_seconds_f64();
-            let b = (j.trip.end_time - j.trip.start_time).as_seconds_f64();
-            a.partial_cmp(&b).unwrap()
-        }).unwrap().trip;
-        let min_duration = &ref_trip.duration;
-        println!("{:#?}", min_duration);
+            let response = match res {
+                Ok(res) => res.text().await,
+                Err(e) => Err(e),
+            }
+            .unwrap();
+            println!("{:#?}", response);
+            let config = ParserConfig::new()
+                .trim_whitespace(false)
+                .whitespace_to_characters(true);
+            let event_reader = EventReader::new_with_config(response.as_bytes(), config);
+            let item = OJPResponse::deserialize(&mut Deserializer::new(event_reader)).unwrap();
 
+            println!(
+                "{:#?}",
+                item.ojp_response.siri_service_delivery.producer_ref
+            );
+            let specific_response = match item.ojp_response.siri_service_delivery.response_specific
+            {
+                ResponseType::OJPLocationInformationDelivery { .. } => None,
+                ResponseType::OJPTripDelivery {
+                    response_timestamp: rt,
+                    request_msg_ref: rmr,
+                    default_lang: dl,
+                    calc_time: ct,
+                    trip_response_context: trc,
+                    trip_result: tr,
+                } => Some(OJPTripDelivery{response_timestamp: rt, request_msg_ref: rmr,
+                    default_lang: dl, calc_time: ct, trip_response_context: trc, trip_result: tr}),
+            }.unwrap();
+            let ref_trip = &specific_response
+                .trip_result
+                .iter()
+                .min_by(|i: &&TripResult, j: &&TripResult| -> Ordering {
+                    let a = (i.trip.end_time - i.trip.start_time).as_seconds_f64();
+                    let b = (j.trip.end_time - j.trip.start_time).as_seconds_f64();
+                    a.partial_cmp(&b).unwrap()
+                })
+                .unwrap()
+                .trip;
+            let min_duration = &ref_trip.duration;
+            println!("{:#?}", min_duration);
 
-        // Do the path search
-        let our_route = plan_journey(
-            &hrdf,
-            from_point_ref,
-            to_point_ref,
-            create_date_time(journey_year, journey_month, journey_day, journey_hour, journey_minute),
-            true,
-        ).unwrap();
+            // Do the path search
+            let our_route = plan_journey(
+                &hrdf,
+                from_point_ref,
+                to_point_ref,
+                create_date_time(
+                    journey_year,
+                    journey_month,
+                    journey_day,
+                    journey_hour,
+                    journey_minute,
+                ),
+                true,
+            )
+            .unwrap();
 
-        // compare path duration
-        println!("Our route departs at : {:#?}",our_route.departure_at());
-        println!("Our route arrives at : {:#?}",our_route.arrival_at());
-        println!("Our route duration = {:#?}",our_route.arrival_at() - our_route.departure_at());
-        println!("Ref route departs at : {:#?}",ref_trip.start_time);
-        println!("Ref route arrives at : {:#?}",ref_trip.end_time);
-        println!("Ref route duration = {:#?}",ref_trip.end_time - ref_trip.start_time);
+            // compare path duration
+            println!("Our route departs at : {:#?}", our_route.departure_at());
+            println!("Our route arrives at : {:#?}", our_route.arrival_at());
+            println!(
+                "Our route duration = {:#?}",
+                our_route.arrival_at() - our_route.departure_at()
+            );
+            println!("Ref route departs at : {:#?}", ref_trip.start_time);
+            println!("Ref route arrives at : {:#?}", ref_trip.end_time);
+            println!(
+                "Ref route duration = {:#?}",
+                ref_trip.end_time - ref_trip.start_time
+            );
 
-        let ref_trip_duration = ref_trip.end_time - ref_trip.start_time;
-        let our_trip_duration = our_route.arrival_at() - our_route.departure_at();
+            let ref_trip_duration = ref_trip.end_time - ref_trip.start_time;
+            let our_trip_duration = our_route.arrival_at() - our_route.departure_at();
 
-        assert!((ref_trip_duration - our_trip_duration).as_seconds_f64() < acceptable_loss * ref_trip_duration.as_seconds_f64());
+            assert!(
+                (ref_trip_duration - our_trip_duration).as_seconds_f64()
+                    < acceptable_loss * ref_trip_duration.as_seconds_f64()
+            );
+        }
     }
 }
