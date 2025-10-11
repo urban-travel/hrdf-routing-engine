@@ -196,12 +196,20 @@ fn update_arrival_stop(
     let last_section = route.last_section();
 
     let journey = last_section.journey(data_storage).unwrap();
-    let arrival_at = journey.arrival_at_of_with_origin(
-        arrival_stop_id,
-        last_section.arrival_at().date(),
-        false,
-        last_section.arrival_stop_id(),
-    );
+    let arrival_at = journey
+        .arrival_at_of_with_origin(
+            arrival_stop_id,
+            last_section.arrival_at().date(),
+            false,
+            last_section.arrival_stop_id(),
+        )
+        .unwrap_or_else(|_| {
+            panic!(
+                "Arrival at not found for {arrival_stop_id}, {}, and {}",
+                last_section.arrival_at().date(),
+                last_section.arrival_stop_id()
+            )
+        });
 
     let last_section = route.last_section_mut();
     last_section.set_arrival_stop_id(arrival_stop_id);
