@@ -21,7 +21,10 @@ impl Route {
             // .expect(format!("Jounrey {journey_id} not found").as_str());
             .unwrap_or_else(|| panic!("Journey {:?} not found.", journey_id));
 
-        if journey.is_last_stop(self.arrival_stop_id(), false) {
+        if journey
+            .is_last_stop(self.arrival_stop_id(), false)
+            .unwrap_or_else(|_| panic!("Unable to get last stop for {}", self.arrival_stop_id()))
+        {
             return None;
         }
 
@@ -36,7 +39,10 @@ impl Route {
         )
         .and_then(|(new_section, new_visited_stops)| {
             if self.has_visited_any_stops(&new_visited_stops)
-                && new_section.arrival_stop_id() != journey.first_stop_id()
+                && new_section.arrival_stop_id()
+                    != journey
+                        .first_stop_id()
+                        .unwrap_or_else(|_| panic!("No first stop on {journey:?}"))
             {
                 return None;
             }
@@ -100,16 +106,22 @@ impl RouteSection {
         let mut visited_stops = FxHashSet::default();
 
         for route_entry in route_iter.by_ref() {
-            let stop = route_entry.stop(data_storage);
+            let stop = route_entry
+                .stop(data_storage)
+                .unwrap_or_else(|_| panic!("Missing stop on route entry: {route_entry:?}"));
             visited_stops.insert(stop.id());
 
-            if stop.can_be_used_as_exchange_point() || journey.is_last_stop(stop.id(), false) {
+            if stop.can_be_used_as_exchange_point()
+                || journey
+                    .is_last_stop(stop.id(), false)
+                    .unwrap_or_else(|_| panic!("Invalid stop {}", stop.id()))
+            {
                 let arrival_at = journey.arrival_at_of_with_origin(
                     stop.id(),
                     date,
                     is_departure_date,
                     departure_stop_id,
-                );
+                ).expect("No arrival date for stop id: {}, date: {}, is_departure_date: {is_departure_date}, departure_stop_id: {departure_stop_id}");
 
                 return Some((
                     RouteSection::new(
@@ -146,7 +158,15 @@ impl RouteSection {
                     self.arrival_at().date(),
                     false,
                     arrival_stop.id(),
-                );
+                )
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "No departure at from {}, at date {}, and origin {}",
+                        departure_stop.id(),
+                        self.arrival_at().date(),
+                        arrival_stop.id()
+                    )
+                });
             (Some(departure_at), Some(self.arrival_at()))
         } else {
             (None, None)

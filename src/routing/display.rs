@@ -48,7 +48,7 @@ impl RouteResult {
                     format!("{}", route_entry.departure_time().as_ref().unwrap().format("%H:%M"))
                 };
 
-                let stop = route_entry.stop(data_storage);
+                let stop = route_entry.stop(data_storage).expect("Stop not found for {route_entry:?}");
 
                 println!(
                     "    {:0>7} {: <36} {} - {}",

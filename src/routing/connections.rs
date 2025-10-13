@@ -50,9 +50,16 @@ pub fn next_departures(
 
         let journeys = get_operating_journeys(data_storage, date, stop_id)
             .into_iter()
-            .filter(|journey| !journey.is_last_stop(stop_id, true))
+            .filter(|journey| {
+                !journey
+                    .is_last_stop(stop_id, true)
+                    .unwrap_or_else(|_| panic!("{stop_id} not found in journey"))
+            })
             .map(|journey| {
-                let journey_departure_at = journey.departure_at_of(stop_id, date);
+                let journey_departure_at =
+                    journey.departure_at_of(stop_id, date).unwrap_or_else(|_| {
+                        panic!("Stop id {stop_id}: date {date} not found in journey")
+                    });
                 if journey_departure_at > max_departure_at {
                     max_departure_at = journey_departure_at;
                 }
@@ -258,8 +265,12 @@ pub fn get_exchange_time(
     if let Some(exchange_time) = stop.exchange_time() {
         return exchange_time_at_stop(
             exchange_time,
-            journey_1.transport_type(data_storage),
-            journey_2.transport_type(data_storage),
+            journey_1
+                .transport_type(data_storage)
+                .unwrap_or_else(|_| panic!("Error: {journey_1:?} does not have a TransportType.")),
+            journey_2
+                .transport_type(data_storage)
+                .unwrap_or_else(|_| panic!("Error: {journey_2:?} does not have a TransportType.")),
         );
     }
 
@@ -281,8 +292,12 @@ pub fn get_exchange_time(
     // Standardumsteigezeit /-\ Standard exchange time.
     exchange_time_at_stop(
         data_storage.default_exchange_time(),
-        journey_1.transport_type(data_storage),
-        journey_2.transport_type(data_storage),
+        journey_1
+            .transport_type(data_storage)
+            .unwrap_or_else(|_| panic!("Error: {journey_1:?} does not have a TransportType.")),
+        journey_2
+            .transport_type(data_storage)
+            .unwrap_or_else(|_| panic!("Error: {journey_2:?} does not have a TransportType.")),
     )
 }
 
