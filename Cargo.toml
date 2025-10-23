@@ -1,6 +1,6 @@
 [package]
 name = "hrdf-routing-engine"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Florian Burgener", "Orestis Malaspinas"]
 edition = "2024"
 description = "Public transport routing engine based on Swiss HRDF data."
