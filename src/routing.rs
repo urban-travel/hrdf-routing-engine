@@ -73,8 +73,6 @@ pub fn plan_shortest_journey(
     )?;
     let mut dep_time = route.departure_at();
     let arrival_at = route.arrival_at();
-    let duration = arrival_at - dep_time;
-    println!("{duration:?}");
     dep_time += Duration::minutes(1);
     let route = loop {
         let current_route = plan_journey(
@@ -96,8 +94,6 @@ pub fn plan_shortest_journey(
             break route;
         }
     };
-    let duration = route.arrival_at() - route.departure_at();
-    println!("{duration:?}");
     if verbose {
         println!();
         route.print(hrdf.data_storage());
