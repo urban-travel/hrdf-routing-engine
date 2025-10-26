@@ -18,7 +18,7 @@ csv = { version = "1.3.1", optional = true }
 flate2 = "1.0.35"
 geo = "0.30.0"
 geojson = "0.24.2"
-hrdf-parser = "0.7.0"
+hrdf-parser = "0.8.0"
 kd-tree = "0.6.0"
 log = "0.4.22"
 # For -Zminimal-versions
