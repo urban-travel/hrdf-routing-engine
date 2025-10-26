@@ -1,5 +1,9 @@
+[![Crates.io](https://img.shields.io/crates/v/hrdf-routing-engine.svg)](https://crates.io/crates/hrdf-routing-engine)
+[![Documentation](https://docs.rs/hrdf-routing-engine/badge.svg)](https://docs.rs/hrdf-routing-engine/)
+[![Codecov](https://codecov.io/gh/urban-travel/hrdf-routing-engine/graph/badge.svg?token=DZNR689V8E)](https://codecov.io/gh/urban-travel/hrdf-routing-engine)
+[![Dependency status](https://deps.rs/repo/github/urban-travel/hrdf-routing-engine/status.svg)](https://deps.rs/repo/github/urban-travel/hrdf-routing-engine)
 
-Public transport routing engine based on Swiss HRDF data.
+# Public transport routing engine based on Swiss HRDF data.
 
 Author:
 
