@@ -13,5 +13,5 @@ pub use isochrone::externals::{ExcludedPolygons, LAKES_GEOJSON_URLS};
 pub use isochrone::{IsochroneArgs, IsochroneDisplayMode};
 #[cfg(feature = "hectare")]
 pub use isochrone::{IsochroneHectareArgs, externals::HectareData};
-pub use routing::{Route, plan_journey};
+pub use routing::{Route, plan_journey, plan_shortest_journey};
 pub use service::run_service;

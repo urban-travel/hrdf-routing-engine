@@ -35,6 +35,7 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
     let start_time = Instant::now();
 
     // 1. Petit-Lancy, Les Esserts => Onex, Bandol
+    println!("1. Petit-Lancy, Les Esserts => Onex, Bandol");
     plan_journey(
         hrdf,
         8587418,
@@ -43,8 +44,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 2. Petit-Lancy, Les Esserts => Genève-Aéroport
+    println!("2. Petit-Lancy, Les Esserts => Genève-Aéroport");
     plan_journey(
         hrdf,
         8587418,
@@ -53,8 +56,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 3. Avully, village => Pont-Céard, gare
+    println!("3. Avully, village => Pont-Céard, gare");
     plan_journey(
         hrdf,
         8587031,
@@ -63,8 +68,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 4. Petit-Lancy, Les Esserts => Vevey, Palud
+    println!("4. Petit-Lancy, Les Esserts => Vevey, Palud");
     plan_journey(
         hrdf,
         8587418,
@@ -73,8 +80,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 5. Genève, gare Cornavin => Avusy, village
+    println!("5. Genève, gare Cornavin => Avusy, village");
     plan_journey(
         hrdf,
         8587057,
@@ -83,8 +92,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 6. Genève => Bern, Bierhübeli
+    println!("6. Genève => Bern, Bierhübeli");
     plan_journey(
         hrdf,
         8501008,
@@ -93,8 +104,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 7. Genève => Zürich HB
+    println!("7. Genève => Zürich HB");
     plan_journey(
         hrdf,
         8501008,
@@ -103,8 +116,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 8. Zürich HB => Lugano, Genzana
+    println!("8. Zürich HB => Lugano, Genzana");
     plan_journey(
         hrdf,
         8503000,
@@ -113,8 +128,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 9. Chancy, Douane => Campocologno
+    println!("9. Chancy, Douane => Campocologno");
     plan_journey(
         hrdf,
         8587477,
@@ -123,8 +140,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         verbose,
     );
+    println!("==============================================");
 
     // 10. Chancy, Douane => Sevelen, Post
+    println!("10. Chancy, Douane => Sevelen, Post");
     plan_journey(
         hrdf,
         8587477,
@@ -133,8 +152,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         true,
     );
+    println!("==============================================");
 
-    //11. Genève => Paris gare de Lyon
+    // 11. Genève => Paris gare de Lyon
+    println!("11. Genève => Paris gare de Lyon");
     plan_journey(
         hrdf,
         8501008,
@@ -143,8 +164,10 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         true,
     );
+    println!("==============================================");
 
     //12. Genève => Lausanne
+    println!("12. Genève => Lausanne");
     plan_journey(
         hrdf,
         8501008,
@@ -153,6 +176,7 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
         max_num_explorable_connections,
         true,
     );
+    println!("==============================================");
 
     println!("\n{:.2?}", start_time.elapsed());
 }

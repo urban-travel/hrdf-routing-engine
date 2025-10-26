@@ -16,8 +16,6 @@ use hrdf_parser::{CoordinateSystem, Coordinates};
 pub use models::RouteResult as Route;
 pub use models::RouteSectionResult as RouteSection;
 use orx_parallel::*;
-// use rayon::iter::IntoParallelRefIterator;
-// use rayon::iter::ParallelIterator;
 
 use core::compute_routing;
 
@@ -25,6 +23,8 @@ use chrono::{Duration, NaiveDateTime};
 use models::RoutingAlgorithmArgs;
 
 /// Finds the fastest route from the departure stop to the arrival stop.
+/// It may not be the one which takes the less time since there is no departure
+/// time optimization. The only guaratnee is that it si the route that arrives the earliest.
 /// The departure date and time must be within the timetable period.
 pub fn plan_journey(
     hrdf: &Hrdf,
@@ -50,6 +50,55 @@ pub fn plan_journey(
     }
 
     result
+}
+
+/// Finds the route that takes the least time while arriving the earliest possioble.
+/// It basically moves from the departure stop to the arrival stop.
+/// The departure date and time must be within the timetable period.
+pub fn plan_shortest_journey(
+    hrdf: &Hrdf,
+    departure_stop_id: i32,
+    arrival_stop_id: i32,
+    departure_at: NaiveDateTime,
+    max_num_explorable_connections: i32,
+    verbose: bool,
+) -> Option<Route> {
+    let mut route = plan_journey(
+        hrdf,
+        departure_stop_id,
+        arrival_stop_id,
+        departure_at,
+        max_num_explorable_connections,
+        false,
+    )?;
+    let mut dep_time = route.departure_at();
+    let arrival_at = route.arrival_at();
+    dep_time += Duration::minutes(1);
+    let route = loop {
+        let current_route = plan_journey(
+            hrdf,
+            departure_stop_id,
+            arrival_stop_id,
+            dep_time,
+            max_num_explorable_connections,
+            false,
+        );
+
+        if let Some(cr) = current_route {
+            if arrival_at < cr.arrival_at() {
+                break route;
+            }
+            dep_time = cr.departure_at() + Duration::minutes(1);
+            route = cr;
+        } else {
+            break route;
+        }
+    };
+    if verbose {
+        println!();
+        route.print(hrdf.data_storage());
+    }
+    Some(route)
 }
 
 /// Finds all stops that can be reached within a time limit from the departured stop.
@@ -130,7 +179,7 @@ fn find_stops_in_time_range(
 
 /// Given a starting point (long/lat) find the Routes given a time limit.
 /// We first find num_starting_points stops that are reachable by foot
-///
+#[allow(clippy::too_many_arguments)]
 pub fn compute_routes_from_origin(
     hrdf: &Hrdf,
     origin_point_latitude: f64,

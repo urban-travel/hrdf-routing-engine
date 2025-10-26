@@ -51,15 +51,11 @@ pub fn next_departures(
         let journeys = get_operating_journeys(data_storage, date, stop_id)
             .into_iter()
             .filter(|journey| {
-                !journey
-                    .is_last_stop(stop_id, true)
-                    .unwrap_or_else(|_| panic!("{stop_id} not found in journey"))
+                !journey.is_last_stop(stop_id, true).unwrap()
+                    && journey.departure_at_of(stop_id, date).is_ok()
             })
             .map(|journey| {
-                let journey_departure_at =
-                    journey.departure_at_of(stop_id, date).unwrap_or_else(|_| {
-                        panic!("Stop id {stop_id}: date {date} not found in journey")
-                    });
+                let journey_departure_at = journey.departure_at_of(stop_id, date).unwrap();
                 if journey_departure_at > max_departure_at {
                     max_departure_at = journey_departure_at;
                 }
