@@ -8,6 +8,7 @@ mod utils;
 
 use crate::isochrone::utils::adjust_departure_at;
 use crate::isochrone::utils::wgs84_to_lv95;
+use crate::routing::models::Transport;
 use hrdf_parser::DataStorage;
 use hrdf_parser::Hrdf;
 use hrdf_parser::Model;
@@ -85,7 +86,8 @@ pub fn plan_shortest_journey(
         );
 
         if let Some(cr) = current_route {
-            if arrival_at < cr.arrival_at() {
+            if arrival_at < cr.arrival_at() || dep_time >= cr.departure_at() + Duration::minutes(1)
+            {
                 break route;
             }
             dep_time = cr.departure_at() + Duration::minutes(1);
@@ -256,6 +258,7 @@ pub fn compute_routes_from_origin(
             Some(NaiveDateTime::default()),
             Some(NaiveDateTime::default()),
             Some(0),
+            Transport::Unknown,
         )],
     );
     routes.push(route);
