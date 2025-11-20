@@ -1530,12 +1530,13 @@ dependencies = [
 
 [[package]]
 name = "ojp-rs"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0f11110f50505e9e8ac07fcfed67c50b19796ca4f87cec8bd36730726b01220"
+checksum = "bc23cba91863a8d5b185fcf82b2d193c343c908776c7cf753a36c88534c28abb"
 dependencies = [
  "chrono",
  "dotenvy",
+ "flate2",
  "futures",
  "native-tls",
  "quick-xml",
@@ -1543,6 +1544,7 @@ dependencies = [
  "reqwest",
  "secrecy",
  "serde",
+ "test-log",
  "thiserror",
  "tokio",
  "tokio-macros",
