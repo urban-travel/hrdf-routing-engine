@@ -54,9 +54,8 @@ jobs:
         if: hashFiles('Cargo.lock') != ''
         run: cargo update
       - name: cargo test
-        env: # Or as an environment variable
-          TOKEN: ${{ secrets.TOKEN }}
         if: hashFiles('Cargo.lock') != ''
         run: cargo test --locked --all-features --all-targets
         env:
           RUSTFLAGS: -D deprecated
+          TOKEN: ${{ secrets.TOKEN }}
