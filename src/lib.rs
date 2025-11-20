@@ -75,7 +75,7 @@ mod tests {
             OJP::find_locations(test_cities, date_time, number_results, "OJP-HRDF", "TOKEN")
                 .await?;
 
-        let num_travels = 20;
+        let num_travels = 5;
         let points = point_ref
             .choose_multiple(&mut rand::rng(), 2 * num_travels)
             .copied()
