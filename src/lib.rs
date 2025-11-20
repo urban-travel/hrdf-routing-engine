@@ -20,10 +20,13 @@ pub use service::run_service;
 mod tests {
     use std::error::Error;
 
+    use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
     use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
     use hrdf_parser::{Hrdf, Version};
     use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
     use rand::prelude::IndexedRandom;
+
+    use test_log::test;
 
     use crate::{Route, plan_shortest_journey};
     use futures::future::join_all;
@@ -119,7 +122,7 @@ mod tests {
         Ok(failed_comparison)
     }
 
-    #[tokio::test(flavor = "current_thread")]
+    #[test(tokio::test)]
     async fn test_journeys() {
         let test_cities = [
             "Zürich",
@@ -164,5 +167,7 @@ mod tests {
             .await
             .unwrap();
         eprintln!("{:?}", failures);
+        test_plan_journey(&hrdf);
+        test_find_reachable_stops_within_time_limit(&hrdf);
     }
 }
