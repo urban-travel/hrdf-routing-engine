@@ -1,5 +1,7 @@
 use hrdf_parser::{DataStorage, Model};
 
+use crate::routing::models::Transport;
+
 use super::models::RouteResult;
 
 impl RouteResult {
@@ -16,8 +18,11 @@ impl RouteResult {
 
             let journey = journey.unwrap();
             println!("Journey #{}", journey.id());
+            let transport_type = journey.transport_type(data_storage).unwrap();
+            println!("{:?}", Transport::from(transport_type));
 
             let mut route_iter = journey.route().iter().peekable();
+
 
             while route_iter.peek().unwrap().stop_id() != section.departure_stop_id() {
                 route_iter.next();

@@ -2,6 +2,8 @@ use chrono::NaiveDate;
 use hrdf_parser::{DataStorage, Journey, Model};
 use rustc_hash::FxHashSet;
 
+use crate::routing::models::Transport;
+
 use super::{
     models::{Route, RouteResult, RouteSection, RouteSectionResult},
     utils::clone_update_route,
@@ -171,6 +173,14 @@ impl RouteSection {
         } else {
             (None, None)
         };
+        let transport = self
+            .journey(data_storage)
+            .map(|j| j.transport_type(data_storage));
+        let transport = if let Some(t) = transport {
+            Transport::from(t.unwrap_or_else(|e| panic!("Transport Type not found, {e}")))
+        } else {
+            Transport::Walk
+        };
 
         RouteSectionResult::new(
             self.journey_id(),
@@ -183,6 +193,7 @@ impl RouteSection {
             departure_at,
             arrival_at,
             self.duration(),
+            transport,
         )
     }
 }

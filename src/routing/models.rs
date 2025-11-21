@@ -1,5 +1,5 @@
-use chrono::{Duration, NaiveDateTime};
-use hrdf_parser::{Coordinates, DataStorage, Journey};
+use chrono::{Duration, NaiveDateTime, TimeDelta};
+use hrdf_parser::{Coordinates, DataStorage, Journey, TransportType};
 use rustc_hash::FxHashSet;
 use serde::Serialize;
 
@@ -224,11 +224,27 @@ impl RouteResult {
     // Getters/Setters
 
     pub fn departure_at(&self) -> NaiveDateTime {
-        self.departure_at
+        if let Some(rs) = self.sections.first() {
+            if rs.is_walking_trip() {
+                self.departure_at - TimeDelta::minutes(rs.duration().unwrap() as i64)
+            } else {
+                self.departure_at
+            }
+        } else {
+            self.departure_at
+        }
     }
 
     pub fn arrival_at(&self) -> NaiveDateTime {
-        self.arrival_at
+        if let Some(rs) = self.sections.last() {
+            if rs.is_walking_trip() {
+                self.arrival_at + TimeDelta::minutes(rs.duration().unwrap() as i64)
+            } else {
+                self.arrival_at
+            }
+        } else {
+            self.arrival_at
+        }
     }
 
     pub fn sections(&self) -> &Vec<RouteSectionResult> {
@@ -257,7 +273,7 @@ impl RouteResult {
     }
 
     pub fn total_time(&self) -> Duration {
-        self.arrival_at - self.departure_at
+        self.arrival_at() - self.departure_at()
     }
 
     pub fn departure_stop_id(&self) -> Option<i32> {
@@ -305,6 +321,7 @@ pub struct RouteSectionResult {
     departure_at: Option<NaiveDateTime>,
     arrival_at: Option<NaiveDateTime>,
     duration: Option<i16>,
+    transport: Transport,
 }
 
 impl RouteSectionResult {
@@ -320,6 +337,7 @@ impl RouteSectionResult {
         departure_at: Option<NaiveDateTime>,
         arrival_at: Option<NaiveDateTime>,
         duration: Option<i16>,
+        transport: Transport,
     ) -> Self {
         Self {
             journey_id,
@@ -332,6 +350,7 @@ impl RouteSectionResult {
             departure_at,
             arrival_at,
             duration,
+            transport,
         }
     }
 
@@ -366,9 +385,6 @@ impl RouteSectionResult {
     }
 
     // Functions
-
-    // pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&Journey> {
-    //     self.journey_id.map(|id| data_storage.journeys().find(id))?
     pub fn journey<'a>(&'a self, data_storage: &'a DataStorage) -> Option<&'a Journey> {
         self.journey_id.map(|id| {
             data_storage
@@ -378,7 +394,65 @@ impl RouteSectionResult {
         })
     }
 
+    pub fn departure_stop_name<'a>(&'a self, data_storage: &'a DataStorage) -> &'a str {
+        let id = self.departure_stop_id();
+        data_storage
+            .stops()
+            .find(id)
+            .unwrap_or_else(|| panic!("stop {id} not found"))
+            .name()
+    }
+
+    pub fn arrival_stop_name<'a>(&'a self, data_storage: &'a DataStorage) -> &'a str {
+        let id = self.arrival_stop_id();
+        data_storage
+            .stops()
+            .find(id)
+            .unwrap_or_else(|| panic!("stop {id} not found"))
+            .name()
+    }
+
     pub fn is_walking_trip(&self) -> bool {
         self.journey_id.is_none()
+    }
+
+    pub fn transport(&self) -> &Transport {
+        &self.transport
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum Transport {
+    Boat,
+    Bus,
+    Chairlift,
+    Elevator,
+    Funicular,
+    GondolaLift,
+    RackRailroad,
+    Train,
+    Tramway,
+    Unknown,
+    Underground,
+    Walk,
+}
+
+impl From<&TransportType> for Transport {
+    fn from(value: &TransportType) -> Self {
+        match value.designation() {
+            "SL" => Transport::Chairlift,
+            "ASC" => Transport::Elevator,
+            "CC" => Transport::RackRailroad,
+            "BAT" | "FAE" => Transport::Boat,
+            "B" | "BN" | "BP" | "CAR" | "EV" | "EXB" | "RUB" | "TX" => Transport::Bus,
+            "FUN" => Transport::Funicular,
+            "M" => Transport::Underground,
+            "GB" | "PB" => Transport::GondolaLift,
+            "EC" | "EXT" | "IC" | "ICE" | "IR" | "NJ" | "PE" | "R" | "RB" | "RE" | "RJX" | "S"
+            | "TER" | "TGV" | "SN" => Transport::Train,
+            "T" => Transport::Tramway,
+            "UUU" => Transport::Unknown,
+            _ => panic!("Uknown transport designation: {}", value.designation()),
+        }
     }
 }
