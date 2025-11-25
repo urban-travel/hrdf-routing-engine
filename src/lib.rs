@@ -21,9 +21,10 @@ mod tests {
     use std::error::Error;
 
     use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
-    use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
+    use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Timelike};
     use hrdf_parser::{Hrdf, Version};
-    use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
+    use log::info;
+    use ojp_rs::{OJP, OjpError, SimplifiedLeg, SimplifiedTrip};
     use rand::prelude::IndexedRandom;
 
     use test_log::test;
@@ -64,40 +65,74 @@ mod tests {
         }
     }
 
+    static IDS: [(i32, i32); 38] = [
+        (8577820, 8501120),
+        (8572662, 8576724),
+        (8593320, 8579237),
+        (8592862, 8500236),
+        (8592458, 8595922),
+        (8591921, 8589143),
+        (8591915, 8583275),
+        (8591611, 8595689),
+        (8590925, 8592776),
+        (8589645, 8583274),
+        (8589632, 8591245),
+        (8589616, 8502495),
+        (8589164, 8592567),
+        (8591610, 8575154),
+        (8591921, 8581062),
+        (8592837, 8588351),
+        (8591363, 8504100),
+        (8580798, 8588731),
+        (8592587, 8593462),
+        (8596094, 8589007),
+        (8583005, 8591046),
+        (8589151, 8592547),
+        (8588949, 8580456),
+        (8573693, 8504354),
+        (8509076, 8587619),
+        (8592588, 8506236),
+        (8501120, 8579006),
+        (8591418, 8592834),
+        (8570732, 8573673),
+        (8578997, 8576815),
+        (8585206, 8506302),
+        (8589587, 8592133),
+        (22, 8592904),
+        (8592889, 8589566),
+        (8572453, 8591998),
+        (8500236, 8511236),
+        (8574226, 8583259),
+        (8575155, 8500161),
+    ];
+
     pub async fn test_paths_validity(
         hrdf: &Hrdf,
-        test_cities: &[&str],
-        date_time: NaiveDateTime,
+        ids: &[(i32, i32)],
     ) -> Result<Vec<(Option<SimplifiedTrip>, Option<SimplifiedTrip>)>, Box<dyn Error>> {
-        dotenvy::dotenv().ok(); // optional
-        let number_results = 10;
-        let point_ref =
-            OJP::find_locations(test_cities, date_time, number_results, "OJP-HRDF", "TOKEN")
-                .await?;
-
-        let num_travels = 5;
-        let points = point_ref
-            .choose_multiple(&mut rand::rng(), 2 * num_travels)
-            .copied()
-            .collect::<Vec<_>>();
-        let (departures, arrivals) = points.split_at(num_travels);
-        let number_results = 3;
-        let ref_trips = OJP::find_trips(
-            departures,
-            arrivals,
-            date_time,
-            number_results,
-            "OJP-HRDF",
-            "TOKEN",
-        )
-        .await;
-        let hrdf_trips = departures
+        let ref_trips = ids
             .iter()
-            .zip(arrivals.iter())
-            .map(|(&from_id, &to_id)| async move {
-                plan_shortest_journey(hrdf, from_id, to_id, date_time, 10, false)
+            .map(|(from_id, to_id)| {
+                let fname = format!("test_xml/{from_id}_{to_id}_trip.xml");
+                let xml = std::fs::read_to_string(fname).unwrap();
+                let ojp = OJP::try_from(xml.as_str()).unwrap();
+
+                let ref_trip = ojp.fastest_trip().unwrap();
+
+                SimplifiedTrip::try_from(ref_trip).unwrap()
+            })
+            .collect::<Vec<_>>();
+
+        let hrdf_trips = ref_trips
+            .iter()
+            .map(|st| async move {
+                let from_id = st.departure_id();
+                let to_id = st.arrival_id();
+                let date_time = st.departure_time().with_second(0).unwrap();
+                let res = plan_shortest_journey(hrdf, from_id, to_id, date_time, 10, false)
                     .as_ref()
-                    .map(|r| STrip::from(r, hrdf).0)
+                    .map(|r| STrip::from(r, hrdf).0);
+                res
             })
             .collect::<Vec<_>>();
         let hrdf_trips: Vec<_> = join_all(hrdf_trips).await;
@@ -105,17 +140,14 @@ mod tests {
         let failed_comparison = ref_trips
             .into_iter()
             .zip(hrdf_trips.into_iter())
-            .filter_map(|(rt, ht)| match (rt, ht) {
-                (Ok(rt), Some(ht)) => {
-                    if !rt.approx_equal(&ht, 0.1) {
-                        Some((Some(rt), Some(ht)))
-                    } else {
-                        None
-                    }
+            .filter_map(|(rt, ht)| {
+                if let Some(ht) = ht
+                    && !rt.approx_equal(&ht, 0.1)
+                {
+                    Some((Some(rt), Some(ht)))
+                } else {
+                    None
                 }
-                (Ok(rt), None) => Some((Some(rt), None)),
-                (Err(_), Some(_)) => None,
-                (Err(_), None) => None,
             })
             .collect::<Vec<_>>();
 
@@ -124,36 +156,6 @@ mod tests {
 
     #[test(tokio::test)]
     async fn test_journeys() {
-        let test_cities = [
-            "Zürich",
-            "Genève",
-            "Basel",
-            "Lausanne",
-            "Bern",
-            "Winterthur",
-            "Lucerne",
-            "St. Gallen",
-            "Lugano",
-            "Biel",
-            "Thun",
-            "Bellinzona",
-            "Fribourg",
-            "Schaffhausen",
-            "Chur",
-            "Sion",
-            "Zug",
-            "Glaris",
-        ];
-        let year = 2025;
-        let month = 11;
-        let day = 1;
-        let hour = 11;
-        let min = 16;
-        let sec = 17;
-        let date_time = NaiveDateTime::new(
-            NaiveDate::from_ymd_opt(year, month, day).unwrap(),
-            NaiveTime::from_hms_opt(hour, min, sec).unwrap(),
-        );
         // First build hrdf file
         let hrdf = Hrdf::new(
             Version::V_5_40_41_2_0_7,
@@ -163,10 +165,15 @@ mod tests {
         )
         .await
         .unwrap();
-        let failures = test_paths_validity(&hrdf, &test_cities, date_time)
-            .await
-            .unwrap();
-        eprintln!("{:?}", failures);
+        let failures = test_paths_validity(&hrdf, &IDS).await.unwrap();
+        for f in failures.iter() {
+            if let (Some(ojp_trip), Some(hrdf_trip)) = f {
+                eprintln!("{} - {}", ojp_trip.departure_id(), ojp_trip.arrival_id());
+                eprintln!("OJP: \n{ojp_trip}");
+                eprintln!("HRDF: \n{hrdf_trip}");
+            }
+        }
+        assert!(failures.is_empty());
         test_plan_journey(&hrdf);
         test_find_reachable_stops_within_time_limit(&hrdf);
     }
