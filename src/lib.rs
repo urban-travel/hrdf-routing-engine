@@ -21,11 +21,9 @@ mod tests {
     use std::error::Error;
 
     use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
-    use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Timelike};
+    use chrono::{TimeDelta, Timelike};
     use hrdf_parser::{Hrdf, Version};
-    use log::info;
-    use ojp_rs::{OJP, OjpError, SimplifiedLeg, SimplifiedTrip};
-    use rand::prelude::IndexedRandom;
+    use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
 
     use test_log::test;
 
@@ -129,10 +127,9 @@ mod tests {
                 let from_id = st.departure_id();
                 let to_id = st.arrival_id();
                 let date_time = st.departure_time().with_second(0).unwrap();
-                let res = plan_shortest_journey(hrdf, from_id, to_id, date_time, 10, false)
+                plan_shortest_journey(hrdf, from_id, to_id, date_time, 10, false)
                     .as_ref()
-                    .map(|r| STrip::from(r, hrdf).0);
-                res
+                    .map(|r| STrip::from(r, hrdf).0)
             })
             .collect::<Vec<_>>();
         let hrdf_trips: Vec<_> = join_all(hrdf_trips).await;
