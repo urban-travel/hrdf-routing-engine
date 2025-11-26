@@ -1,5 +1,7 @@
+use futures::future::join_all;
 use std::fs::File;
 use std::io::Write;
+use std::sync::Arc;
 use std::{error::Error, net::Ipv4Addr};
 
 use chrono::{Duration, NaiveDateTime};
@@ -122,8 +124,8 @@ enum Mode {
         address: Ipv4Addr,
 
         /// Port exposed on the server
-        #[arg(short, long, default_value_t = 8100)]
-        port: u16,
+        #[arg(short, long, value_parser = clap::value_parser!(u16), num_args = 1.., default_values_t = [8100u16])]
+        ports: Vec<u16>,
     },
     /// Debug mode used to check if the examples still run
     Debug,
@@ -240,8 +242,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Mode::Debug => {
             run_debug(hrdf_2025);
         }
-        Mode::Serve { address, port } => {
-            run_service(hrdf_2025, cli.num_threads, excluded_polygons, address, port).await;
+        Mode::Serve { address, ports } => {
+            let ahrdf = Arc::new(hrdf_2025);
+            let services: Vec<_> = ports
+                .into_iter()
+                .map(|p| {
+                    let value = excluded_polygons.clone();
+                    let hrdf = Arc::clone(&ahrdf);
+                    async move {
+                        run_service(hrdf, cli.num_threads, value, address, p).await;
+                    }
+                })
+                .collect();
+            join_all(services).await;
         }
         Mode::Optimal {
             isochrone_args,
