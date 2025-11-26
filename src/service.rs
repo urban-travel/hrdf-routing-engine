@@ -17,7 +17,7 @@ use crate::{
 };
 
 pub async fn run_service(
-    hrdf: Hrdf,
+    hrdf: Arc<Hrdf>,
     num_threads: usize,
     excluded_polygons: MultiPolygon,
     ip_addr: Ipv4Addr,
@@ -25,7 +25,6 @@ pub async fn run_service(
 ) {
     log::info!("Starting the server...");
 
-    let hrdf = Arc::new(hrdf);
     let hrdf_1 = Arc::clone(&hrdf);
     let hrdf_2 = Arc::clone(&hrdf);
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
