@@ -14,16 +14,17 @@ pub fn create_grid(
     data: &[(Coordinates, Duration)],
     bounding_box: ((f64, f64), (f64, f64)),
     time_limit: Duration,
-    num_points: usize,
+    dx: f64,
     num_threads: usize,
 ) -> (Vec<(Coordinates, Duration)>, usize, usize, f64) {
     let dist_x = bounding_box.1.0 - bounding_box.0.0;
     let dist_y = bounding_box.1.1 - bounding_box.0.1;
     let max = dist_x.max(dist_y);
-    let dx = max / num_points as f64;
+    println!("dist_x = {dist_x}, dist_y = {dist_y}, max = {max}, dx = {dx}");
 
     let num_points_x = ((bounding_box.1.0 - bounding_box.0.0) / dx).ceil() as usize;
     let num_points_y = ((bounding_box.1.1 - bounding_box.0.1) / dx).ceil() as usize;
+    println!("num_points_x = {num_points_x}, num_points_y = {num_points_y}");
 
     let tree = KdTree::build_by_ordered_float(
         data.iter()

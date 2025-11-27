@@ -78,7 +78,7 @@ pub fn compute_optimal_isochrones(
     } = isochrone_args;
 
     if verbose {
-        log::debug!(
+        log::info!(
             "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes(),
@@ -128,7 +128,7 @@ pub fn compute_optimal_isochrones(
         });
 
     if verbose {
-        log::debug!(
+        log::info!(
             "Time computing the optimal solution : {:.2?}",
             start_time.elapsed()
         );
@@ -159,7 +159,7 @@ pub fn compute_worst_isochrones(
     } = isochrone_args;
 
     if verbose {
-        log::debug!(
+        log::info!(
             "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes(),
@@ -209,7 +209,7 @@ pub fn compute_worst_isochrones(
         });
 
     if verbose {
-        log::debug!(
+        log::info!(
             "Time computing the optimal solution : {:.2?}",
             start_time.elapsed()
         );
@@ -240,7 +240,7 @@ pub fn compute_average_isochrones(
     } = isochrone_args;
 
     if verbose {
-        log::debug!(
+        log::info!(
             "Computing average isochrone:\n longitude: {longitude}, latitude: {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes(),
@@ -298,10 +298,10 @@ pub fn compute_average_isochrones(
         },
     );
 
-    let num_points = 1500;
+    let dx = 100.0;
     let mut grids = data
         .into_iter()
-        .map(|d| contour_line::create_grid(&d, bounding_box, time_limit, num_points, num_threads))
+        .map(|d| contour_line::create_grid(&d, bounding_box, time_limit, dx, num_threads))
         .collect::<Vec<_>>();
     let timesteps = grids.len();
     let grid_ini = grids.pop().expect("Grids was empty");
@@ -334,10 +334,8 @@ pub fn compute_average_isochrones(
                 dx,
             );
 
-            let polygons = polygons
-                .into_iter()
-                .map(|p| p.difference(excluded_polygons))
-                .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p));
+            let polygons = MultiPolygon(polygons.into_iter().collect());
+            let polygons = polygons.difference(excluded_polygons);
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })
         .collect::<Vec<_>>();
@@ -353,7 +351,7 @@ pub fn compute_average_isochrones(
         .collect();
 
     if verbose {
-        log::debug!(
+        log::info!(
             "Time for finding the isochrones : {:.2?}",
             start_time.elapsed()
         );
@@ -391,7 +389,7 @@ pub fn compute_isochrones(
     } = isochrone_args;
 
     if verbose {
-        log::debug!(
+        log::info!(
             "longitude: {longitude}, latitude : {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, max_num_explorable_connections: {max_num_explorable_connections}, verbose: {verbose}",
             time_limit.num_minutes(),
             isochrone_interval.num_minutes()
@@ -418,7 +416,7 @@ pub fn compute_isochrones(
     );
 
     if verbose {
-        log::debug!("Time for finding the routes : {:.2?}", start_time.elapsed());
+        log::info!("Time for finding the routes : {:.2?}", start_time.elapsed());
     }
 
     let start_time = Instant::now();
@@ -427,14 +425,14 @@ pub fn compute_isochrones(
     let data = unique_coordinates_from_routes(&routes, departure_at);
 
     let bounding_box = get_bounding_box(&data, time_limit);
-    let num_points = 1500;
+    let dx = 100.0;
 
     let grid = if display_mode == models::DisplayMode::ContourLine {
         Some(contour_line::create_grid(
             &data,
             bounding_box,
             time_limit,
-            num_points,
+            dx,
             num_threads,
         ))
     } else {
@@ -445,11 +443,19 @@ pub fn compute_isochrones(
     let isochrones = (0..isochrone_count)
         .map(|i| {
             let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
+            // let prev_time_limit = Duration::minutes(isochrone_interval.num_minutes() * i);
+            let prev_time_limit = Duration::minutes(0);
 
             let polygons = match display_mode {
                 IsochroneDisplayMode::Circles => {
                     let num_points_circle = 6;
-                    circles::get_polygons(&data, current_time_limit, num_points_circle, num_threads)
+                    circles::get_polygons(
+                        &data,
+                        current_time_limit,
+                        prev_time_limit,
+                        num_points_circle,
+                        num_threads,
+                    )
                 }
                 IsochroneDisplayMode::ContourLine => {
                     let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
@@ -463,10 +469,8 @@ pub fn compute_isochrones(
                     )
                 }
             };
-            let polygons = polygons
-                .into_iter()
-                .map(|p| p.difference(excluded_polygons))
-                .fold(MultiPolygon::new(vec![]), |res, p| res.union(&p));
+            // let polygons = MultiPolygon(polygons.into_iter().collect());
+            let polygons = polygons.difference(excluded_polygons);
 
             Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
         })
@@ -483,7 +487,7 @@ pub fn compute_isochrones(
         .collect();
 
     if verbose {
-        log::debug!(
+        log::info!(
             "Time for finding the isochrones : {:.2?}",
             start_time.elapsed()
         );
