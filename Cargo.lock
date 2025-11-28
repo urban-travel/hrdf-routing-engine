@@ -1530,9 +1530,9 @@ dependencies = [
 
 [[package]]
 name = "ojp-rs"
-version = "0.2.2"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6034207fa53feb63d4fbf6756821f7502f71eb5cf7a5a4516d9008ab66311cd4"
+checksum = "43f4c2d21f077209de45e42ee679cb97d882c157bbc6c1239d458abc1a994c19"
 dependencies = [
  "chrono",
  "dotenvy",
