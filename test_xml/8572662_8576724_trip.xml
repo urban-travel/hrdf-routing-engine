@@ -1,0 +1,3079 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP version="2.0" xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri">
+  <OJPResponse>
+    <siri:ServiceDelivery>
+      <siri:ResponseTimestamp>2025-11-24T15:52:25.2233955+01:00</siri:ResponseTimestamp>
+      <siri:ProducerRef>MENTZ</siri:ProducerRef>
+      <OJPTripDelivery>
+        <siri:ResponseTimestamp>2025-11-24T15:52:25.2223452+01:00</siri:ResponseTimestamp>
+        <siri:RequestMessageRef>00-682c9565414ec4ac7892c</siri:RequestMessageRef>
+        <siri:DefaultLanguage>de</siri:DefaultLanguage>
+        <TripResponseContext>
+          <Places>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8572662</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Chur, Geissweid</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>115796</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23011901:2</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Chur, Geissweid</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>9.49323</siri:Longitude>
+                <siri:Latitude>46.84347</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>8572662</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Chur, Geissweid</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>115796</Value>
+                </PrivateCode>
+                <ParentRef>8572662</ParentRef>
+                <TopographicPlaceRef>23011901:2</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Geissweid</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>9.49323</siri:Longitude>
+                <siri:Latitude>46.84347</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <TopographicPlace>
+                <TopographicPlaceCode>23011901:2</TopographicPlaceCode>
+                <TopographicPlaceName>
+                  <Text xml:lang="de">Chur</Text>
+                </TopographicPlaceName>
+              </TopographicPlace>
+              <Name>
+                <Text xml:lang="de">Geissweid</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>9.49323</siri:Longitude>
+                <siri:Latitude>46.84347</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8581044</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>122608:0:B</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23011901:2</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>9.52973</siri:Longitude>
+                <siri:Latitude>46.85315</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:81044:0:1</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>122608:0:B</Value>
+                </PrivateCode>
+                <ParentRef>8581044</ParentRef>
+                <TopographicPlaceRef>23011901:2</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Bahnhofplatz</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>9.52973</siri:Longitude>
+                <siri:Latitude>46.85315</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8509000</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Chur</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>112213:0:8</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23011901:2</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Chur</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>9.52942</siri:Longitude>
+                <siri:Latitude>46.85385</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:9000:4:8</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Chur</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>112213:0:8</Value>
+                </PrivateCode>
+                <ParentRef>8509000</ParentRef>
+                <TopographicPlaceRef>23011901:2</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Chur</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>9.52942</siri:Longitude>
+                <siri:Latitude>46.85385</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8503000</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Zürich HB</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>108276:0:8</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23026261:27</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Zürich HB</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.53643</siri:Longitude>
+                <siri:Latitude>47.37869</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:3000:5:8</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Zürich HB</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>108276:0:8</Value>
+                </PrivateCode>
+                <ParentRef>8503000</ParentRef>
+                <TopographicPlaceRef>23026261:27</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Zürich HB</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.53643</siri:Longitude>
+                <siri:Latitude>47.37869</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <TopographicPlace>
+                <TopographicPlaceCode>23026261:27</TopographicPlaceCode>
+                <TopographicPlaceName>
+                  <Text xml:lang="de">Zürich</Text>
+                </TopographicPlaceName>
+              </TopographicPlace>
+              <Name>
+                <Text xml:lang="de">Zürich HB</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.53643</siri:Longitude>
+                <siri:Latitude>47.37869</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:3000:500:32</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Zürich HB</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>108276:0:32</Value>
+                </PrivateCode>
+                <ParentRef>8503000</ParentRef>
+                <TopographicPlaceRef>23026261:27</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Zürich HB</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.53672</siri:Longitude>
+                <siri:Latitude>47.37846</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8504300</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Biel/Bienne</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>109175:0:5</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Biel/Bienne</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.24307</siri:Longitude>
+                <siri:Latitude>47.13243</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:4300:3:5</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel/Bienne</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>109175:0:5</Value>
+                </PrivateCode>
+                <ParentRef>8504300</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Biel/Bienne</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.24307</siri:Longitude>
+                <siri:Latitude>47.13243</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <TopographicPlace>
+                <TopographicPlaceCode>23006371:1</TopographicPlaceCode>
+                <TopographicPlaceName>
+                  <Text xml:lang="de">Biel/Bienne</Text>
+                </TopographicPlaceName>
+              </TopographicPlace>
+              <Name>
+                <Text xml:lang="de">Biel/Bienne</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.24307</siri:Longitude>
+                <siri:Latitude>47.13243</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8576391</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>118966:0:C</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.24365</siri:Longitude>
+                <siri:Latitude>47.13341</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:76391:0:03</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>118966:0:C</Value>
+                </PrivateCode>
+                <ParentRef>8576391</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Bahnhof/Gare</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.24365</siri:Longitude>
+                <siri:Latitude>47.13341</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8576724</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Biel/Bienne, Omega</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>119248:0:B</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Biel/Bienne, Omega</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.25992</siri:Longitude>
+                <siri:Latitude>47.14399</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:76724:0:01</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel/Bienne, Omega</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>119248:0:B</Value>
+                </PrivateCode>
+                <ParentRef>8576724</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Omega</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.25992</siri:Longitude>
+                <siri:Latitude>47.14399</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:9000:5:9</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Chur</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>112213:0:9</Value>
+                </PrivateCode>
+                <ParentRef>8509000</ParentRef>
+                <TopographicPlaceRef>23011901:2</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Chur</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>9.52866</siri:Longitude>
+                <siri:Latitude>46.85354</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:3000:8:14</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Zürich HB</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>108276:0:14</Value>
+                </PrivateCode>
+                <ParentRef>8503000</ParentRef>
+                <TopographicPlaceRef>23026261:27</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Zürich HB</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.53667</siri:Longitude>
+                <siri:Latitude>47.37913</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:76391:0:04</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>118966:0:D</Value>
+                </PrivateCode>
+                <ParentRef>8576391</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Bahnhof/Gare</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.24363</siri:Longitude>
+                <siri:Latitude>47.13375</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:3000:6:11</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Zürich HB</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>108276:0:11</Value>
+                </PrivateCode>
+                <ParentRef>8503000</ParentRef>
+                <TopographicPlaceRef>23026261:27</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Zürich HB</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.53657</siri:Longitude>
+                <siri:Latitude>47.37891</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:4300:4:6</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel/Bienne</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>109175:0:6</Value>
+                </PrivateCode>
+                <ParentRef>8504300</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Biel/Bienne</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.24271</siri:Longitude>
+                <siri:Latitude>47.13247</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8504419</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Biel Mett</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>109270:0:1</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Biel Mett</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.27263</siri:Longitude>
+                <siri:Latitude>47.14488</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:4419:1:1</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel Mett</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>109270:0:1</Value>
+                </PrivateCode>
+                <ParentRef>8504419</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Biel Mett</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.27263</siri:Longitude>
+                <siri:Latitude>47.14488</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <StopPlaceRef>8587899</StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">Biel/Bienne,Bf Mett/gare Mâche</Text>
+                </StopPlaceName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>125417:0:A</Value>
+                </PrivateCode>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">Biel/Bienne,Bf Mett/gare Mâche</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.27322</siri:Longitude>
+                <siri:Latitude>47.14628</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>8587899</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel/Bienne,Bf Mett/gare Mâche</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>125417:0:A</Value>
+                </PrivateCode>
+                <ParentRef>8587899</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Bf Mett/gare Mâche</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.27322</siri:Longitude>
+                <siri:Latitude>47.14628</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:76724:0:04</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel/Bienne, Omega</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>119248:0:C</Value>
+                </PrivateCode>
+                <ParentRef>8576724</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Omega</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.26122</siri:Longitude>
+                <siri:Latitude>47.14469</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>ch:1:sloid:76724:0:03</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Biel/Bienne, Omega</Text>
+                </StopPointName>
+                <PrivateCode>
+                  <System>EFA</System>
+                  <Value>119248:0:D</Value>
+                </PrivateCode>
+                <ParentRef>8576724</ParentRef>
+                <TopographicPlaceRef>23006371:1</TopographicPlaceRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">Omega</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>7.26187</siri:Longitude>
+                <siri:Latitude>47.14492</siri:Latitude>
+              </GeoPosition>
+            </Place>
+          </Places>
+          <Situations>
+            <PtSituation>
+              <siri:CreationTime>2025-11-19T15:05:00Z</siri:CreationTime>
+              <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+              <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+              <siri:Version>15</siri:Version>
+              <siri:Source>
+                <siri:SourceType>directReport</siri:SourceType>
+              </siri:Source>
+              <siri:ValidityPeriod>
+                <siri:StartTime>2025-11-19T15:05:00Z</siri:StartTime>
+                <siri:EndTime>2025-11-24T21:00:00Z</siri:EndTime>
+              </siri:ValidityPeriod>
+              <siri:AlertCause>unknown</siri:AlertCause>
+              <siri:Priority>3</siri:Priority>
+              <siri:ScopeType>stopPoint</siri:ScopeType>
+              <siri:Language>de</siri:Language>
+              <siri:PublishingActions>
+                <siri:PublishingAction>
+                  <siri:PublishAtScope>
+                    <siri:ScopeType>stopPoint</siri:ScopeType>
+                    <siri:Affects></siri:Affects>
+                  </siri:PublishAtScope>
+                  <siri:PassengerInformationAction>
+                    <siri:ActionRef></siri:ActionRef>
+                    <siri:RecordedAtTime>2025-11-19T15:05:00Z</siri:RecordedAtTime>
+                    <siri:Perspective>stopPoint</siri:Perspective>
+                    <siri:TextualContent>
+                      <siri:SummaryContent>
+                        <siri:SummaryText xml:lang="de">Der stufenfreie Zugang zum Bahnhof Zürich HB Löwenstrasse ist für Reisende mit Mobilitätseinschränkung nicht mehr garantiert.</siri:SummaryText>
+                      </siri:SummaryContent>
+                      <siri:ReasonContent>
+                        <siri:ReasonText xml:lang="de">Der Grund dafür ist eine Liftstörung.</siri:ReasonText>
+                      </siri:ReasonContent>
+                      <siri:DescriptionContent>
+                        <siri:DescriptionText xml:lang="de">Betroffen ist der Personenlift Gleis 31/32 - Halle Löwenstrasse - Zugang Bahnhofplatz.</siri:DescriptionText>
+                      </siri:DescriptionContent>
+                      <siri:RecommendationContent>
+                        <siri:RecommendationText xml:lang="de">Reisende mit Mobilitätseinschränkung informieren sich bitte beim Contact Center Handicap: Tel. 0800 007 102 oder swisspass.ch/handicap</siri:RecommendationText>
+                      </siri:RecommendationContent>
+                      <siri:DurationContent>
+                        <siri:DurationText xml:lang="de">Die Einschränkung dauert bis zirka 24.11.2025, 22:00.</siri:DurationText>
+                      </siri:DurationContent>
+                    </siri:TextualContent>
+                  </siri:PassengerInformationAction>
+                </siri:PublishingAction>
+              </siri:PublishingActions>
+            </PtSituation>
+          </Situations>
+        </TripResponseContext>
+        <TripResult>
+          <Id>ID-85163CDB-CA68-4EC6-BE98-A0D3A7166A5F</Id>
+          <Trip>
+            <Id>ID-85163CDB-CA68-4EC6-BE98-A0D3A7166A5F</Id>
+            <Duration>PT3H11M</Duration>
+            <StartTime>2025-11-24T15:21:00Z</StartTime>
+            <EndTime>2025-11-24T18:32:00Z</EndTime>
+            <Transfers>3</Transfers>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT11M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>8572662</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur, Geissweid</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T15:21:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T15:21:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:81044:0:1</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">B</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">B</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T15:32:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T15:32:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>10</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100568:SKI-1279</JourneyRef>
+                  <PublicCode>12</PublicCode>
+                  <siri:LineRef>ojp:92012:P</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>bus</PtMode>
+                    <siri:BusSubmode>localBus</siri:BusSubmode>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                    <ProductCategoryRef>29</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">12</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>1279</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">VELOS: Platzzahl eingeschränkt</Text>
+                    </UserText>
+                    <Code>A__VB</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>766</siri:OperatorRef>
+                  <DestinationStopPointRef>8581044</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Chur Bahnhof</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.0918</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT3M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8581044</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8509000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Chur</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT3M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT1H14M18S</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:9000:4:8</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE_WHEN_NOTIFIED</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">8</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">8</Text>
+                  </EstimatedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T15:38:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T15:38:30Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:3000:5:8</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITHOUT_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">8</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">8</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T16:53:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T16:52:48Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>5</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:932-001</JourneyRef>
+                  <PublicCode>IC3</PublicCode>
+                  <siri:LineRef>ojp:91003:C</siri:LineRef>
+                  <siri:DirectionRef>H</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">InterCity</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                    <ProductCategoryRef>23</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">IC3</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>932</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Gratis-Internet mit der App SBB FreeSurf</Text>
+                    </UserText>
+                    <Code>A__FS</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Ruhezone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__RZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Restaurant</Text>
+                    </UserText>
+                    <Code>A__WR</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Familienzone ohne Spielplatz</Text>
+                    </UserText>
+                    <Code>A__FZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Businesszone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__BZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Links</Text>
+                    </UserText>
+                    <Code>ojp91003CH_InfoCall351_108276_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8503000</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </DestinationText>
+                  <SituationFullRefs>
+                    <SituationFullRef>
+                      <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+                      <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+                    </SituationFullRef>
+                  </SituationFullRefs>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>4</Id>
+              <Duration>PT7M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8503000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8503000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT7M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>5</Id>
+              <Duration>PT1H10M36S</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:3000:500:32</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_NOT_WHEELCHAIR_ACCESSIBLE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">32</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">32</Text>
+                  </EstimatedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T17:04:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T17:04:30Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>fewSeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>fewSeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:4300:3:5</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_NOT_WHEELCHAIR_ACCESSIBLE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">5</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">5</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T18:15:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T18:15:06Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>6</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:532-001</JourneyRef>
+                  <PublicCode>IC5</PublicCode>
+                  <siri:LineRef>ojp:91005:A</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">InterCity</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                    <ProductCategoryRef>23</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">IC5</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>532</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Restaurant</Text>
+                    </UserText>
+                    <Code>A__WR</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Gratis-Internet mit der App SBB FreeSurf</Text>
+                    </UserText>
+                    <Code>A__FS</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Businesszone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__BZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Familienzone ohne Spielplatz</Text>
+                    </UserText>
+                    <Code>A__FZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Ruhezone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__RZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Neigezug</Text>
+                    </UserText>
+                    <Code>A__TT</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Kein Niederflur</Text>
+                    </UserText>
+                    <Code>A__PH</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Platzreservierung möglich</Text>
+                    </UserText>
+                    <Code>A___R</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Links</Text>
+                    </UserText>
+                    <Code>ojp91005AR_InfoCall720_108276_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Rechts</Text>
+                    </UserText>
+                    <Code>ojp91005AR_InfoCall720_109175_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8501120</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Lausanne</Text>
+                  </DestinationText>
+                  <SituationFullRefs>
+                    <SituationFullRef>
+                      <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+                      <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+                    </SituationFullRef>
+                  </SituationFullRefs>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>6</Id>
+              <Duration>PT5M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8504300</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8576391</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT5M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>7</Id>
+              <Duration>PT6M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:76391:0:03</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">C</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T18:26:00Z</TimetabledTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:76724:0:01</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne, Omega</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">B</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T18:32:00Z</TimetabledTime>
+                  </ServiceArrival>
+                  <Order>7</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100688:SKI-21154</JourneyRef>
+                  <PublicCode>2</PublicCode>
+                  <siri:LineRef>ojp:92002:D</siri:LineRef>
+                  <siri:DirectionRef>H</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>bus</PtMode>
+                    <siri:BusSubmode>localBus</siri:BusSubmode>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                    <ProductCategoryRef>29</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">2</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>21154</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>889</siri:OperatorRef>
+                  <DestinationStopPointRef>8576723</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Biel/Bienne, Orpundplatz</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.0918</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>ID-0C730D52-7523-450B-A850-0BEBBB2BB896</Id>
+          <Trip>
+            <Id>ID-0C730D52-7523-450B-A850-0BEBBB2BB896</Id>
+            <Duration>PT3H2M</Duration>
+            <StartTime>2025-11-24T15:51:00Z</StartTime>
+            <EndTime>2025-11-24T18:53:00Z</EndTime>
+            <Transfers>3</Transfers>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT11M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>8572662</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur, Geissweid</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T15:51:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T15:51:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:81044:0:1</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">B</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">B</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T16:02:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T16:02:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>10</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100568:SKI-1283</JourneyRef>
+                  <PublicCode>12</PublicCode>
+                  <siri:LineRef>ojp:92012:P</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>bus</PtMode>
+                    <siri:BusSubmode>localBus</siri:BusSubmode>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                    <ProductCategoryRef>29</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">12</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>1283</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">VELOS: Platzzahl eingeschränkt</Text>
+                    </UserText>
+                    <Code>A__VB</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>766</siri:OperatorRef>
+                  <DestinationStopPointRef>8581044</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Chur Bahnhof</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.0918</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT3M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8581044</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8509000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Chur</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT3M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT1H13M36S</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:9000:5:9</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE_WHEN_NOTIFIED</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">9</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">9</Text>
+                  </EstimatedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T16:08:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T16:08:30Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:3000:5:8</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITHOUT_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">8</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">8</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T17:22:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T17:22:06Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>5</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:580-001</JourneyRef>
+                  <PublicCode>IC3</PublicCode>
+                  <siri:LineRef>ojp:91003:C</siri:LineRef>
+                  <siri:DirectionRef>H</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">InterCity</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                    <ProductCategoryRef>23</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">IC3</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>580</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Gratis-Internet mit der App SBB FreeSurf</Text>
+                    </UserText>
+                    <Code>A__FS</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Ruhezone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__RZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Restaurant</Text>
+                    </UserText>
+                    <Code>A__WR</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Platzreservierung möglich</Text>
+                    </UserText>
+                    <Code>A___R</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Businesszone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__BZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Familienwagen mit Spielplatz</Text>
+                    </UserText>
+                    <Code>A__FA</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Links</Text>
+                    </UserText>
+                    <Code>ojp91003CH_InfoCall475_108276_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8503000</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </DestinationText>
+                  <SituationFullRefs>
+                    <SituationFullRef>
+                      <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+                      <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+                    </SituationFullRef>
+                  </SituationFullRefs>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>4</Id>
+              <Duration>PT7M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8503000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8503000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT7M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>5</Id>
+              <Duration>PT1H13M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:3000:8:14</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_NOT_WHEELCHAIR_ACCESSIBLE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">14</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T17:30:00Z</TimetabledTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>fewSeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:4300:3:5</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_NOT_WHEELCHAIR_ACCESSIBLE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">5</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T18:43:00Z</TimetabledTime>
+                  </ServiceArrival>
+                  <Order>6</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:1532-001</JourneyRef>
+                  <PublicCode>IC5</PublicCode>
+                  <siri:LineRef>ojp:91005:A</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">InterCity</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                    <ProductCategoryRef>23</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">IC5</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>1532</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Gratis-Internet mit der App SBB FreeSurf</Text>
+                    </UserText>
+                    <Code>A__FS</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Businesszone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__BZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Familienzone ohne Spielplatz</Text>
+                    </UserText>
+                    <Code>A__FZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Ruhezone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__RZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Neigezug</Text>
+                    </UserText>
+                    <Code>A__TT</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Kein Niederflur</Text>
+                    </UserText>
+                    <Code>A__PH</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Restaurant</Text>
+                    </UserText>
+                    <Code>A__WR</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Platzreservierung möglich</Text>
+                    </UserText>
+                    <Code>A___R</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Rechts</Text>
+                    </UserText>
+                    <Code>ojp91005AR_InfoCall871_109175_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8501120</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Lausanne</Text>
+                  </DestinationText>
+                  <SituationFullRefs>
+                    <SituationFullRef>
+                      <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+                      <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+                    </SituationFullRef>
+                  </SituationFullRefs>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>6</Id>
+              <Duration>PT5M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8504300</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8576391</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT5M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>7</Id>
+              <Duration>PT4M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:76391:0:04</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">ALTERNATIVE_TRANSPORT</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">D</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T18:49:00Z</TimetabledTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:76724:0:01</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne, Omega</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">B</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T18:53:00Z</TimetabledTime>
+                  </ServiceArrival>
+                  <Order>4</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100669:SKI-72438</JourneyRef>
+                  <PublicCode>72</PublicCode>
+                  <siri:LineRef>ojp:92072:A</siri:LineRef>
+                  <siri:DirectionRef>H</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>bus</PtMode>
+                    <siri:BusSubmode>localBus</siri:BusSubmode>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                    <ProductCategoryRef>29</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">72</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>72438</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">VELOS: Platzzahl eingeschränkt</Text>
+                    </UserText>
+                    <Code>A__VB</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>870</siri:OperatorRef>
+                  <DestinationStopPointRef>8576718</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Meinisberg, Rütti</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.0918</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>ID-90353255-07CF-4882-B165-046A47AE81C4</Id>
+          <Trip>
+            <Id>ID-90353255-07CF-4882-B165-046A47AE81C4</Id>
+            <Duration>PT3H11M</Duration>
+            <StartTime>2025-11-24T16:21:00Z</StartTime>
+            <EndTime>2025-11-24T19:32:00Z</EndTime>
+            <Transfers>4</Transfers>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT11M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>8572662</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur, Geissweid</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T16:21:00Z</TimetabledTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:81044:0:1</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">B</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T16:32:00Z</TimetabledTime>
+                  </ServiceArrival>
+                  <Order>10</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100568:SKI-1287</JourneyRef>
+                  <PublicCode>12</PublicCode>
+                  <siri:LineRef>ojp:92012:P</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>bus</PtMode>
+                    <siri:BusSubmode>localBus</siri:BusSubmode>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                    <ProductCategoryRef>29</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">12</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>1287</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">VELOS: Platzzahl eingeschränkt</Text>
+                    </UserText>
+                    <Code>A__VB</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>766</siri:OperatorRef>
+                  <DestinationStopPointRef>8581044</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Chur Bahnhof</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.0918</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT3M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8581044</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8509000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Chur</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT3M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT1H14M12S</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:9000:5:9</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE_WHEN_NOTIFIED</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">9</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">9</Text>
+                  </EstimatedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T16:38:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T16:38:30Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:3000:6:11</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITHOUT_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">11</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">11</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T17:53:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T17:52:42Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>5</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:934-001</JourneyRef>
+                  <PublicCode>IC3</PublicCode>
+                  <siri:LineRef>ojp:91003:C</siri:LineRef>
+                  <siri:DirectionRef>H</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">InterCity</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                    <ProductCategoryRef>23</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">IC3</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>934</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Gratis-Internet mit der App SBB FreeSurf</Text>
+                    </UserText>
+                    <Code>A__FS</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Ruhezone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__RZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Businesszone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__BZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Familienwagen mit Spielplatz</Text>
+                    </UserText>
+                    <Code>A__FA</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Restaurant</Text>
+                    </UserText>
+                    <Code>A__WR</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Rechts</Text>
+                    </UserText>
+                    <Code>ojp91003CH_InfoCall316_108276_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8503000</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </DestinationText>
+                  <SituationFullRefs>
+                    <SituationFullRef>
+                      <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+                      <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+                    </SituationFullRef>
+                  </SituationFullRefs>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>4</Id>
+              <Duration>PT7M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8503000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8503000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT7M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>5</Id>
+              <Duration>PT1H10M36S</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:3000:500:32</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_NOT_WHEELCHAIR_ACCESSIBLE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">32</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">32</Text>
+                  </EstimatedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T18:04:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T18:04:30Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>fewSeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:4300:3:5</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_NOT_WHEELCHAIR_ACCESSIBLE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">5</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">5</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T19:15:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T19:15:06Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>6</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:534-001</JourneyRef>
+                  <PublicCode>IC5</PublicCode>
+                  <siri:LineRef>ojp:91005:A</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">InterCity</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                    <ProductCategoryRef>23</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">IC5</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>534</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Restaurant</Text>
+                    </UserText>
+                    <Code>A__WR</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Gratis-Internet mit der App SBB FreeSurf</Text>
+                    </UserText>
+                    <Code>A__FS</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Businesszone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__BZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Familienzone ohne Spielplatz</Text>
+                    </UserText>
+                    <Code>A__FZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Ruhezone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__RZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Neigezug</Text>
+                    </UserText>
+                    <Code>A__TT</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Kein Niederflur</Text>
+                    </UserText>
+                    <Code>A__PH</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Platzreservierung möglich</Text>
+                    </UserText>
+                    <Code>A___R</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Links</Text>
+                    </UserText>
+                    <Code>ojp91005AR_InfoCall725_108276_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Rechts</Text>
+                    </UserText>
+                    <Code>ojp91005AR_InfoCall725_109175_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8501120</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Lausanne</Text>
+                  </DestinationText>
+                  <SituationFullRefs>
+                    <SituationFullRef>
+                      <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+                      <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+                    </SituationFullRef>
+                  </SituationFullRefs>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>6</Id>
+              <Duration>PT4M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8504300</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8504300</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT4M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>7</Id>
+              <Duration>PT3M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:4300:4:6</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITHOUT_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">6</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T19:21:00Z</TimetabledTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:4419:1:1</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel Mett</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE_WHEN_NOTIFIED</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">1</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T19:24:00Z</TimetabledTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:7687-001</JourneyRef>
+                  <PublicCode>S20</PublicCode>
+                  <siri:LineRef>ojp:91020:A</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>local</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">S</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">S-Bahn</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">S</Text>
+                    </ShortName>
+                    <ProductCategoryRef>27</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">S20</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>7687</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Links</Text>
+                    </UserText>
+                    <Code>ojp91020AR_InfoCall1456_109270_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8500218</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Olten</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>8</Id>
+              <Duration>PT5M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8504419</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel Mett</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8587899</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne,Bf Mett/gare Mâche</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT5M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>9</Id>
+              <Duration>PT3M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>8587899</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne,Bf Mett/gare Mâche</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">A</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T19:29:00Z</TimetabledTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:76724:0:04</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne, Omega</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">C</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T19:32:00Z</TimetabledTime>
+                  </ServiceArrival>
+                  <Order>5</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100688:SKI-40875</JourneyRef>
+                  <PublicCode>4</PublicCode>
+                  <siri:LineRef>ojp:92004:C</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>bus</PtMode>
+                    <siri:BusSubmode>localBus</siri:BusSubmode>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                    <ProductCategoryRef>29</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">4</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>40875</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>889</siri:OperatorRef>
+                  <DestinationStopPointRef>8507703</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Nidau, Burgerallee</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.0918</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>ID-AFCBB7F1-B9A6-4D7E-A958-C4FABF18E40A</Id>
+          <Trip>
+            <Id>ID-AFCBB7F1-B9A6-4D7E-A958-C4FABF18E40A</Id>
+            <Duration>PT3H15M</Duration>
+            <StartTime>2025-11-24T16:21:00Z</StartTime>
+            <EndTime>2025-11-24T19:36:00Z</EndTime>
+            <Transfers>3</Transfers>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT11M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>8572662</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur, Geissweid</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T16:21:00Z</TimetabledTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:81044:0:1</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">B</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T16:32:00Z</TimetabledTime>
+                  </ServiceArrival>
+                  <Order>10</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100568:SKI-1287</JourneyRef>
+                  <PublicCode>12</PublicCode>
+                  <siri:LineRef>ojp:92012:P</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>bus</PtMode>
+                    <siri:BusSubmode>localBus</siri:BusSubmode>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                    <ProductCategoryRef>29</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">12</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>1287</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">VELOS: Platzzahl eingeschränkt</Text>
+                    </UserText>
+                    <Code>A__VB</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>766</siri:OperatorRef>
+                  <DestinationStopPointRef>8581044</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Chur Bahnhof</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.0918</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT3M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8581044</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Chur, Bahnhofplatz</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8509000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Chur</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT3M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT1H14M12S</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:9000:5:9</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Chur</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE_WHEN_NOTIFIED</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">9</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">9</Text>
+                  </EstimatedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T16:38:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T16:38:30Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:3000:6:11</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITHOUT_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">11</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">11</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T17:53:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T17:52:42Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>5</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:934-001</JourneyRef>
+                  <PublicCode>IC3</PublicCode>
+                  <siri:LineRef>ojp:91003:C</siri:LineRef>
+                  <siri:DirectionRef>H</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">InterCity</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                    <ProductCategoryRef>23</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">IC3</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>934</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Gratis-Internet mit der App SBB FreeSurf</Text>
+                    </UserText>
+                    <Code>A__FS</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Ruhezone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__RZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Businesszone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__BZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Familienwagen mit Spielplatz</Text>
+                    </UserText>
+                    <Code>A__FA</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Restaurant</Text>
+                    </UserText>
+                    <Code>A__WR</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Rechts</Text>
+                    </UserText>
+                    <Code>ojp91003CH_InfoCall316_108276_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8503000</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </DestinationText>
+                  <SituationFullRefs>
+                    <SituationFullRef>
+                      <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+                      <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+                    </SituationFullRef>
+                  </SituationFullRefs>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>4</Id>
+              <Duration>PT7M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8503000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8503000</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT7M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>5</Id>
+              <Duration>PT1H10M36S</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:3000:500:32</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Zürich HB</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_NOT_WHEELCHAIR_ACCESSIBLE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">32</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">32</Text>
+                  </EstimatedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T18:04:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T18:04:30Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>firstClass</siri:FareClass>
+                    <siri:OccupancyLevel>manySeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                  <siri:ExpectedDepartureOccupancy>
+                    <siri:FareClass>secondClass</siri:FareClass>
+                    <siri:OccupancyLevel>fewSeatsAvailable</siri:OccupancyLevel>
+                  </siri:ExpectedDepartureOccupancy>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:4300:3:5</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_NOT_WHEELCHAIR_ACCESSIBLE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">5</Text>
+                  </PlannedQuay>
+                  <EstimatedQuay>
+                    <Text xml:lang="de">5</Text>
+                  </EstimatedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T19:15:00Z</TimetabledTime>
+                    <EstimatedTime>2025-11-24T19:15:06Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>6</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100001:534-001</JourneyRef>
+                  <PublicCode>IC5</PublicCode>
+                  <siri:LineRef>ojp:91005:A</siri:LineRef>
+                  <siri:DirectionRef>R</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                    <Name>
+                      <Text xml:lang="de">Zug</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">InterCity</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">IC</Text>
+                    </ShortName>
+                    <ProductCategoryRef>23</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">IC5</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>534</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Restaurant</Text>
+                    </UserText>
+                    <Code>A__WR</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Gratis-Internet mit der App SBB FreeSurf</Text>
+                    </UserText>
+                    <Code>A__FS</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Businesszone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__BZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Familienzone ohne Spielplatz</Text>
+                    </UserText>
+                    <Code>A__FZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Ruhezone in 1. Klasse</Text>
+                    </UserText>
+                    <Code>A__RZ</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Neigezug</Text>
+                    </UserText>
+                    <Code>A__TT</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Kein Niederflur</Text>
+                    </UserText>
+                    <Code>A__PH</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Platzreservierung möglich</Text>
+                    </UserText>
+                    <Code>A___R</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Links</Text>
+                    </UserText>
+                    <Code>ojp91005AR_InfoCall725_108276_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Aussteigeseite: Rechts</Text>
+                    </UserText>
+                    <Code>ojp91005AR_InfoCall725_109175_1</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>11</siri:OperatorRef>
+                  <DestinationStopPointRef>8501120</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Lausanne</Text>
+                  </DestinationText>
+                  <SituationFullRefs>
+                    <SituationFullRef>
+                      <siri:ParticipantRef>ski-ddip-out-sx_prod</siri:ParticipantRef>
+                      <siri:SituationNumber>ch:1:sstid:100001:ski-oct_sip2-sx_prod-TT1010194-ski-oct_sip2-sx_prod-TT1010194-5</siri:SituationNumber>
+                    </SituationFullRef>
+                  </SituationFullRefs>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.007</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>6</Id>
+              <Duration>PT5M</Duration>
+              <TransferLeg>
+                <TransferType>walk</TransferType>
+                <LegStart>
+                  <siri:StopPointRef>8504300</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>8576391</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                  </Name>
+                </LegEnd>
+                <Duration>PT5M</Duration>
+              </TransferLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+            <Leg>
+              <Id>7</Id>
+              <Duration>PT8M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>ch:1:sloid:76391:0:03</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne, Bahnhof/Gare</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">C</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2025-11-24T19:28:00Z</TimetabledTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>ch:1:sloid:76724:0:03</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">Biel/Bienne, Omega</Text>
+                  </StopPointName>
+                  <NameSuffix>
+                    <Text xml:lang="de">PLATFORM_ACCESS_WITH_ASSISTANCE</Text>
+                  </NameSuffix>
+                  <PlannedQuay>
+                    <Text xml:lang="de">D</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2025-11-24T19:36:00Z</TimetabledTime>
+                  </ServiceArrival>
+                  <Order>9</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>2025-11-24</OperatingDayRef>
+                  <JourneyRef>ch:1:sjyid:100688:SKI-30856</JourneyRef>
+                  <PublicCode>3</PublicCode>
+                  <siri:LineRef>ojp:92003:F</siri:LineRef>
+                  <siri:DirectionRef>H</siri:DirectionRef>
+                  <Mode>
+                    <PtMode>bus</PtMode>
+                    <siri:BusSubmode>localBus</siri:BusSubmode>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                  </Mode>
+                  <ProductCategory>
+                    <Name>
+                      <Text xml:lang="de">Bus</Text>
+                    </Name>
+                    <ShortName>
+                      <Text xml:lang="de">B</Text>
+                    </ShortName>
+                    <ProductCategoryRef>29</ProductCategoryRef>
+                  </ProductCategory>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">3</Text>
+                  </PublishedServiceName>
+                  <TrainNumber>30856</TrainNumber>
+                  <Attribute>
+                    <UserText>
+                      <Text xml:lang="de">Niederflureinstieg</Text>
+                    </UserText>
+                    <Code>A__NF</Code>
+                    <Importance>50</Importance>
+                  </Attribute>
+                  <OriginText>
+                    <Text xml:lang="de">n/a</Text>
+                  </OriginText>
+                  <siri:OperatorRef>889</siri:OperatorRef>
+                  <DestinationStopPointRef>8593382</DestinationStopPointRef>
+                  <DestinationText>
+                    <Text xml:lang="de">Biel/Bienne, Vorhölzli/Bois-Dv</Text>
+                  </DestinationText>
+                </Service>
+              </TimedLeg>
+              <EmissionCO2>
+                <KilogramPerPersonKm>0.0918</KilogramPerPersonKm>
+              </EmissionCO2>
+            </Leg>
+          </Trip>
+        </TripResult>
+      </OJPTripDelivery>
+    </siri:ServiceDelivery>
+  </OJPResponse>
+</OJP>
