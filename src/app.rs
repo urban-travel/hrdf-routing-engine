@@ -1,5 +1,7 @@
 use orx_parallel::*;
 use std::error::Error;
+use std::fs::File;
+use std::io::Write;
 use std::time::Instant;
 
 use crate::IsochroneArgs;
@@ -48,6 +50,11 @@ pub fn run_simple(
         1.0 / 100.0,
         Some(coord),
     )?;
+
+    let data = serde_json::to_string_pretty(&iso).unwrap();
+    let fname = format!("isochrone_{}_{}.json", time_limit, isochrone_interval);
+    let mut f = File::create(&fname).expect("Unable to create file");
+    f.write_all(data.as_bytes()).expect("Unable to write data");
 
     Ok(())
 }
@@ -122,7 +129,7 @@ pub fn run_surface_per_ha(
 
             let verbose =  isochrone_args.verbose;
             if verbose {
-                log::debug!("Computing max area for {reli} (longitude, latitude) = ({longitude}, {latitude}");
+                log::info!("Computing max area for {reli} (longitude, latitude) = ({longitude}, {latitude}");
             }
 
             let he_re = if area.is_some() {
@@ -145,7 +152,7 @@ pub fn run_surface_per_ha(
                     interval: time_limit,
                     max_num_explorable_connections,
                     num_starting_points,
-                    verbose,
+                    verbose: !verbose,
                 };
                 let opt_iso = compute_optimal_isochrones(
                     &hrdf,
@@ -178,7 +185,7 @@ pub fn run_surface_per_ha(
                         let remaining_time = Duration::from_std(remaining_time).expect("Unable to convert to a duration.");
                         let remaining_minutes = remaining_time - Duration::hours(remaining_time.num_hours());
                         let remaining_seconds = remaining_minutes - Duration::minutes(remaining_minutes.num_minutes());
-                        log::debug!(
+                        log::info!(
                             "Isochrone done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {time:.2?}"
                         );
                         log::info!(

@@ -225,7 +225,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let hrdf_2025 = Hrdf::new(
         Version::V_5_40_41_2_0_7,
-        "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
+        "https://data.opentransportdata.swiss/en/dataset/timetable-54-2026-hrdf/permalink",
         cli.force_rebuild,
         cli.cache_prefix.clone(),
     )

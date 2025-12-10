@@ -221,7 +221,7 @@ pub fn compute_routes_from_origin(
                 departure_stop,
             );
             if verbose {
-                log::debug!(
+                log::info!(
                     "Departure stop : {:?}, Adjusted departure at : {:?}, Adjusted time limit : {:?}",
                     departure_stop,
                     adjusted_departure_at,

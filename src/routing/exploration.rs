@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use chrono::NaiveDateTime;
 use hrdf_parser::DataStorage;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -22,7 +24,7 @@ where
 {
     let mut new_routes = Vec::new();
 
-    let mut old_routes = routes.clone();
+    let mut visited_routes = HashSet::new();
     while !routes.is_empty() {
         let route = routes.remove(0);
 
@@ -43,22 +45,18 @@ where
             // for example see: *Z 011709 000801   in FPLAHN
             // This can lead to an infinite loop. We will therefore check if the same route is explored
             // a second time
-            if routes.len() == 1 && routes == old_routes {
-                log::debug!("Routes stayed the same: {:?}", routes);
+            if visited_routes.contains(&route) {
+                log::info!("Routes stayed the same: {:?}", routes);
+                visited_routes.remove(&route);
                 let _ = routes.remove(0);
-            } else if routes.len() == 1 {
-                old_routes = routes.clone();
+            } else {
+                visited_routes.insert(route.clone());
             }
             continue;
         }
 
-        // log::debug!("EXPLORE NEARBY STOPS");
         explore_nearby_stops(data_storage, &route, &mut routes);
-        // log::debug!("EXPLRED NEARBY STOPS: {:?}", routes);
         explore_connections(data_storage, &route, journeys_to_ignore, &mut new_routes);
-        // log::debug!("EXPLRED CONNECTIONS: {:?}", new_routes);
-
-        // log::debug!("==============================================================");
     }
 
     // All new journeys are recorded as not available for the next connection level.
