@@ -50,12 +50,6 @@ pub fn run_simple(
         1.0 / 100.0,
         Some(coord),
     )?;
-
-    let data = serde_json::to_string_pretty(&iso).unwrap();
-    let fname = format!("isochrone_{}_{}.json", time_limit, isochrone_interval);
-    let mut f = File::create(&fname).expect("Unable to create file");
-    f.write_all(data.as_bytes()).expect("Unable to write data");
-
     Ok(())
 }
 
@@ -274,41 +268,20 @@ pub fn run_worst(
 
 #[allow(clippy::too_many_arguments)]
 pub fn run_comparison(
-    hrdf_2024: Hrdf,
     hrdf_2025: Hrdf,
+    hrdf_2026: Hrdf,
     excluded_polygons: MultiPolygon,
-    isochrone_args_2024: IsochroneArgs,
     isochrone_args_2025: IsochroneArgs,
+    isochrone_args_2026: IsochroneArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
 ) -> Result<(), Box<dyn Error>> {
-    let time_limit = isochrone_args_2024.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args_2024.interval.num_minutes();
+    let time_limit = isochrone_args_2025.time_limit.num_minutes();
+    let isochrone_interval = isochrone_args_2025.interval.num_minutes();
 
-    let (x, y) = wgs84_to_lv95(isochrone_args_2024.latitude, isochrone_args_2024.longitude);
+    let (x, y) = wgs84_to_lv95(isochrone_args_2025.latitude, isochrone_args_2025.longitude);
     let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    let isochrones_2024 = compute_optimal_isochrones(
-        &hrdf_2024,
-        &excluded_polygons,
-        isochrone_args_2024,
-        delta_time,
-        display_mode,
-        num_threads,
-    );
-    #[cfg(feature = "svg")]
-    isochrones_2024.write_svg(
-        &format!("isochrones_2024_{}_{}.svg", time_limit, isochrone_interval),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-    println!(
-        "time = {}, surface = {}, max_distance = {}",
-        isochrones_2024.departure_at(),
-        isochrones_2024.compute_max_area(),
-        isochrones_2024.compute_max_distance(coord).1
-    );
 
     let isochrones_2025 = compute_optimal_isochrones(
         &hrdf_2025,
@@ -329,6 +302,27 @@ pub fn run_comparison(
         isochrones_2025.departure_at(),
         isochrones_2025.compute_max_area(),
         isochrones_2025.compute_max_distance(coord).1
+    );
+
+    let isochrones_2026 = compute_optimal_isochrones(
+        &hrdf_2026,
+        &excluded_polygons,
+        isochrone_args_2026,
+        delta_time,
+        display_mode,
+        num_threads,
+    );
+    #[cfg(feature = "svg")]
+    isochrones_2026.write_svg(
+        &format!("isochrones_2026_{}_{}.svg", time_limit, isochrone_interval),
+        1.0 / 100.0,
+        Some(coord),
+    )?;
+    println!(
+        "time = {}, surface = {}, max_distance = {}",
+        isochrones_2026.departure_at(),
+        isochrones_2026.compute_max_area(),
+        isochrones_2026.compute_max_distance(coord).1
     );
 
     Ok(())
