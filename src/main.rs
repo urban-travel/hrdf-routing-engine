@@ -134,7 +134,7 @@ enum Mode {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
         /// Second departure date and time
-        #[arg(short, long, default_value_t = String::from("2024-04-11 15:36:00"))]
+        #[arg(short, long, default_value_t = String::from("2025-04-11 15:36:00"))]
         old_departure_at: String,
         /// Display mode of the isochrones: circles or contour_line
         #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
