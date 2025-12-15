@@ -134,7 +134,7 @@ enum Mode {
         #[command(flatten)]
         isochrone_args: IsochroneArgsBuilder,
         /// Second departure date and time
-        #[arg(short, long, default_value_t = String::from("2024-04-11 15:36:00"))]
+        #[arg(short, long, default_value_t = String::from("2025-04-11 15:36:00"))]
         old_departure_at: String,
         /// Display mode of the isochrones: circles or contour_line
         #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
@@ -223,9 +223,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let cli = Cli::parse();
 
-    let hrdf_2025 = Hrdf::new(
+    let hrdf_2026 = Hrdf::new(
         Version::V_5_40_41_2_0_7,
-        "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
+        "https://data.opentransportdata.swiss/en/dataset/timetable-54-2026-hrdf/permalink",
         cli.force_rebuild,
         cli.cache_prefix.clone(),
     )
@@ -240,10 +240,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     match cli.mode {
         Mode::Debug => {
-            run_debug(hrdf_2025);
+            run_debug(hrdf_2026);
         }
         Mode::Serve { address, ports } => {
-            let ahrdf = Arc::new(hrdf_2025);
+            let ahrdf = Arc::new(hrdf_2026);
             let services: Vec<_> = ports
                 .into_iter()
                 .map(|p| {
@@ -262,7 +262,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             mode,
         } => {
             run_optimal(
-                hrdf_2025,
+                hrdf_2026,
                 excluded_polygons,
                 isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
@@ -276,7 +276,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             mode,
         } => {
             run_worst(
-                hrdf_2025,
+                hrdf_2026,
                 excluded_polygons,
                 isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
@@ -289,7 +289,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             mode,
         } => {
             run_simple(
-                hrdf_2025,
+                hrdf_2026,
                 excluded_polygons,
                 isochrone_args.finalize()?,
                 mode,
@@ -301,7 +301,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             delta_time,
         } => {
             run_average(
-                hrdf_2025,
+                hrdf_2026,
                 excluded_polygons,
                 isochrone_args.finalize()?,
                 Duration::minutes(delta_time),
@@ -314,24 +314,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
             old_departure_at,
             delta_time,
         } => {
-            let args_2025 = isochrone_args.clone().finalize()?;
-            let args_2024 = isochrone_args
+            let args_2026 = isochrone_args.clone().finalize()?;
+            let args_2025 = isochrone_args
                 .set_departure_at(old_departure_at)
                 .finalize()?;
 
-            let hrdf_2024 = Hrdf::new(
-                Version::V_5_40_41_2_0_6,
-                "https://data.opentransportdata.swiss/en/dataset/timetable-54-2024-hrdf/permalink",
+            let hrdf_2025 = Hrdf::new(
+                Version::V_5_40_41_2_0_7,
+                "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
                 cli.force_rebuild,
                 cli.cache_prefix,
             )
             .await?;
             run_comparison(
-                hrdf_2024,
                 hrdf_2025,
+                hrdf_2026,
                 excluded_polygons,
-                args_2024,
                 args_2025,
+                args_2026,
                 Duration::minutes(delta_time),
                 mode,
                 cli.num_threads,
@@ -348,7 +348,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let hectare =
                 HectareData::new(&url, cli.force_rebuild, cli.cache_prefix.clone()).await?;
             let surfaces = run_surface_per_ha(
-                hrdf_2025,
+                hrdf_2026,
                 excluded_polygons,
                 hectare,
                 isochrone_args.clone(),

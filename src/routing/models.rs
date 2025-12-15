@@ -2,8 +2,9 @@ use chrono::{Duration, NaiveDateTime, TimeDelta};
 use hrdf_parser::{Coordinates, DataStorage, Journey, TransportType};
 use rustc_hash::FxHashSet;
 use serde::Serialize;
+use std::hash::{Hash, Hasher};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct RouteSection {
     journey_id: Option<i32>,
     departure_stop_id: i32,
@@ -73,10 +74,24 @@ impl RouteSection {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Route {
     sections: Vec<RouteSection>,
     visited_stops: FxHashSet<i32>,
+}
+
+impl Hash for Route {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Hash the sections vector
+        self.sections.hash(state);
+
+        // Hash the visited stops set
+        // Note: FxHashSet does not guarantee order, so we should hash in a stable way
+        // For consistency, iterate in sorted order
+        let mut stops: Vec<_> = self.visited_stops.iter().collect();
+        stops.sort();
+        stops.hash(state);
+    }
 }
 
 impl Route {

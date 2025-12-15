@@ -123,6 +123,7 @@ mod tests {
                 let from_id = st.departure_id();
                 let to_id = st.arrival_id();
                 let date_time = st.departure_time().with_second(0).unwrap();
+                log::info!("Testing trip: {from_id} - {to_id} at {date_time}");
                 plan_shortest_journey(hrdf, from_id, to_id, date_time, 10, false)
                     .as_ref()
                     .map(|r| STrip::from(r, hrdf).0)
