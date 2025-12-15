@@ -1,7 +1,5 @@
 use orx_parallel::*;
 use std::error::Error;
-use std::fs::File;
-use std::io::Write;
 use std::time::Instant;
 
 use crate::IsochroneArgs;
