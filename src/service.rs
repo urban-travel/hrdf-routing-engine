@@ -109,25 +109,31 @@ async fn compute_isochrones(
         interval: Duration::minutes(params.isochrone_interval.into()),
         max_num_explorable_connections,
         num_starting_points,
-        verbose: true,
+        verbose: false,
     };
     let result = if params.find_optimal {
-        isochrone::compute_optimal_isochrones(
+        log::info!("Computing Optimal Isochrones for {isochrone_args}");
+        let res = isochrone::compute_optimal_isochrones(
             &hrdf,
             &excluded_polygons,
             isochrone_args,
             Duration::minutes(30),
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
             num_threads,
-        )
+        );
+        log::info!("Optimal Computation Successful");
+        res
     } else {
-        isochrone::compute_isochrones(
+        log::info!("Computing Isochrones for {isochrone_args}");
+        let res = isochrone::compute_isochrones(
             &hrdf,
             &excluded_polygons,
             isochrone_args,
             IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
             num_threads,
-        )
+        );
+        log::info!("Normal Computation Successful");
+        res
     };
     Ok(Json(result))
 }

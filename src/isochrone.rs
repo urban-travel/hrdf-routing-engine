@@ -6,6 +6,7 @@ mod models;
 pub(crate) mod utils;
 
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::time::Instant;
 
 use crate::isochrone::utils::haversine_distance;
@@ -54,6 +55,16 @@ pub struct IsochroneArgs {
     pub max_num_explorable_connections: i32,
     pub num_starting_points: usize,
     pub verbose: bool,
+}
+
+impl Display for IsochroneArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "longitude: {}, latitude: {}, departure_at: {}, time_limit: {}, interval: {}",
+            self.longitude, self.latitude, self.departure_at, self.time_limit, self.interval
+        )
+    }
 }
 
 /// Computes the best isochrone in [departure_at - delta_time; departure_at + delta_time)
