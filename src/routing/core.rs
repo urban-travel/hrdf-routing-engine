@@ -126,12 +126,12 @@ fn can_continue_exploration_one_to_one(
     solutions: &mut FxHashMap<i32, Route>,
     arrival_stop_id: i32,
 ) -> bool {
-    let solution = solutions.get(&arrival_stop_id);
-
     if !route.visited_stops().contains(&arrival_stop_id) {
+        let solution = solutions.get(&arrival_stop_id);
         return can_improve_solution(route, &solution);
     }
 
+    let solution = solutions.get(&arrival_stop_id);
     let candidate = if route.last_section().journey_id().is_none() {
         route.clone()
     } else {

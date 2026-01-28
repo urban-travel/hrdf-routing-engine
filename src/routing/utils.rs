@@ -46,11 +46,3 @@ pub fn get_routes_to_ignore(data_storage: &DataStorage, route: &Route) -> FxHash
 pub fn sort_routes(routes: &mut [Route]) {
     routes.sort_by_key(|route| route.arrival_at());
 }
-
-pub fn sorted_insert(routes: &mut Vec<Route>, route_to_insert: Route) {
-    let index = routes
-        .iter_mut()
-        .position(|route| route_to_insert.arrival_at() < route.arrival_at())
-        .unwrap_or(routes.len());
-    routes.insert(index, route_to_insert);
-}

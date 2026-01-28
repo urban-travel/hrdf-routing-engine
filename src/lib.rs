@@ -18,7 +18,7 @@ pub use service::run_service;
 
 #[cfg(test)]
 mod tests {
-    use std::error::Error;
+    use std::{error::Error, time::Instant};
 
     use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
     use chrono::{TimeDelta, Timelike};
@@ -159,7 +159,12 @@ mod tests {
         )
         .await
         .unwrap();
+        let started = Instant::now();
         let failures = test_paths_validity(&hrdf, &IDS).await.unwrap();
+        log::info!(
+            "Time elapsed for all the HRDF tests: {:?}",
+            started.elapsed()
+        );
         for f in failures.iter() {
             if let (Some(ojp_trip), Some(hrdf_trip)) = f {
                 eprintln!("{} - {}", ojp_trip.departure_id(), ojp_trip.arrival_id());
