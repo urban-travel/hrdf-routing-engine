@@ -6,7 +6,7 @@ use std::{error::Error, net::Ipv4Addr};
 
 use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
-use hrdf_parser::{Hrdf, Version};
+use hrdf_parser::Hrdf;
 use hrdf_routing_engine::{
     ExcludedPolygons, IsochroneArgs, IsochroneDisplayMode, LAKES_GEOJSON_URLS, run_average,
     run_comparison, run_debug, run_optimal, run_service, run_simple, run_worst,
@@ -223,14 +223,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let cli = Cli::parse();
 
-    let hrdf_2026 = Hrdf::new(
-        Version::V_5_40_41_2_0_7,
-        "https://data.opentransportdata.swiss/en/dataset/timetable-54-2026-hrdf/permalink",
-        cli.force_rebuild,
-        cli.cache_prefix.clone(),
-    )
-    .await?;
-
     let excluded_polygons = ExcludedPolygons::try_new(
         &LAKES_GEOJSON_URLS,
         cli.force_rebuild,
@@ -240,9 +232,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     match cli.mode {
         Mode::Debug => {
-            run_debug(hrdf_2026);
+            let hrdf =
+                Hrdf::try_from_year(2025, cli.force_rebuild, cli.cache_prefix.clone()).await?;
+            run_debug(hrdf);
         }
         Mode::Serve { address, ports } => {
+            let hrdf_2026 =
+                Hrdf::try_from_year(2026, cli.force_rebuild, cli.cache_prefix.clone()).await?;
             let ahrdf = Arc::new(hrdf_2026);
             let services: Vec<_> = ports
                 .into_iter()
@@ -261,10 +257,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             delta_time,
             mode,
         } => {
+            let isochrone_args = isochrone_args.finalize()?;
+            let hrdf = Hrdf::try_from_date(
+                isochrone_args.departure_at.date(),
+                cli.force_rebuild,
+                cli.cache_prefix.clone(),
+            )
+            .await?;
             run_optimal(
-                hrdf_2026,
+                hrdf,
                 excluded_polygons,
-                isochrone_args.finalize()?,
+                isochrone_args,
                 Duration::minutes(delta_time),
                 mode,
                 cli.num_threads,
@@ -275,10 +278,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             delta_time,
             mode,
         } => {
+            let isochrone_args = isochrone_args.finalize()?;
+            let hrdf = Hrdf::try_from_date(
+                isochrone_args.departure_at.date(),
+                cli.force_rebuild,
+                cli.cache_prefix.clone(),
+            )
+            .await?;
             run_worst(
-                hrdf_2026,
+                hrdf,
                 excluded_polygons,
-                isochrone_args.finalize()?,
+                isochrone_args,
                 Duration::minutes(delta_time),
                 mode,
                 cli.num_threads,
@@ -288,10 +298,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             isochrone_args,
             mode,
         } => {
+            let isochrone_args = isochrone_args.finalize()?;
+            let hrdf = Hrdf::try_from_date(
+                isochrone_args.departure_at.date(),
+                cli.force_rebuild,
+                cli.cache_prefix.clone(),
+            )
+            .await?;
             run_simple(
-                hrdf_2026,
+                hrdf,
                 excluded_polygons,
-                isochrone_args.finalize()?,
+                isochrone_args,
                 mode,
                 cli.num_threads,
             )?;
@@ -300,10 +317,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             isochrone_args,
             delta_time,
         } => {
+            let isochrone_args = isochrone_args.finalize()?;
+            let hrdf_2026 = Hrdf::try_from_date(
+                isochrone_args.departure_at.date(),
+                cli.force_rebuild,
+                cli.cache_prefix.clone(),
+            )
+            .await?;
             run_average(
                 hrdf_2026,
                 excluded_polygons,
-                isochrone_args.finalize()?,
+                isochrone_args,
                 Duration::minutes(delta_time),
                 cli.num_threads,
             )?;
@@ -314,24 +338,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
             old_departure_at,
             delta_time,
         } => {
-            let args_2026 = isochrone_args.clone().finalize()?;
-            let args_2025 = isochrone_args
+            let args_new = isochrone_args.clone().finalize()?;
+            let args_old = isochrone_args
                 .set_departure_at(old_departure_at)
                 .finalize()?;
 
-            let hrdf_2025 = Hrdf::new(
-                Version::V_5_40_41_2_0_7,
-                "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
+            let hrdf_old = Hrdf::try_from_date(
+                args_old.departure_at.date(),
+                cli.force_rebuild,
+                cli.cache_prefix.clone(),
+            )
+            .await?;
+            let hrdf_new = Hrdf::try_from_date(
+                args_new.departure_at.date(),
                 cli.force_rebuild,
                 cli.cache_prefix,
             )
             .await?;
             run_comparison(
-                hrdf_2025,
-                hrdf_2026,
+                hrdf_old,
+                hrdf_new,
                 excluded_polygons,
-                args_2025,
-                args_2026,
+                args_old,
+                args_new,
                 Duration::minutes(delta_time),
                 mode,
                 cli.num_threads,
@@ -347,6 +376,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let isochrone_args = isochrone_args.finalize()?;
             let hectare =
                 HectareData::new(&url, cli.force_rebuild, cli.cache_prefix.clone()).await?;
+            let hrdf_2026 = Hrdf::try_from_date(
+                isochrone_args.departure_at.date(),
+                cli.force_rebuild,
+                cli.cache_prefix.clone(),
+            )
+            .await?;
             let surfaces = run_surface_per_ha(
                 hrdf_2026,
                 excluded_polygons,
