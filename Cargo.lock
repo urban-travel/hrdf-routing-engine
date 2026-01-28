@@ -881,9 +881,9 @@ dependencies = [
 
 [[package]]
 name = "hrdf-parser"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "781a27b2211df7b26224cad5873cf0a302027b59688375b86d3130d2bc8f15dd"
+checksum = "5345ab944c9b5001f345ef898bac92b89ad949d7c09bd62aff2a59371ef11646"
 dependencies = [
  "bincode",
  "chrono",
@@ -900,12 +900,12 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
- "zip 4.6.0",
+ "zip",
 ]
 
 [[package]]
 name = "hrdf-routing-engine"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "axum",
  "bincode",
@@ -939,7 +939,7 @@ dependencies = [
  "tower-http",
  "typenum",
  "url",
- "zip 6.0.0",
+ "zip",
 ]
 
 [[package]]
@@ -1348,26 +1348,6 @@ name = "libc"
 version = "0.2.175"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a82ae493e598baaea5209805c49bbf2ea7de956d50d7da0da1164f9c6d28543"
-
-[[package]]
-name = "liblzma"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10bf66f4598dc77ff96677c8e763655494f00ff9c1cf79e2eb5bb07bc31f807d"
-dependencies = [
- "liblzma-sys",
-]
-
-[[package]]
-name = "liblzma-sys"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01b9596486f6d60c3bbe644c0e1be1aa6ccc472ad630fe8927b456973d7cb736"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
-]
 
 [[package]]
 name = "libm"
@@ -3296,33 +3276,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "zip"
-version = "4.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c034aa6c54f654df20e7dc3713bc51705c12f280748fb6d7f40f87c696623e34"
-dependencies = [
- "aes",
- "arbitrary",
- "bzip2",
- "constant_time_eq",
- "crc32fast",
- "deflate64",
- "flate2",
- "getrandom 0.3.3",
- "hmac",
- "indexmap",
- "liblzma",
- "memchr",
- "pbkdf2",
- "ppmd-rust",
- "sha1",
- "time",
- "zeroize",
- "zopfli",
- "zstd",
 ]
 
 [[package]]
