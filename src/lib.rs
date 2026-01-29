@@ -233,7 +233,9 @@ mod tests {
             let fname = format!("test_json/ref_routes_{departure_stop_id}.json");
             println!("Comparing {fname}");
             let reference = read_to_string(fname).unwrap();
-            let (current, reference) = get_json_values(&routes, &reference).unwrap();
+            let (mut current, mut reference) = get_json_values(&routes, &reference).unwrap();
+            current.sort_all_objects();
+            reference.sort_all_objects();
             assert_eq!(current, reference);
         }
 
