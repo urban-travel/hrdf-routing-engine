@@ -1,7 +1,7 @@
 use chrono::{Duration, NaiveDateTime, TimeDelta};
 use hrdf_parser::{Coordinates, DataStorage, Journey, TransportType};
 use rustc_hash::FxHashSet;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
@@ -206,7 +206,7 @@ impl RoutingAlgorithmArgs {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteResult {
     departure_at: NaiveDateTime,
     arrival_at: NaiveDateTime,
@@ -324,7 +324,7 @@ impl RouteResult {
     }
 }
 
-#[derive(Debug, Serialize, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 pub struct RouteSectionResult {
     journey_id: Option<i32>,
     departure_stop_id: i32,
@@ -436,7 +436,7 @@ impl RouteSectionResult {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Transport {
     Boat,
     Bus,

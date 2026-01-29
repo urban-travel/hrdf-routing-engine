@@ -1,0 +1,823 @@
+[
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:25:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509361,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2801419.0,
+                    "y": 1133722.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.324672,
+                    "y": 10.054478
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:25:00",
+                "duration": null,
+                "transport": "Train"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:10:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509365,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2805092.0,
+                    "y": 1128121.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.273208,
+                    "y": 10.099681
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:10:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509365,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2805092.0,
+                    "y": 1128121.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.273208,
+                    "y": 10.099681
+                },
+                "arrival_stop_id": 8579989,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2805101.0,
+                    "y": 1128110.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.273105,
+                    "y": 10.099794
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 2,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:25:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509361,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2801419.0,
+                    "y": 1133722.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.324672,
+                    "y": 10.054478
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:25:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509361,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2801419.0,
+                    "y": 1133722.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.324672,
+                    "y": 10.054478
+                },
+                "arrival_stop_id": 8574796,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2801421.0,
+                    "y": 1133662.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.324134,
+                    "y": 10.054483
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 2,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:15:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509364,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2803370.0,
+                    "y": 1130052.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.291087,
+                    "y": 10.078193
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:15:00",
+                "duration": null,
+                "transport": "Train"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T17:55:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509367,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807659.0,
+                    "y": 1125026.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.244596,
+                    "y": 10.131585
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T17:55:00",
+                "duration": null,
+                "transport": "Train"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:01:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509366,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807095.0,
+                    "y": 1126627.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.259158,
+                    "y": 10.124989
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:01:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509366,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807095.0,
+                    "y": 1126627.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.259158,
+                    "y": 10.124989
+                },
+                "arrival_stop_id": 8574920,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807085.0,
+                    "y": 1126620.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.259101,
+                    "y": 10.124854
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 2,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:01:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509366,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807095.0,
+                    "y": 1126627.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.259158,
+                    "y": 10.124989
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:01:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509366,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807095.0,
+                    "y": 1126627.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.259158,
+                    "y": 10.124989
+                },
+                "arrival_stop_id": 8579984,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807209.0,
+                    "y": 1126510.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.258074,
+                    "y": 10.126412
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 3,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:20:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509363,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2802144.0,
+                    "y": 1132248.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.311201,
+                    "y": 10.063247
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:20:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509363,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2802144.0,
+                    "y": 1132248.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.311201,
+                    "y": 10.063247
+                },
+                "arrival_stop_id": 8574794,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2802162.0,
+                    "y": 1132225.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.310992,
+                    "y": 10.063475
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 1,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:10:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509365,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2805092.0,
+                    "y": 1128121.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.273208,
+                    "y": 10.099681
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:10:00",
+                "duration": null,
+                "transport": "Train"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T18:14:00",
+        "arrival_at": "2025-05-29T18:23:00",
+        "sections": [
+            {
+                "journey_id": 102566,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509369,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2810477.0,
+                    "y": 1121914.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.215736,
+                    "y": 10.166695
+                },
+                "departure_at": "2025-05-29T18:14:00",
+                "arrival_at": "2025-05-29T18:23:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509369,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2810477.0,
+                    "y": 1121914.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.215736,
+                    "y": 10.166695
+                },
+                "arrival_stop_id": 1300174,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2810505.0,
+                    "y": 1121784.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.214563,
+                    "y": 10.166998
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 5,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T17:55:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509367,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807659.0,
+                    "y": 1125026.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.244596,
+                    "y": 10.131585
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T17:55:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509367,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807659.0,
+                    "y": 1125026.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.244596,
+                    "y": 10.131585
+                },
+                "arrival_stop_id": 8579985,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807619.0,
+                    "y": 1125035.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.244686,
+                    "y": 10.13107
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 5,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:20:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509363,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2802144.0,
+                    "y": 1132248.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.311201,
+                    "y": 10.063247
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:20:00",
+                "duration": null,
+                "transport": "Train"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T18:14:00",
+        "arrival_at": "2025-05-29T18:23:00",
+        "sections": [
+            {
+                "journey_id": 102566,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509369,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2810477.0,
+                    "y": 1121914.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.215736,
+                    "y": 10.166695
+                },
+                "departure_at": "2025-05-29T18:14:00",
+                "arrival_at": "2025-05-29T18:23:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509369,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2810477.0,
+                    "y": 1121914.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.215736,
+                    "y": 10.166695
+                },
+                "arrival_stop_id": 8301440,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2809200.0,
+                    "y": 1117500.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.215788,
+                    "y": 10.166559
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 5,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:01:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509366,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2807095.0,
+                    "y": 1126627.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.259158,
+                    "y": 10.124989
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:01:00",
+                "duration": null,
+                "transport": "Train"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T17:52:00",
+        "arrival_at": "2025-05-29T18:15:00",
+        "sections": [
+            {
+                "journey_id": 102573,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509364,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2803370.0,
+                    "y": 1130052.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.291087,
+                    "y": 10.078193
+                },
+                "departure_at": "2025-05-29T17:52:00",
+                "arrival_at": "2025-05-29T18:15:00",
+                "duration": null,
+                "transport": "Train"
+            },
+            {
+                "journey_id": null,
+                "departure_stop_id": 8509364,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2803370.0,
+                    "y": 1130052.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.291087,
+                    "y": 10.078193
+                },
+                "arrival_stop_id": 8574790,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2803370.0,
+                    "y": 1130058.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.291144,
+                    "y": 10.078201
+                },
+                "departure_at": null,
+                "arrival_at": null,
+                "duration": 2,
+                "transport": "Walk"
+            }
+        ]
+    },
+    {
+        "departure_at": "2025-05-29T18:14:00",
+        "arrival_at": "2025-05-29T18:23:00",
+        "sections": [
+            {
+                "journey_id": 102566,
+                "departure_stop_id": 8509368,
+                "departure_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2808477.0,
+                    "y": 1123846.0
+                },
+                "departure_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.233731,
+                    "y": 10.141655
+                },
+                "arrival_stop_id": 8509369,
+                "arrival_stop_lv95_coordinates": {
+                    "coordinate_system": "LV95",
+                    "x": 2810477.0,
+                    "y": 1121914.0
+                },
+                "arrival_stop_wgs84_coordinates": {
+                    "coordinate_system": "WGS84",
+                    "x": 46.215736,
+                    "y": 10.166695
+                },
+                "departure_at": "2025-05-29T18:14:00",
+                "arrival_at": "2025-05-29T18:23:00",
+                "duration": null,
+                "transport": "Train"
+            }
+        ]
+    }
+]
