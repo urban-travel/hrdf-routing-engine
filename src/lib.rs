@@ -231,11 +231,10 @@ mod tests {
                 false,
             );
             let fname = format!("test_json/ref_routes_{departure_stop_id}.json");
+            println!("Comparing {fname}");
             let reference = read_to_string(fname).unwrap();
             let (current, reference) = get_json_values(&routes, &reference).unwrap();
             assert_eq!(current, reference);
-
-            println!("\n{}", routes.len());
         }
 
         println!("{:.2?}", start_time.elapsed());
