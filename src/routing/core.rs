@@ -6,7 +6,7 @@ use super::{
     connections::next_departures,
     exploration::explore_routes,
     models::{Route, RouteResult, RouteSection, RoutingAlgorithmArgs, RoutingAlgorithmMode},
-    utils::{get_stop_connections, sort_routes},
+    utils::{RouteQueue, get_stop_connections},
 };
 
 pub fn compute_routing(
@@ -18,15 +18,13 @@ pub fn compute_routing(
     args: RoutingAlgorithmArgs,
 ) -> FxHashMap<i32, RouteResult> {
     let mut routes = create_initial_routes(data_storage, departure_stop_id, departure_at);
-    let mut journeys_to_ignore = FxHashSet::default();
     let mut earliest_arrival_by_stop_id = FxHashMap::default();
     let mut solutions = FxHashMap::default();
 
-    routes.iter().for_each(|route| {
-        if let Some(journey_id) = route.last_section().journey_id() {
-            journeys_to_ignore.insert(journey_id);
-        }
-    });
+    let mut journeys_to_ignore = routes
+        .iter_routes()
+        .filter_map(|route| route.last_section().journey_id())
+        .collect::<FxHashSet<_>>();
 
     for i in 0..max_num_explorable_connections {
         if verbose {
@@ -79,27 +77,26 @@ pub fn create_initial_routes(
     data_storage: &DataStorage,
     departure_stop_id: i32,
     departure_at: NaiveDateTime,
-) -> Vec<Route> {
-    let mut routes: Vec<Route> =
+) -> RouteQueue {
+    let mut routes = RouteQueue::new();
+
+    for (journey, journey_departure_at) in
         next_departures(data_storage, departure_stop_id, departure_at, None, None)
-            .into_iter()
-            .filter_map(|(journey, journey_departure_at)| {
-                RouteSection::find_next(
-                    data_storage,
-                    journey,
-                    departure_stop_id,
-                    journey_departure_at.date(),
-                    true,
-                )
-                .map(|(section, mut visited_stops)| {
-                    visited_stops.insert(departure_stop_id);
-                    Route::new(vec![section], visited_stops)
-                })
-            })
-            .collect();
+    {
+        if let Some((section, mut visited_stops)) = RouteSection::find_next(
+            data_storage,
+            journey,
+            departure_stop_id,
+            journey_departure_at.date(),
+            true,
+        ) {
+            visited_stops.insert(departure_stop_id);
+            routes.push(Route::new(vec![section], visited_stops));
+        }
+    }
 
     if let Some(stop_connections) = get_stop_connections(data_storage, departure_stop_id) {
-        routes.extend(stop_connections.iter().map(|stop_connection| {
+        stop_connections.iter().for_each(|stop_connection| {
             let mut visited_stops = FxHashSet::default();
             visited_stops.insert(stop_connection.stop_id_1());
             visited_stops.insert(stop_connection.stop_id_2());
@@ -111,12 +108,10 @@ pub fn create_initial_routes(
                 departure_at,
                 Some(stop_connection.duration()),
             );
-
-            Route::new(vec![section], visited_stops)
-        }));
+            routes.push(Route::new(vec![section], visited_stops));
+        });
     }
 
-    sort_routes(&mut routes);
     routes
 }
 

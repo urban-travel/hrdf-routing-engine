@@ -1,5 +1,4 @@
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashSet};
+use std::collections::HashSet;
 
 use chrono::NaiveDateTime;
 use hrdf_parser::DataStorage;
@@ -10,95 +9,23 @@ use crate::utils::add_minutes_to_date_time;
 use super::{
     connections::get_connections,
     models::{Route, RouteSection},
-    utils::{clone_update_route, get_stop_connections, sort_routes},
+    utils::{RouteQueue, clone_update_route, get_stop_connections},
 };
-
-#[derive(Debug)]
-struct RouteHeapItem {
-    arrival_at: NaiveDateTime,
-    seq: u64,
-    route: Route,
-}
-
-impl Eq for RouteHeapItem {}
-
-impl PartialEq for RouteHeapItem {
-    fn eq(&self, other: &Self) -> bool {
-        self.arrival_at == other.arrival_at && self.seq == other.seq
-    }
-}
-
-impl Ord for RouteHeapItem {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match other.arrival_at.cmp(&self.arrival_at) {
-            Ordering::Equal => other.seq.cmp(&self.seq),
-            ordering => ordering,
-        }
-    }
-}
-
-impl PartialOrd for RouteHeapItem {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-struct RouteQueue {
-    heap: BinaryHeap<RouteHeapItem>,
-    seq: u64,
-}
-
-impl From<Vec<Route>> for RouteQueue {
-    fn from(routes: Vec<Route>) -> Self {
-        let heap: BinaryHeap<RouteHeapItem> = routes
-            .into_iter()
-            .enumerate()
-            .map(|(seq, route)| RouteHeapItem {
-                arrival_at: route.arrival_at(),
-                seq: seq as u64,
-                route,
-            })
-            .collect();
-        let seq = heap.len() as u64;
-        Self { heap, seq }
-    }
-}
-
-impl RouteQueue {
-    fn push(&mut self, route: Route) {
-        self.heap.push(RouteHeapItem {
-            arrival_at: route.arrival_at(),
-            seq: self.seq,
-            route,
-        });
-        self.seq += 1;
-    }
-
-    fn pop(&mut self) -> Option<Route> {
-        self.heap.pop().map(|item| item.route)
-    }
-
-    fn len(&self) -> usize {
-        self.heap.len()
-    }
-}
 
 pub fn explore_routes<F>(
     data_storage: &DataStorage,
-    routes: Vec<Route>,
+    mut routes: RouteQueue,
     journeys_to_ignore: &mut FxHashSet<i32>,
     earliest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
     mut can_continue_exploration: F,
-) -> Vec<Route>
+) -> RouteQueue
 where
     F: FnMut(&Route) -> bool,
 {
-    let mut new_routes = Vec::new();
-
-    let mut queue: RouteQueue = routes.into();
+    let mut new_routes = RouteQueue::new();
 
     let mut visited_routes = HashSet::new();
-    while let Some(route) = queue.pop() {
+    while let Some(route) = routes.pop() {
         if !can_continue_exploration(&route) {
             continue;
         }
@@ -109,7 +36,7 @@ where
             continue;
         }
 
-        explore_last_route_section_more_if_possible(data_storage, &route, &mut queue);
+        explore_last_route_section_more_if_possible(data_storage, &route, &mut routes);
 
         if !can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id) {
             // In some cases there are stops appearing multiple times in a Journey
@@ -117,27 +44,26 @@ where
             // This can lead to an infinite loop. We will therefore check if the same route is explored
             // a second time
             if visited_routes.contains(&route) {
-                log::info!("Routes stayed the same: {}", queue.len());
+                log::info!("Routes stayed the same: {}", routes.len());
                 visited_routes.remove(&route);
-                let _ = queue.pop();
+                let _ = routes.pop();
             } else {
                 visited_routes.insert(route.clone());
             }
             continue;
         }
 
-        explore_nearby_stops(data_storage, &route, &mut queue);
+        explore_nearby_stops(data_storage, &route, &mut routes);
         explore_connections(data_storage, &route, journeys_to_ignore, &mut new_routes);
     }
 
     // All new journeys are recorded as not available for the next connection level.
-    new_routes.iter().for_each(|route| {
+    new_routes.iter_routes().for_each(|route| {
         if let Some(journey_id) = route.last_section().journey_id() {
             journeys_to_ignore.insert(journey_id);
         }
     });
 
-    sort_routes(&mut new_routes);
     new_routes
 }
 
@@ -199,16 +125,14 @@ fn explore_connections(
     data_storage: &DataStorage,
     route: &Route,
     journeys_to_ignore: &FxHashSet<i32>,
-    new_routes: &mut Vec<Route>,
+    new_routes: &mut RouteQueue,
 ) {
-    new_routes.extend(get_connections(data_storage, route, journeys_to_ignore));
+    for route in get_connections(data_storage, route, journeys_to_ignore) {
+        new_routes.push(route);
+    }
 }
 
-fn explore_nearby_stops(
-    data_storage: &DataStorage,
-    route: &Route,
-    routes: &mut RouteQueue,
-) {
+fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut RouteQueue) {
     if route.last_section().journey_id().is_none() {
         // No walking between 2 stops, after walking between 2 stops just before.
         return;
