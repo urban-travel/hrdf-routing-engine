@@ -30,6 +30,8 @@ mod tests {
     use crate::{Route, plan_shortest_journey};
     use futures::future::join_all;
 
+    use pretty_assertions::assert_eq;
+
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use serde::{Deserialize, Serialize};
 
