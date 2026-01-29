@@ -41,7 +41,7 @@ jobs:
       - name: cargo test --locked
         env: # Or as an environment variable
           TOKEN: ${{ secrets.TOKEN }}
-        run: cargo test --locked --all-features --all-targets
+        run: cargo test --locked --all-features --all-targets -- --test-threads 1
       # https://github.com/rust-lang/cargo/issues/6669
       - name: cargo test --doc
         env: # Or as an environment variable
@@ -87,7 +87,7 @@ jobs:
       - name: cargo test
         env: # Or as an environment variable
           TOKEN: ${{ secrets.TOKEN }}
-        run: cargo test --locked --all-features --all-targets
+        run: cargo test --locked --all-features --all-targets -- --test-threads 1
   os-check:
     # run cargo test on mac and windows
     runs-on: ${{ matrix.os }}
@@ -114,7 +114,7 @@ jobs:
       - name: cargo test
         env: # Or as an environment variable
           TOKEN: ${{ secrets.TOKEN }}
-        run: cargo test --locked --all-features --all-targets
+        run: cargo test --locked --all-features --all-targets -- --test-threads 1
   coverage:
     # use llvm-cov to build and collect coverage and outputs in a format that
     # is compatible with codecov.io
