@@ -9,25 +9,23 @@ use crate::utils::add_minutes_to_date_time;
 use super::{
     connections::get_connections,
     models::{Route, RouteSection},
-    utils::{clone_update_route, get_stop_connections, sort_routes, sorted_insert},
+    utils::{RouteQueue, clone_update_route, get_stop_connections},
 };
 
 pub fn explore_routes<F>(
     data_storage: &DataStorage,
-    mut routes: Vec<Route>,
+    mut routes: RouteQueue,
     journeys_to_ignore: &mut FxHashSet<i32>,
     earliest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
     mut can_continue_exploration: F,
-) -> Vec<Route>
+) -> RouteQueue
 where
     F: FnMut(&Route) -> bool,
 {
-    let mut new_routes = Vec::new();
+    let mut new_routes = RouteQueue::new();
 
     let mut visited_routes = HashSet::new();
-    while !routes.is_empty() {
-        let route = routes.remove(0);
-
+    while let Some(route) = routes.pop() {
         if !can_continue_exploration(&route) {
             continue;
         }
@@ -46,9 +44,9 @@ where
             // This can lead to an infinite loop. We will therefore check if the same route is explored
             // a second time
             if visited_routes.contains(&route) {
-                log::info!("Routes stayed the same: {:?}", routes);
+                log::info!("Routes stayed the same: {}", routes.len());
                 visited_routes.remove(&route);
-                let _ = routes.remove(0);
+                let _ = routes.pop();
             } else {
                 visited_routes.insert(route.clone());
             }
@@ -60,20 +58,19 @@ where
     }
 
     // All new journeys are recorded as not available for the next connection level.
-    new_routes.iter().for_each(|route| {
+    new_routes.iter_routes().for_each(|route| {
         if let Some(journey_id) = route.last_section().journey_id() {
             journeys_to_ignore.insert(journey_id);
         }
     });
 
-    sort_routes(&mut new_routes);
     new_routes
 }
 
 fn explore_last_route_section_more_if_possible(
     data_storage: &DataStorage,
     route: &Route,
-    routes: &mut Vec<Route>,
+    routes: &mut RouteQueue,
 ) {
     let Some(journey_id) = route.last_section().journey_id() else {
         return;
@@ -83,7 +80,7 @@ fn explore_last_route_section_more_if_possible(
     let new_route = route.extend(data_storage, journey_id, route.arrival_at().date(), false);
 
     if let Some(rou) = new_route {
-        sorted_insert(routes, rou);
+        routes.push(rou);
     }
 }
 
@@ -128,17 +125,18 @@ fn explore_connections(
     data_storage: &DataStorage,
     route: &Route,
     journeys_to_ignore: &FxHashSet<i32>,
-    new_routes: &mut Vec<Route>,
+    new_routes: &mut RouteQueue,
 ) {
-    new_routes.extend(get_connections(data_storage, route, journeys_to_ignore));
+    for route in get_connections(data_storage, route, journeys_to_ignore) {
+        new_routes.push(route);
+    }
 }
 
-fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut Vec<Route>) {
+fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut RouteQueue) {
     if route.last_section().journey_id().is_none() {
         // No walking between 2 stops, after walking between 2 stops just before.
         return;
     }
-
     match get_stop_connections(data_storage, route.arrival_stop_id()) {
         Some(stop_connections) => stop_connections,
         None => return,
@@ -165,5 +163,5 @@ fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut 
             cloned_visited_stops.insert(stop_connection.stop_id_2());
         })
     })
-    .for_each(|new_route| sorted_insert(routes, new_route));
+    .for_each(|new_route| routes.push(new_route));
 }
