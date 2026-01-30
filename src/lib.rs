@@ -20,7 +20,10 @@ pub use service::run_service;
 mod tests {
     use std::{error::Error, fs::read_to_string, time::Instant};
 
-    use crate::{routing::find_reachable_stops_within_time_limit, utils::create_date_time};
+    use crate::{
+        isochrone::unique_coordinates_from_routes, routing::compute_routes_from_origin,
+        utils::create_date_time,
+    };
     use chrono::{Duration, TimeDelta, Timelike};
     use hrdf_parser::Hrdf;
     use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
@@ -224,20 +227,52 @@ mod tests {
         let start_time = Instant::now();
         let time_limit = 60;
         for (departure_stop_id, departure_at) in departures.into_iter() {
-            let routes: Vec<Route> = find_reachable_stops_within_time_limit(
+            let coordinates = hrdf
+                .data_storage()
+                .stops()
+                .data()
+                .get(&departure_stop_id)
+                .unwrap()
+                .wgs84_coordinates()
+                .unwrap();
+            let routes = compute_routes_from_origin(
                 hrdf,
-                departure_stop_id,
+                coordinates.latitude().unwrap(),
+                coordinates.longitude().unwrap(),
                 departure_at,
                 Duration::minutes(time_limit),
+                1,
+                1,
                 max_num_explorable_connections,
                 false,
             );
+            let mut data = unique_coordinates_from_routes(&routes, departure_at)
+                .into_iter()
+                .map(|(c, td)| {
+                    (
+                        c.easting().unwrap(),
+                        c.northing().unwrap(),
+                        td.num_minutes(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            data.sort_by(|(la, lb, lc), (ra, rb, rc)| {
+                let first = lc.cmp(rc);
+                match first {
+                    std::cmp::Ordering::Equal => {
+                        let second = la.partial_cmp(ra).unwrap();
+                        match second {
+                            std::cmp::Ordering::Equal => lb.partial_cmp(rb).unwrap(),
+                            _ => second,
+                        }
+                    }
+                    _ => first,
+                }
+            });
             let fname = format!("test_json/ref_routes_{departure_stop_id}.json");
-            println!("Comparing {fname}");
+            eprintln!("Comparing {fname}");
             let reference = read_to_string(fname).unwrap();
-            let (mut current, mut reference) = get_json_values(&routes, &reference).unwrap();
-            current.sort_all_objects();
-            reference.sort_all_objects();
+            let (current, reference) = get_json_values(&data, &reference).unwrap();
             assert_eq!(current, reference);
         }
 
