@@ -548,7 +548,7 @@ fn find_nearest_stop(
 }
 
 /// Each coordinate should be kept only once with the minimum duration associated
-fn unique_coordinates_from_routes(
+pub(crate) fn unique_coordinates_from_routes(
     routes: &[Route],
     departure_at: NaiveDateTime,
 ) -> Vec<(Coordinates, Duration)> {

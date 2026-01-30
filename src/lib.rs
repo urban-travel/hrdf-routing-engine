@@ -18,17 +18,40 @@ pub use service::run_service;
 
 #[cfg(test)]
 mod tests {
-    use std::{error::Error, time::Instant};
+    use std::{error::Error, fs::read_to_string, time::Instant};
 
-    use crate::debug::{test_find_reachable_stops_within_time_limit, test_plan_journey};
-    use chrono::{TimeDelta, Timelike};
-    use hrdf_parser::{Hrdf, Version};
+    use crate::{
+        isochrone::unique_coordinates_from_routes, routing::compute_routes_from_origin,
+        utils::create_date_time,
+    };
+    use chrono::{Duration, TimeDelta, Timelike};
+    use hrdf_parser::Hrdf;
     use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
 
     use test_log::test;
 
     use crate::{Route, plan_shortest_journey};
     use futures::future::join_all;
+
+    use pretty_assertions::assert_eq;
+
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use serde::{Deserialize, Serialize};
+
+    fn get_json_values<F>(
+        lhs: &F,
+        rhs: &str,
+    ) -> Result<(serde_json::Value, serde_json::Value), Box<dyn Error>>
+    where
+        for<'a> F: Serialize + Deserialize<'a>,
+    {
+        let serialized = serde_json::to_string(&lhs)?;
+        let reference = serde_json::to_string(&serde_json::from_str::<F>(rhs)?)?;
+        Ok((
+            serialized.parse::<serde_json::Value>()?,
+            reference.parse::<serde_json::Value>()?,
+        ))
+    }
 
     struct STrip(SimplifiedTrip);
 
@@ -148,17 +171,118 @@ mod tests {
         Ok(failed_comparison)
     }
 
+    pub fn test_find_reachable_stops_within_time_limit(hrdf: &Hrdf) {
+        let max_num_explorable_connections = 10;
+        let mut departures = Vec::new();
+        // 1. Petit-Lancy, Les Esserts (8587418)
+        let departure_stop_id = 8587418;
+        let departure_at = create_date_time(2025, 6, 1, 12, 30);
+        departures.push((departure_stop_id, departure_at));
+
+        // 2. Sevelen, Post (8588197)
+        let departure_stop_id = 8588197;
+        let departure_at = create_date_time(2025, 9, 2, 14, 2);
+        departures.push((departure_stop_id, departure_at));
+
+        // 3. Avully, village (8587031)
+        let departure_stop_id = 8587031;
+        let departure_at = create_date_time(2025, 7, 13, 16, 43);
+        departures.push((departure_stop_id, departure_at));
+
+        // 4. Bern, Bierhübeli (8590028)
+        let departure_stop_id = 8590028;
+        let departure_at = create_date_time(2025, 9, 17, 5, 59);
+        departures.push((departure_stop_id, departure_at));
+
+        // 5. Genève, gare Cornavin (8587057)
+        let departure_stop_id = 8587057;
+        let departure_at = create_date_time(2025, 10, 18, 20, 10);
+        departures.push((departure_stop_id, departure_at));
+
+        // 6. Villmergen, Zentrum (8587554)
+        let departure_stop_id = 8587554;
+        let departure_at = create_date_time(2025, 11, 22, 6, 59);
+        departures.push((departure_stop_id, departure_at));
+
+        // 7. Lugano, Genzana (8575310)
+        let departure_stop_id = 8575310;
+        let departure_at = create_date_time(2025, 4, 9, 8, 4);
+        departures.push((departure_stop_id, departure_at));
+
+        // 8. Zürich HB (8503000)
+        let departure_stop_id = 8503000;
+        let departure_at = create_date_time(2025, 6, 15, 12, 10);
+        departures.push((departure_stop_id, departure_at));
+
+        // 9. Campocologno (8509368)
+        let departure_stop_id = 8509368;
+        let departure_at = create_date_time(2025, 5, 29, 17, 29);
+        departures.push((departure_stop_id, departure_at));
+
+        // 10. Chancy, Douane (8587477)
+        let departure_stop_id = 8587477;
+        let departure_at = create_date_time(2025, 9, 10, 13, 37);
+        departures.push((departure_stop_id, departure_at));
+
+        let start_time = Instant::now();
+        let time_limit = 60;
+        for (departure_stop_id, departure_at) in departures.into_iter() {
+            let coordinates = hrdf
+                .data_storage()
+                .stops()
+                .data()
+                .get(&departure_stop_id)
+                .unwrap()
+                .wgs84_coordinates()
+                .unwrap();
+            let routes = compute_routes_from_origin(
+                hrdf,
+                coordinates.latitude().unwrap(),
+                coordinates.longitude().unwrap(),
+                departure_at,
+                Duration::minutes(time_limit),
+                1,
+                1,
+                max_num_explorable_connections,
+                false,
+            );
+            let mut data = unique_coordinates_from_routes(&routes, departure_at)
+                .into_iter()
+                .map(|(c, td)| {
+                    (
+                        c.easting().unwrap(),
+                        c.northing().unwrap(),
+                        td.num_minutes(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            data.sort_by(|(la, lb, lc), (ra, rb, rc)| {
+                let first = lc.cmp(rc);
+                match first {
+                    std::cmp::Ordering::Equal => {
+                        let second = la.partial_cmp(ra).unwrap();
+                        match second {
+                            std::cmp::Ordering::Equal => lb.partial_cmp(rb).unwrap(),
+                            _ => second,
+                        }
+                    }
+                    _ => first,
+                }
+            });
+            let fname = format!("test_json/ref_routes_{departure_stop_id}.json");
+            eprintln!("Comparing {fname}");
+            let reference = read_to_string(fname).unwrap();
+            let (current, reference) = get_json_values(&data, &reference).unwrap();
+            assert_eq!(current, reference);
+        }
+
+        println!("{:.2?}", start_time.elapsed());
+    }
+
     #[test(tokio::test)]
     async fn test_journeys() {
         // First build hrdf file
-        let hrdf = Hrdf::new(
-            Version::V_5_40_41_2_0_7,
-            "https://data.opentransportdata.swiss/en/dataset/timetable-54-2025-hrdf/permalink",
-            false,
-            None,
-        )
-        .await
-        .unwrap();
+        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
         let started = Instant::now();
         let failures = test_paths_validity(&hrdf, &IDS).await.unwrap();
         log::info!(
@@ -173,7 +297,6 @@ mod tests {
             }
         }
         assert!(failures.is_empty());
-        test_plan_journey(&hrdf);
         test_find_reachable_stops_within_time_limit(&hrdf);
     }
 }

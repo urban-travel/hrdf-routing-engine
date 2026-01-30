@@ -1,12 +1,8 @@
 use std::time::Instant;
 
-use chrono::Duration;
 use hrdf_parser::Hrdf;
 
-use crate::{
-    routing::{find_reachable_stops_within_time_limit, plan_journey},
-    utils::create_date_time,
-};
+use crate::{routing::plan_journey, utils::create_date_time};
 
 pub fn run_debug(hrdf: Hrdf) {
     println!();
@@ -19,7 +15,6 @@ pub fn run_debug(hrdf: Hrdf) {
     );
 
     test_plan_journey(&hrdf);
-    test_find_reachable_stops_within_time_limit(&hrdf);
 }
 
 #[allow(dead_code)]
@@ -179,64 +174,4 @@ pub fn test_plan_journey(hrdf: &Hrdf) {
     println!("==============================================");
 
     println!("\n{:.2?}", start_time.elapsed());
-}
-
-#[allow(dead_code)]
-pub fn test_find_reachable_stops_within_time_limit(hrdf: &Hrdf) {
-    let max_num_explorable_connections = 10;
-    // 1. Petit-Lancy, Les Esserts (8587418)
-    let departure_stop_id = 8587418;
-    let departure_at = create_date_time(2025, 6, 1, 12, 30);
-
-    // 2. Sevelen, Post (8588197)
-    // let departure_stop_id = 8588197;
-    // let departure_at = create_date_time(2025, 9, 2, 14, 2);
-
-    // 3. Avully, village (8587031)
-    // let departure_stop_id = 8587031;
-    // let departure_at = create_date_time(2025, 7, 13, 16, 43);
-
-    // 4. Bern, Bierhübeli (8590028)
-    // let departure_stop_id = 8590028;
-    // let departure_at = create_date_time(2025, 9, 17, 5, 59);
-
-    // 5. Genève, gare Cornavin (8587057)
-    // let departure_stop_id = 8587057;
-    // let departure_at = create_date_time(2025, 10, 18, 20, 10);
-
-    // 6. Villmergen, Zentrum (8587554)
-    // let departure_stop_id = 8587554;
-    // let departure_at = create_date_time(2025, 11, 22, 6, 59);
-
-    // 7. Lugano, Genzana (8575310)
-    // let departure_stop_id = 8575310;
-    // let departure_at = create_date_time(2025, 4, 9, 8, 4);
-
-    // 8. Zürich HB (8503000)
-    // let departure_stop_id = 8503000;
-    // let departure_at = create_date_time(2025, 6, 15, 12, 10);
-
-    // 9. Campocologno (8509368)
-    // let departure_stop_id = 8509368;
-    // let departure_at = create_date_time(2025, 5, 29, 17, 29);
-
-    // 10. Chancy, Douane (8587477)
-    // let departure_stop_id = 8587477;
-    // let departure_at = create_date_time(2025, 9, 10, 13, 37);
-
-    let start_time = Instant::now();
-    for time_limit in [60, 120, 180] {
-        let routes = find_reachable_stops_within_time_limit(
-            hrdf,
-            departure_stop_id,
-            departure_at,
-            Duration::minutes(time_limit),
-            max_num_explorable_connections,
-            false,
-        );
-
-        println!("\n{}", routes.len());
-    }
-
-    println!("{:.2?}", start_time.elapsed());
 }
