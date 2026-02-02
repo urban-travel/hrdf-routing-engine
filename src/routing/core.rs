@@ -2,6 +2,8 @@ use chrono::NaiveDateTime;
 use hrdf_parser::DataStorage;
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::utils::add_minutes_to_date_time;
+
 use super::{
     connections::next_departures,
     exploration::explore_routes,
@@ -105,7 +107,7 @@ pub fn create_initial_routes(
                 None,
                 stop_connection.stop_id_1(),
                 stop_connection.stop_id_2(),
-                departure_at,
+                add_minutes_to_date_time(departure_at, stop_connection.duration().into()),
                 Some(stop_connection.duration()),
             );
             routes.push(Route::new(vec![section], visited_stops));
