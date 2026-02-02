@@ -153,6 +153,7 @@ pub struct HectareData {
     data: Vec<HectareRecord>,
 }
 
+#[cfg(feature = "hectare")]
 impl PartialEq for HectareData {
     fn eq(&self, other: &Self) -> bool {
         self.data
