@@ -114,7 +114,10 @@ impl ExcludedPolygons {
                 // The cache must be built.
                 // If cache loading has failed, the cache must be rebuilt.
                 let data_path = if Url::parse(url).is_ok() {
-                    let data_path = format!("/tmp/{unique_filename}");
+                    let data_path = env::temp_dir()
+                        .join(&unique_filename)
+                        .to_string_lossy()
+                        .to_string();
 
                     if !Path::new(&data_path).exists() {
                         // The data must be downloaded.
@@ -320,7 +323,8 @@ mod tests {
         let polygon = Polygon::new(LineString::from(exterior), vec![]);
         let multi_polygon = MultiPolygon::new(vec![polygon]);
 
-        let cache_path = "/tmp/test_excluded_polygons.cache";
+        let cache_path = env::temp_dir().join("test_excluded_polygons.cache");
+        let cache_path = cache_path.to_str().unwrap();
         let _ = fs::remove_file(cache_path);
         ExcludedPolygons::build_cache(&multi_polygon, cache_path)
             .unwrap_or_else(|_| panic!("Failed to build cache {cache_path}"));
@@ -366,7 +370,8 @@ mod tests {
         let hectare_data = HectareData {
             data: test_records.clone(),
         };
-        let cache_path = "/tmp/test_hectare.cache";
+        let cache_path = env::temp_dir().join("test_hectare.cache");
+        let cache_path = cache_path.to_str().unwrap();
         let _ = fs::remove_file(cache_path);
         hectare_data
             .build_cache(cache_path)

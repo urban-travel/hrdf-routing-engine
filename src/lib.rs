@@ -18,7 +18,7 @@ pub use service::run_service;
 
 #[cfg(test)]
 mod tests {
-    use std::{error::Error, fs::read_to_string, time::Instant};
+    use std::{env, error::Error, fs::read_to_string, time::Instant};
 
     use crate::{
         ExcludedPolygons, HectareData, LAKES_GEOJSON_URLS,
@@ -303,14 +303,20 @@ mod tests {
 
     #[test(tokio::test)]
     async fn test_real_polygons_cache() {
-        let original =
-            ExcludedPolygons::try_new(&LAKES_GEOJSON_URLS, true, Some(String::from("/tmp/")))
-                .await
-                .expect("Failed to create new polygons from online data");
-        let loaded =
-            ExcludedPolygons::try_new(&LAKES_GEOJSON_URLS, false, Some(String::from("/tmp/")))
-                .await
-                .expect("Failed to create new polygons from cached");
+        let original = ExcludedPolygons::try_new(
+            &LAKES_GEOJSON_URLS,
+            true,
+            Some(env::temp_dir().to_string_lossy().to_string()),
+        )
+        .await
+        .expect("Failed to create new polygons from online data");
+        let loaded = ExcludedPolygons::try_new(
+            &LAKES_GEOJSON_URLS,
+            false,
+            Some(env::temp_dir().to_string_lossy().to_string()),
+        )
+        .await
+        .expect("Failed to create new polygons from cached");
 
         assert_eq!(original, loaded);
     }
@@ -318,13 +324,23 @@ mod tests {
     #[test(tokio::test)]
     #[cfg(feature = "hectare")]
     async fn test_real_hectare_data_cache() {
+        use std::env;
+
         let url = "https://dam-api.bfs.admin.ch/hub/api/dam/assets/32686751/master";
-        let original = HectareData::new(url, true, Some(String::from("/tmp/")))
-            .await
-            .expect("Failed to create new hectare data from online data");
-        let loaded = HectareData::new(url, false, Some(String::from("/tmp/")))
-            .await
-            .expect("Failed to create new polygons from cached");
+        let original = HectareData::new(
+            url,
+            true,
+            Some(env::temp_dir().to_string_lossy().to_string()),
+        )
+        .await
+        .expect("Failed to create new hectare data from online data");
+        let loaded = HectareData::new(
+            url,
+            false,
+            Some(env::temp_dir().to_string_lossy().to_string()),
+        )
+        .await
+        .expect("Failed to create new polygons from cached");
 
         assert_eq!(original, loaded);
     }
