@@ -4,7 +4,6 @@ use std::fs::{self, File};
 use std::io::{BufReader, Cursor};
 use std::path::Path;
 
-use bincode::config;
 use geo::{BooleanOps, MultiPolygon, Polygon};
 use geojson::{FeatureCollection, GeoJson};
 use serde::{Deserialize, Serialize};
@@ -78,14 +77,14 @@ pub struct ExcludedPolygons;
 
 impl ExcludedPolygons {
     fn build_cache(multis: &MultiPolygon, path: &str) -> Result<(), Box<dyn Error>> {
-        let data = bincode::serde::encode_to_vec(multis, config::standard())?;
-        std::fs::write(path, data)?;
+        let bytes = postcard::to_stdvec(multis)?;
+        std::fs::write(path, bytes)?;
         Ok(())
     }
 
     fn load_from_cache(path: &str) -> Result<MultiPolygon, Box<dyn Error>> {
         let data = std::fs::read(path)?;
-        let (multis, _) = bincode::serde::decode_from_slice(&data, config::standard())?;
+        let multis: MultiPolygon = postcard::from_bytes(&data)?;
         Ok(multis)
     }
 
@@ -115,7 +114,10 @@ impl ExcludedPolygons {
                 // The cache must be built.
                 // If cache loading has failed, the cache must be rebuilt.
                 let data_path = if Url::parse(url).is_ok() {
-                    let data_path = format!("/tmp/{unique_filename}");
+                    let data_path = env::temp_dir()
+                        .join(&unique_filename)
+                        .to_string_lossy()
+                        .to_string();
 
                     if !Path::new(&data_path).exists() {
                         // The data must be downloaded.
@@ -152,6 +154,16 @@ impl ExcludedPolygons {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HectareData {
     data: Vec<HectareRecord>,
+}
+
+#[cfg(feature = "hectare")]
+impl PartialEq for HectareData {
+    fn eq(&self, other: &Self) -> bool {
+        self.data
+            .iter()
+            .zip(other.data.iter())
+            .all(|(lhs, rhs)| lhs.eq(rhs))
+    }
 }
 
 #[cfg(feature = "hectare")]
@@ -270,24 +282,122 @@ impl HectareData {
     }
 
     fn build_cache(&self, path: &str) -> Result<(), Box<dyn Error>> {
-        let data = bincode::serde::encode_to_vec(self, config::standard())?;
-        fs::write(path, data)?;
+        let bytes = postcard::to_stdvec(self)?;
+        fs::write(path, bytes)?;
         Ok(())
     }
 
     fn load_from_cache(path: &str) -> Result<Self, Box<dyn Error>> {
         let data = fs::read(path)?;
-        let (hrdf, _) = bincode::serde::decode_from_slice(&data, config::standard())?;
-        Ok(hrdf)
+        let hectare: HectareData = postcard::from_bytes(&data)?;
+        Ok(hectare)
     }
 }
 
 #[cfg(feature = "hectare")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HectareRecord {
     pub reli: u64,
     pub longitude: f64,
     pub latitude: f64,
     pub population: u64,
     pub area: Option<f64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use geo::{LineString, Polygon};
+    use std::fs;
+
+    #[test]
+    fn test_excluded_polygons_cache() {
+        // Create a test MultiPolygon
+        let exterior = vec![
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 10.0),
+            (0.0, 10.0),
+            (0.0, 0.0),
+        ];
+        let polygon = Polygon::new(LineString::from(exterior), vec![]);
+        let multi_polygon = MultiPolygon::new(vec![polygon]);
+
+        let cache_path = env::temp_dir().join("test_excluded_polygons.cache");
+        let cache_path = cache_path.to_str().unwrap();
+        let _ = fs::remove_file(cache_path);
+        ExcludedPolygons::build_cache(&multi_polygon, cache_path)
+            .unwrap_or_else(|_| panic!("Failed to build cache {cache_path}"));
+
+        assert!(
+            std::path::Path::new(cache_path).exists(),
+            "Cache file should exist"
+        );
+
+        let loaded_polygon = ExcludedPolygons::load_from_cache(cache_path)
+            .unwrap_or_else(|_| panic!("Failed to load from {cache_path}"));
+
+        assert_eq!(
+            multi_polygon.0.len(),
+            loaded_polygon.0.len(),
+            "Number of polygons should match"
+        );
+
+        fs::remove_file(cache_path)
+            .unwrap_or_else(|_| panic!("Failed to remove cache file {cache_path}"));
+    }
+
+    #[test]
+    #[cfg(feature = "hectare")]
+    fn test_hectare_data_cache() {
+        let test_records = vec![
+            HectareRecord {
+                reli: 1,
+                longitude: 6.14,
+                latitude: 46.21,
+                population: 1000,
+                area: Some(100.0),
+            },
+            HectareRecord {
+                reli: 2,
+                longitude: 7.44,
+                latitude: 46.95,
+                population: 2000,
+                area: Some(150.0),
+            },
+        ];
+
+        let hectare_data = HectareData {
+            data: test_records.clone(),
+        };
+        let cache_path = env::temp_dir().join("test_hectare.cache");
+        let cache_path = cache_path.to_str().unwrap();
+        let _ = fs::remove_file(cache_path);
+        hectare_data
+            .build_cache(cache_path)
+            .unwrap_or_else(|_| panic!("Failed to build cache {cache_path}"));
+
+        assert!(
+            std::path::Path::new(cache_path).exists(),
+            "Cache file should exist"
+        );
+
+        let loaded_data = HectareData::load_from_cache(cache_path)
+            .unwrap_or_else(|_| panic!("Failed to load from {cache_path}"));
+        assert_eq!(
+            hectare_data.data.len(),
+            loaded_data.data.len(),
+            "Number of records should match"
+        );
+
+        for (original, loaded) in hectare_data.data.iter().zip(loaded_data.data.iter()) {
+            assert_eq!(original.reli, loaded.reli);
+            assert_eq!(original.longitude, loaded.longitude);
+            assert_eq!(original.latitude, loaded.latitude);
+            assert_eq!(original.population, loaded.population);
+            assert_eq!(original.area, loaded.area);
+        }
+        fs::remove_file(cache_path)
+            .unwrap_or_else(|_| panic!("Failed to remove cache file {cache_path}"));
+    }
 }

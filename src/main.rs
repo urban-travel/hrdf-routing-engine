@@ -189,7 +189,7 @@ enum Mode {
         /// The +/- duration on which to compute the average (in minutes)
         #[arg(long, default_value_t = 30)]
         delta_time: i64,
-        /// The +/- duration on which to compute the average (in minutes)
+        /// The URL from where to download the necessary data for the Hectare computations
         #[arg(short, long, default_value_t = String::from("https://dam-api.bfs.admin.ch/hub/api/dam/assets/32686751/master"))]
         url: String,
     },
