@@ -1,6 +1,7 @@
 use std::num::{ParseFloatError, ParseIntError};
 
 use thiserror::Error;
+#[cfg(feature = "hectare")]
 use zip::result::ZipError;
 
 #[derive(Debug, Error)]
@@ -25,10 +26,12 @@ pub enum RError {
     ParseIntError(#[from] ParseIntError),
     #[error("Failed to parse float: {0}")]
     ParseFloatError(#[from] ParseFloatError),
+    #[cfg(feature = "hectare")]
     #[error("Csv error: {0}")]
     CsvError(#[from] csv::Error),
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
+    #[cfg(feature = "hectare")]
     #[error("Failed decompress data: {0}")]
     Decompress(#[from] ZipError),
 }
