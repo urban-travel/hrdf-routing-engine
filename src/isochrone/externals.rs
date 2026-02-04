@@ -1,5 +1,4 @@
 use std::env;
-use std::error::Error;
 use std::fs::{self, File};
 use std::io::{BufReader, Cursor};
 use std::path::Path;
@@ -12,6 +11,8 @@ use url::Url;
 
 #[cfg(feature = "hectare")]
 use zip::ZipArchive;
+
+use crate::RResult;
 
 use super::utils::lv95_to_wgs84;
 
@@ -38,7 +39,7 @@ pub const LAKES_GEOJSON_URLS: [&str; 20] = [
     "https://raw.githubusercontent.com/ZHB/switzerland-geojson/05cc91014860ddd8a6c1704f4a421f1e9b1f0080/lakes/lake-zurich.geojson",
 ];
 
-fn parse_geojson_file(path: &str) -> Result<MultiPolygon, Box<dyn Error>> {
+fn parse_geojson_file(path: &str) -> RResult<MultiPolygon> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
 
@@ -76,13 +77,13 @@ fn parse_geojson_file(path: &str) -> Result<MultiPolygon, Box<dyn Error>> {
 pub struct ExcludedPolygons;
 
 impl ExcludedPolygons {
-    fn build_cache(multis: &MultiPolygon, path: &str) -> Result<(), Box<dyn Error>> {
+    fn build_cache(multis: &MultiPolygon, path: &str) -> RResult<()> {
         let bytes = postcard::to_stdvec(multis)?;
         std::fs::write(path, bytes)?;
         Ok(())
     }
 
-    fn load_from_cache(path: &str) -> Result<MultiPolygon, Box<dyn Error>> {
+    fn load_from_cache(path: &str) -> RResult<MultiPolygon> {
         let data = std::fs::read(path)?;
         let multis: MultiPolygon = postcard::from_bytes(&data)?;
         Ok(multis)
@@ -92,7 +93,7 @@ impl ExcludedPolygons {
         urls: &[&str],
         force_rebuild_cache: bool,
         cache_prefix: Option<String>,
-    ) -> Result<MultiPolygon, Box<dyn Error>> {
+    ) -> RResult<MultiPolygon> {
         let cache_path = format!(
             "{}/{:x}.cache",
             cache_prefix.unwrap_or("./".to_string()),
@@ -176,7 +177,7 @@ impl HectareData {
         url_or_path: &str,
         force_rebuild_cache: bool,
         cache_prefix: Option<String>,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> RResult<Self> {
         let unique_filename = format!("{:x}", Sha256::digest(url_or_path.as_bytes()));
         let cache_path = format!(
             "{}/{unique_filename}.cache",
@@ -250,7 +251,7 @@ impl HectareData {
         Ok(hectare)
     }
 
-    fn parse(decompressed_data_path: &str) -> Result<Vec<HectareRecord>, Box<dyn Error>> {
+    fn parse(decompressed_data_path: &str) -> RResult<Vec<HectareRecord>> {
         let path = format!("{decompressed_data_path}/ag-b-00.03-vz2023statpop/STATPOP2023.csv");
         let file = File::open(path)?;
 
@@ -281,13 +282,13 @@ impl HectareData {
         self.data
     }
 
-    fn build_cache(&self, path: &str) -> Result<(), Box<dyn Error>> {
+    fn build_cache(&self, path: &str) -> RResult<()> {
         let bytes = postcard::to_stdvec(self)?;
         fs::write(path, bytes)?;
         Ok(())
     }
 
-    fn load_from_cache(path: &str) -> Result<Self, Box<dyn Error>> {
+    fn load_from_cache(path: &str) -> RResult<Self> {
         let data = fs::read(path)?;
         let hectare: HectareData = postcard::from_bytes(&data)?;
         Ok(hectare)

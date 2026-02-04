@@ -6,13 +6,14 @@ use strum_macros::EnumString;
 
 #[cfg(feature = "svg")]
 use geo::BoundingRect;
-#[cfg(feature = "svg")]
-use std::error::Error;
 use std::fmt::Display;
 #[cfg(feature = "svg")]
 use svg::Document;
 #[cfg(feature = "svg")]
 use svg::node::element::Polygon as SvgPolygon;
+
+#[cfg(feature = "svg")]
+use crate::RResult;
 
 use super::utils::{multi_polygon_to_lv95, wgs84_to_lv95};
 
@@ -104,12 +105,7 @@ impl IsochroneMap {
     }
 
     #[cfg(feature = "svg")]
-    pub fn write_svg(
-        &self,
-        path: &str,
-        scale_factor: f64,
-        c: Option<Coordinates>,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn write_svg(&self, path: &str, scale_factor: f64, c: Option<Coordinates>) -> RResult<()> {
         const HEXES: [&str; 6] = [
             "#36AB68", // Nearest.
             "#91CF60", //
@@ -119,6 +115,8 @@ impl IsochroneMap {
             "#E2453C", // Furthest.
         ];
         use svg::node::element::Line;
+
+        use crate::error::RError;
 
         let polys = self
             .get_polygons()
@@ -137,9 +135,10 @@ impl IsochroneMap {
 
         let bounding_rect = polys
             .last()
+            .ok_or_else(|| RError::EmptyMultiPolygon)
             .expect("MultiPolygons Vec is empty")
             .bounding_rect()
-            .expect("Unable to find bounding rectangle");
+            .ok_or_else(|| RError::NoBoundingRect)?;
         let (min_x, min_y) = bounding_rect.min().x_y();
         let (max_x, max_y) = bounding_rect.max().x_y();
         let mut document = polys
