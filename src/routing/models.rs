@@ -498,17 +498,8 @@ mod tests {
         };
 
         RouteSectionResult::new(
-            journey_id,
-            dep_stop,
-            None,
-            None, // LV95 and WGS84 coordinates
-            arr_stop,
-            None,
-            None,
-            dep_at,
-            arr_at,
-            duration,
-            transport,
+            journey_id, dep_stop, None, None, // LV95 and WGS84 coordinates
+            arr_stop, None, None, dep_at, arr_at, duration, transport,
         )
     }
 
