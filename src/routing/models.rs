@@ -471,3 +471,445 @@ impl From<&TransportType> for Transport {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDateTime;
+
+    fn create_test_section(
+        journey_id: Option<i32>,
+        dep_stop: i32,
+        arr_stop: i32,
+        dep_time: &str,
+        arr_time: &str,
+        duration: Option<i16>,
+        transport: Transport,
+    ) -> RouteSectionResult {
+        let dep_at = if dep_time.is_empty() {
+            None
+        } else {
+            Some(NaiveDateTime::parse_from_str(dep_time, "%Y-%m-%d %H:%M:%S").unwrap())
+        };
+        let arr_at = if arr_time.is_empty() {
+            None
+        } else {
+            Some(NaiveDateTime::parse_from_str(arr_time, "%Y-%m-%d %H:%M:%S").unwrap())
+        };
+
+        RouteSectionResult::new(
+            journey_id,
+            dep_stop,
+            None,
+            None, // LV95 and WGS84 coordinates
+            arr_stop,
+            None,
+            None,
+            dep_at,
+            arr_at,
+            duration,
+            transport,
+        )
+    }
+
+    #[test]
+    fn test_route_result_total_time() {
+        let sections = vec![create_test_section(
+            Some(1),
+            8503000,
+            8507000,
+            "2025-06-15 10:00:00",
+            "2025-06-15 11:30:00",
+            None,
+            Transport::Train,
+        )];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:30:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        assert_eq!(route.total_time().num_minutes(), 90);
+    }
+
+    #[test]
+    fn test_route_result_number_changes_direct() {
+        let sections = vec![create_test_section(
+            Some(1),
+            8503000,
+            8507000,
+            "2025-06-15 10:00:00",
+            "2025-06-15 11:00:00",
+            None,
+            Transport::Train,
+        )];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        assert_eq!(route.number_changes(), 0, "Direct journey has no changes");
+    }
+
+    #[test]
+    fn test_route_result_number_changes_with_one_transfer() {
+        let sections = vec![
+            create_test_section(
+                Some(1),
+                8503000,
+                8507000,
+                "2025-06-15 10:00:00",
+                "2025-06-15 10:45:00",
+                None,
+                Transport::Train,
+            ),
+            create_test_section(
+                Some(2),
+                8507000,
+                8508000,
+                "2025-06-15 10:50:00",
+                "2025-06-15 11:30:00",
+                None,
+                Transport::Train,
+            ),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:30:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        assert_eq!(route.number_changes(), 1, "One transfer = 1 change");
+    }
+
+    #[test]
+    fn test_route_result_number_changes_with_two_transfers() {
+        let sections = vec![
+            create_test_section(
+                Some(1),
+                8503000,
+                8507000,
+                "2025-06-15 10:00:00",
+                "2025-06-15 10:45:00",
+                None,
+                Transport::Train,
+            ),
+            create_test_section(
+                Some(2),
+                8507000,
+                8508000,
+                "2025-06-15 10:50:00",
+                "2025-06-15 11:30:00",
+                None,
+                Transport::Train,
+            ),
+            create_test_section(
+                Some(3),
+                8508000,
+                8509000,
+                "2025-06-15 11:35:00",
+                "2025-06-15 12:00:00",
+                None,
+                Transport::Train,
+            ),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 12:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        assert_eq!(route.number_changes(), 2, "Two transfers = 2 changes");
+    }
+
+    #[test]
+    fn test_route_result_number_changes_excludes_walking() {
+        let sections = vec![
+            create_test_section(None, 8503000, 8503001, "", "", Some(5), Transport::Walk),
+            create_test_section(
+                Some(1),
+                8503001,
+                8507000,
+                "2025-06-15 10:00:00",
+                "2025-06-15 10:45:00",
+                None,
+                Transport::Train,
+            ),
+            create_test_section(
+                Some(2),
+                8507000,
+                8508000,
+                "2025-06-15 10:50:00",
+                "2025-06-15 11:30:00",
+                None,
+                Transport::Train,
+            ),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:30:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        // Walking doesn't count as a change, only the train-to-train transfer
+        assert_eq!(route.number_changes(), 1);
+    }
+
+    #[test]
+    fn test_route_result_total_walking_time() {
+        let sections = vec![
+            create_test_section(None, 8503000, 8503001, "", "", Some(5), Transport::Walk),
+            create_test_section(
+                Some(1),
+                8503001,
+                8507000,
+                "2025-06-15 10:00:00",
+                "2025-06-15 11:00:00",
+                None,
+                Transport::Train,
+            ),
+            create_test_section(None, 8507000, 8507001, "", "", Some(3), Transport::Walk),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        assert_eq!(
+            route.total_walking_time().num_minutes(),
+            8,
+            "5 + 3 = 8 minutes"
+        );
+    }
+
+    #[test]
+    fn test_route_result_total_walking_time_no_walking() {
+        let sections = vec![create_test_section(
+            Some(1),
+            8503000,
+            8507000,
+            "2025-06-15 10:00:00",
+            "2025-06-15 11:00:00",
+            None,
+            Transport::Train,
+        )];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        assert_eq!(route.total_walking_time().num_minutes(), 0);
+    }
+
+    #[test]
+    fn test_route_result_total_walking_time_only_walking() {
+        let sections = vec![
+            create_test_section(None, 8503000, 8503001, "", "", Some(5), Transport::Walk),
+            create_test_section(None, 8503001, 8503002, "", "", Some(7), Transport::Walk),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:12:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        assert_eq!(route.total_walking_time().num_minutes(), 12);
+    }
+
+    #[test]
+    fn test_route_result_departure_at_with_initial_walking() {
+        let sections = vec![
+            create_test_section(None, 8503000, 8503001, "", "", Some(5), Transport::Walk),
+            create_test_section(
+                Some(1),
+                8503001,
+                8507000,
+                "2025-06-15 10:00:00",
+                "2025-06-15 11:00:00",
+                None,
+                Transport::Train,
+            ),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        // Should subtract 5 minutes of walking from departure time
+        let expected =
+            NaiveDateTime::parse_from_str("2025-06-15 09:55:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        assert_eq!(route.departure_at(), expected);
+    }
+
+    #[test]
+    fn test_route_result_departure_at_without_walking() {
+        let sections = vec![create_test_section(
+            Some(1),
+            8503000,
+            8507000,
+            "2025-06-15 10:00:00",
+            "2025-06-15 11:00:00",
+            None,
+            Transport::Train,
+        )];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        // Should return the stored departure time
+        assert_eq!(route.departure_at(), dep_at);
+    }
+
+    #[test]
+    fn test_route_result_arrival_at_with_final_walking() {
+        let sections = vec![
+            create_test_section(
+                Some(1),
+                8503000,
+                8507000,
+                "2025-06-15 10:00:00",
+                "2025-06-15 11:00:00",
+                None,
+                Transport::Train,
+            ),
+            create_test_section(None, 8507000, 8507001, "", "", Some(3), Transport::Walk),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        // Should add 3 minutes of walking to arrival time
+        let expected =
+            NaiveDateTime::parse_from_str("2025-06-15 11:03:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        assert_eq!(route.arrival_at(), expected);
+    }
+
+    #[test]
+    fn test_route_result_arrival_at_without_walking() {
+        let sections = vec![create_test_section(
+            Some(1),
+            8503000,
+            8507000,
+            "2025-06-15 10:00:00",
+            "2025-06-15 11:00:00",
+            None,
+            Transport::Train,
+        )];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        // Should return the stored arrival time
+        assert_eq!(route.arrival_at(), arr_at);
+    }
+
+    #[test]
+    fn test_route_result_empty_sections() {
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, dep_at, vec![]);
+
+        assert_eq!(route.number_changes(), 0);
+        assert_eq!(route.total_walking_time().num_minutes(), 0);
+        assert_eq!(route.total_time().num_minutes(), 0);
+        assert_eq!(route.departure_stop_id(), None);
+        assert_eq!(route.arrival_stop_id(), None);
+    }
+
+    #[test]
+    fn test_route_result_stop_ids() {
+        let sections = vec![create_test_section(
+            Some(1),
+            8503000,
+            8507000,
+            "2025-06-15 10:00:00",
+            "2025-06-15 11:00:00",
+            None,
+            Transport::Train,
+        )];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        assert_eq!(route.departure_stop_id(), Some(8503000));
+        assert_eq!(route.arrival_stop_id(), Some(8507000));
+    }
+
+    #[test]
+    fn test_route_result_stop_ids_with_walking() {
+        let sections = vec![
+            create_test_section(None, 8503000, 8503001, "", "", Some(5), Transport::Walk),
+            create_test_section(
+                Some(1),
+                8503001,
+                8507000,
+                "2025-06-15 10:00:00",
+                "2025-06-15 11:00:00",
+                None,
+                Transport::Train,
+            ),
+            create_test_section(None, 8507000, 8507001, "", "", Some(3), Transport::Walk),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        // Should return first and last stops (including walking)
+        assert_eq!(route.departure_stop_id(), Some(8503000));
+        assert_eq!(route.arrival_stop_id(), Some(8507001));
+    }
+
+    #[test]
+    fn test_route_result_total_time_with_walking() {
+        let sections = vec![
+            create_test_section(None, 8503000, 8503001, "", "", Some(5), Transport::Walk),
+            create_test_section(
+                Some(1),
+                8503001,
+                8507000,
+                "2025-06-15 10:00:00",
+                "2025-06-15 11:00:00",
+                None,
+                Transport::Train,
+            ),
+            create_test_section(None, 8507000, 8507001, "", "", Some(3), Transport::Walk),
+        ];
+
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        // Total time should account for walking: (11:03) - (09:55) = 68 minutes
+        assert_eq!(route.total_time().num_minutes(), 68);
+    }
+}
