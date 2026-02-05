@@ -46,7 +46,7 @@ jobs:
       - name: cargo test --doc
         env: # Or as an environment variable
           TOKEN: ${{ secrets.TOKEN }}
-        run: cargo test --locked --all-features --doc
+        run: cargo test --locked --all-features --doc -- --test-threads 1
   minimal:
     # This action chooses the oldest version of the dependencies permitted by Cargo.toml to ensure
     # that this crate is compatible with the minimal version that this crate and its dependencies
@@ -155,7 +155,7 @@ jobs:
       - name: cargo llvm-cov
         env: # Or as an environment variable
           TOKEN: ${{ secrets.TOKEN }}
-        run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info
+        run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info -- --test-threads 1
       - name: Record Rust version
         run: echo "RUST=$(rustc --version)" >> "$GITHUB_ENV"
       - name: Upload to codecov.io
