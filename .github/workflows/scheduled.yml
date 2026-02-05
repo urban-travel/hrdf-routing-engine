@@ -30,7 +30,7 @@ jobs:
       - name: cargo test --locked
         env: # Or as an environment variable
           TOKEN: ${{ secrets.TOKEN }}
-        run: cargo test --locked --all-features --all-targets
+        run: cargo test --locked --all-features --all-targets -- --test-threads 1
   # https://twitter.com/alcuadrado/status/1571291687837732873
   update:
     # This action checks that updating the dependencies of this crate to the latest available that
@@ -55,7 +55,7 @@ jobs:
         run: cargo update
       - name: cargo test
         if: hashFiles('Cargo.lock') != ''
-        run: cargo test --locked --all-features --all-targets
+        run: cargo test --locked --all-features --all-targets -- --test-threads 1
         env:
           RUSTFLAGS: -D deprecated
           TOKEN: ${{ secrets.TOKEN }}
