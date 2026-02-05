@@ -11,6 +11,8 @@ use super::{
     utils::{lv95_to_wgs84, time_to_distance},
 };
 
+/// Returns the polygons in wgs84 coordinates from LV95 coordinates.
+// TODO: create two versions of this function for LV95 and WGS84
 pub fn get_polygons(
     data: &[(Coordinates, Duration)],
     time_limit: Duration,
@@ -18,46 +20,6 @@ pub fn get_polygons(
     num_circle_points: usize,
     num_threads: usize,
 ) -> MultiPolygon {
-    // let polygons = data
-    //     .iter()
-    //     .filter(|(_, duration)| prev_time_limit <= *duration && *duration <= time_limit)
-    //     .collect::<Vec<_>>();
-    // polygons
-    //     .chunks(50)
-    //     .map(|c| {
-    //         let poly = c
-    //             .iter()
-    //             .map(|(center_lv95, duration)| {
-    //                 let distance = time_to_distance(
-    //                     time_limit - *duration,
-    //                     WALKING_SPEED_IN_KILOMETERS_PER_HOUR,
-    //                 );
-    //
-    //                 let polygon = generate_lv95_circle_points(
-    //                     center_lv95.easting().expect("Wrong coordinate system"),
-    //                     center_lv95.northing().expect("Wrong coordinate system"),
-    //                     distance,
-    //                     num_circle_points,
-    //                 )
-    //                 .into_iter()
-    //                 .map(|lv95| {
-    //                     let wgs84 = lv95_to_wgs84(
-    //                         lv95.easting().expect("Wrong coordinate system"),
-    //                         lv95.northing().expect("Wrong coordinate system"),
-    //                     );
-    //                     (wgs84.0, wgs84.1)
-    //                 })
-    //                 .collect::<Vec<_>>();
-    //                 // MultiPolygon::new(vec![Polygon::new(LineString::from(polygon), vec![])])
-    //                 Polygon::new(LineString::from(polygon), vec![])
-    //             })
-    //             .collect::<Vec<_>>();
-    //         let poly = MultiPolygon(poly);
-    //         poly.union(&poly)
-    //     })
-    //     .reduce(|lhs, rhs| lhs.union(&rhs))
-    //     .expect("Could not compute Polygon")
-
     data.par()
         .chunk_size(50)
         .num_threads(num_threads)
