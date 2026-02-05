@@ -194,3 +194,316 @@ impl Iterator for NaiveDateTimeRange {
         (self.from < self.to).then_some(maybe_next)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_wgs84_to_lv95_bern_cathedral() {
+        // Bern Cathedral: 46.9479°N, 7.4474°E
+        // Expected LV95: approximately 2600555, 1199646
+        let (easting, northing) = wgs84_to_lv95(46.9479, 7.4474);
+
+        // Allow 1000m tolerance (LV95 conversion can vary by implementation)
+        assert!(
+            (easting - 2600555.0).abs() < 1000.0,
+            "Easting was {}, expected ~2600555",
+            easting
+        );
+        assert!(
+            (northing - 1199646.0).abs() < 1000.0,
+            "Northing was {}, expected ~1199646",
+            northing
+        );
+    }
+
+    #[test]
+    fn test_wgs84_to_lv95_zurich_hb() {
+        // Zürich HB: 47.3769°N, 8.5417°E
+        // Expected LV95: approximately 2683074, 1247950
+        let (easting, northing) = wgs84_to_lv95(47.3769, 8.5417);
+
+        assert!(
+            (easting - 2683074.0).abs() < 500.0,
+            "Easting was {}, expected ~2683074",
+            easting
+        );
+        assert!(
+            (northing - 1247950.0).abs() < 500.0,
+            "Northing was {}, expected ~1247950",
+            northing
+        );
+    }
+
+    #[test]
+    fn test_wgs84_to_lv95_geneva() {
+        // Geneva: 46.2044°N, 6.1432°E
+        let (easting, northing) = wgs84_to_lv95(46.2044, 6.1432);
+
+        assert!(
+            (easting - 2500000.0).abs() < 1000.0,
+            "Easting was {}, expected ~2500000",
+            easting
+        );
+        assert!(
+            (northing - 1118000.0).abs() < 1000.0,
+            "Northing was {}, expected ~1118000",
+            northing
+        );
+    }
+
+    #[test]
+    fn test_wgs84_to_lv95_lugano() {
+        // Lugano: 46.0037°N, 8.9511°E
+        let (easting, northing) = wgs84_to_lv95(46.0037, 8.9511);
+
+        assert!(
+            (easting - 2717900.0).abs() < 1000.0,
+            "Easting was {}, expected ~2717900",
+            easting
+        );
+        assert!(
+            (northing - 1095900.0).abs() < 1000.0,
+            "Northing was {}, expected ~1095900",
+            northing
+        );
+    }
+
+    #[test]
+    fn test_lv95_to_wgs84_round_trip() {
+        // Test various Swiss locations for round-trip accuracy
+        let test_points = vec![
+            (46.9479, 7.4474), // Bern
+            (47.3769, 8.5417), // Zürich
+            (46.2044, 6.1432), // Geneva
+            (46.5197, 6.6323), // Lausanne
+            (46.0037, 8.9511), // Lugano
+            (47.5596, 7.5886), // Basel
+        ];
+
+        for (lat, lon) in test_points {
+            let (e, n) = wgs84_to_lv95(lat, lon);
+            let (lat2, lon2) = lv95_to_wgs84(e, n);
+
+            assert!(
+                (lat - lat2).abs() < 0.0001,
+                "Latitude mismatch: {} -> {} (diff: {})",
+                lat,
+                lat2,
+                (lat - lat2).abs()
+            );
+            assert!(
+                (lon - lon2).abs() < 0.0001,
+                "Longitude mismatch: {} -> {} (diff: {})",
+                lon,
+                lon2,
+                (lon - lon2).abs()
+            );
+        }
+    }
+
+    #[test]
+    fn test_haversine_distance_bern_zurich() {
+        // Bern to Zürich: approximately 94.5 km
+        let distance = haversine_distance(46.9479, 7.4474, 47.3769, 8.5417);
+
+        // Convert to meters
+        assert!(
+            (distance - 95.5).abs() < 0.1,
+            "Distance should be ~95.5 km, got {} km",
+            distance
+        );
+    }
+
+    #[test]
+    fn test_haversine_distance_same_point() {
+        let distance = haversine_distance(46.9479, 7.4474, 46.9479, 7.4474);
+        assert_eq!(distance, 0.0, "Distance to same point should be 0");
+    }
+
+    #[test]
+    fn test_haversine_distance_geneva_lugano() {
+        // Geneva to Lugano: approximately 218 km (as the crow flies)
+        let distance = haversine_distance(46.2044, 6.1432, 46.0037, 8.9511);
+
+        assert!(
+            (distance - 217.6).abs() < 0.1,
+            "Distance should be ~217.6 km, got {} km",
+            distance
+        );
+    }
+
+    #[test]
+    fn test_haversine_distance_bern_geneva() {
+        // Bern to Geneva: approximately 130 km (as the crow flies)
+        let distance = haversine_distance(46.9479, 7.4474, 46.2044, 6.1432);
+
+        assert!(
+            (distance - 129.5).abs() < 0.1,
+            "Distance should be ~129.5 km, got {} km",
+            distance
+        );
+    }
+
+    #[test]
+    fn test_haversine_distance_small_distance() {
+        // Two very close points (about 1 km apart)
+        let distance = haversine_distance(46.9479, 7.4474, 46.9579, 7.4574);
+
+        assert!(
+            distance < 1.347,
+            "Small distance should be < 1.347 km, but is {}",
+            distance
+        );
+        assert!(
+            distance > 1.345,
+            "Small distance should be > 1.345 km, but is {}",
+            distance
+        );
+    }
+
+    #[test]
+    fn test_time_to_distance_at_5_kmh() {
+        assert_eq!(time_to_distance(Duration::minutes(60), 5.0), 5000.0);
+        assert_eq!(time_to_distance(Duration::minutes(30), 5.0), 2500.0);
+    }
+
+    #[test]
+    fn test_time_to_distance_different_speeds() {
+        let distance = time_to_distance(Duration::minutes(60), 3.0);
+        assert!(
+            (distance - 3000.0).abs() < 0.1,
+            "Expected ~3000.0, got {}",
+            distance
+        );
+        let distance = time_to_distance(Duration::minutes(60), 6.0);
+        assert!(
+            (distance - 6000.0).abs() < 0.1,
+            "Expected ~6000.0, got {}",
+            distance
+        );
+    }
+
+    #[test]
+    fn test_time_to_distance_zero() {
+        assert_eq!(time_to_distance(Duration::minutes(0), 5.0), 0.0);
+        assert_eq!(time_to_distance(Duration::seconds(0), 5.0), 0.0);
+    }
+
+    #[test]
+    fn test_distance_to_time() {
+        assert_eq!(distance_to_time(5000.0, 5.0).num_minutes(), 60);
+        assert_eq!(distance_to_time(2500.0, 5.0).num_minutes(), 30);
+    }
+
+    #[test]
+    fn test_distance_to_time_zero() {
+        assert_eq!(distance_to_time(0.0, 5.0).num_seconds(), 0);
+    }
+
+    #[test]
+    fn test_time_distance_round_trip() {
+        let test_distances = vec![100.0, 500.0, 1000.0, 2500.0, 5000.0];
+        for distance in test_distances {
+            let time = distance_to_time(distance, 5.0);
+            let distance2 = time_to_distance(time, 5.0);
+
+            assert!(
+                (distance - distance2).abs() < 0.01,
+                "Round trip failed: {} -> {} seconds -> {}",
+                distance,
+                time.num_seconds(),
+                distance2
+            );
+        }
+    }
+
+    #[test]
+    fn test_degrees_to_radians() {
+        // Test common angles
+        assert!((degrees_to_radians(0.0) - 0.0).abs() < 0.0001);
+        assert!((degrees_to_radians(90.0) - PI / 2.0).abs() < 0.0001);
+        assert!((degrees_to_radians(180.0) - PI).abs() < 0.0001);
+        assert!((degrees_to_radians(360.0) - 2.0 * PI).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_distance_between_2_points() {
+        use hrdf_parser::CoordinateSystem;
+        let point1 = Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0);
+        let point2 = Coordinates::new(CoordinateSystem::LV95, 2601000.0, 1200000.0);
+        let distance = distance_between_2_points(point1, point2);
+        assert_eq!(distance, 1000.0);
+    }
+
+    #[test]
+    fn test_distance_between_2_points_diagonal() {
+        use hrdf_parser::CoordinateSystem;
+        let point1 = Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0);
+        let point2 = Coordinates::new(CoordinateSystem::LV95, 2600300.0, 1200400.0);
+        let distance = distance_between_2_points(point1, point2);
+        assert_eq!(distance, 500.0);
+    }
+
+    #[test]
+    fn test_distance_between_2_points_same() {
+        use hrdf_parser::CoordinateSystem;
+        let point1 = Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0);
+        let distance = distance_between_2_points(point1, point1);
+        assert_eq!(distance, 0.0);
+    }
+
+    #[test]
+    fn test_naive_date_time_range_iteration() {
+        use chrono::NaiveDateTime;
+
+        let start =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let end =
+            NaiveDateTime::parse_from_str("2025-06-15 10:05:00", "%Y-%m-%d %H:%M:%S").unwrap();
+
+        let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
+        let times: Vec<_> = range.collect();
+        assert_eq!(times.len(), 4);
+
+        let expected = vec![
+            NaiveDateTime::parse_from_str("2025-06-15 10:01:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+            NaiveDateTime::parse_from_str("2025-06-15 10:02:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+            NaiveDateTime::parse_from_str("2025-06-15 10:03:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+            NaiveDateTime::parse_from_str("2025-06-15 10:04:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+        ];
+
+        assert_eq!(times, expected);
+    }
+
+    #[test]
+    fn test_naive_date_time_range_empty() {
+        use chrono::NaiveDateTime;
+
+        let start =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let end =
+            NaiveDateTime::parse_from_str("2025-06-15 09:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+
+        let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
+        let times: Vec<_> = range.collect();
+
+        // Should be empty when start > end
+        assert_eq!(times.len(), 0);
+    }
+
+    #[test]
+    fn test_naive_date_time_range_single_step() {
+        use chrono::NaiveDateTime;
+
+        let start =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let end =
+            NaiveDateTime::parse_from_str("2025-06-15 10:01:00", "%Y-%m-%d %H:%M:%S").unwrap();
+
+        let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
+        let times: Vec<_> = range.collect();
+        assert_eq!(times.len(), 0);
+    }
+}

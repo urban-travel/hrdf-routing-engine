@@ -1,6 +1,6 @@
 [package]
 name = "hrdf-routing-engine"
-version = "0.6.4"
+version = "0.7.0"
 authors = ["Florian Burgener", "Orestis Malaspinas"]
 edition = "2024"
 description = "Public transport routing engine based on Swiss HRDF data."
@@ -18,7 +18,7 @@ flate2 = "1.0.35"
 futures = "0.3.31"
 geo = "0.32.0"
 geojson = "0.24.2"
-hrdf-parser = "0.9.1"
+hrdf-parser = "0.9.2"
 kd-tree = "0.6.0"
 log = "0.4.22"
 # For -Zminimal-versions
@@ -36,6 +36,7 @@ strum = "0.27.1"
 strum_macros = "0.27.1"
 svg = { version = "0.18.0", optional = true }
 test-log = "0.2.16"
+thiserror = "2.0.18"
 tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = ["cors"] }
 typenum = "1.17.0"

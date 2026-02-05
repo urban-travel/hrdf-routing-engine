@@ -8,8 +8,9 @@ use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
 use hrdf_parser::Hrdf;
 use hrdf_routing_engine::{
-    ExcludedPolygons, IsochroneArgs, IsochroneDisplayMode, LAKES_GEOJSON_URLS, run_average,
-    run_comparison, run_debug, run_optimal, run_service, run_simple, run_worst,
+    ExcludedPolygons, IsochroneArgs, IsochroneDisplayMode, JourneyArgs, LAKES_GEOJSON_URLS,
+    RResult, plan_journey, run_average, run_comparison, run_debug, run_optimal, run_service,
+    run_simple, run_worst,
 };
 #[cfg(feature = "hectare")]
 use hrdf_routing_engine::{HectareData, IsochroneHectareArgs, run_surface_per_ha};
@@ -49,7 +50,7 @@ impl IsochroneArgsBuilder {
         self
     }
 
-    pub(crate) fn finalize(self) -> Result<IsochroneArgs, Box<dyn Error>> {
+    pub(crate) fn finalize(self) -> RResult<IsochroneArgs> {
         let Self {
             latitude,
             longitude,
@@ -69,6 +70,45 @@ impl IsochroneArgsBuilder {
             interval: Duration::minutes(interval),
             max_num_explorable_connections,
             num_starting_points,
+            verbose,
+        })
+    }
+}
+
+#[derive(Parser, Debug, Clone)]
+struct JourneyArgsBuilder {
+    /// Departure stop id
+    #[arg(long, default_value_t = 8587418)]
+    departure_stop_id: i32,
+    /// Departure longitude
+    #[arg(long, default_value_t = 8595120)]
+    arrival_stop_id: i32,
+    /// Departure date and time
+    #[arg(short, long, default_value_t = String::from("2025-09-17 17:05:59"))]
+    departure_at: String,
+    /// Maximum number of connections
+    #[arg(short, long, default_value_t = 10)]
+    max_num_explorable_connections: i32,
+    /// Verbose on or off
+    #[arg(short, long, default_value_t = false)]
+    verbose: bool,
+}
+
+impl JourneyArgsBuilder {
+    pub(crate) fn finalize(self) -> RResult<JourneyArgs> {
+        let Self {
+            departure_stop_id,
+            arrival_stop_id,
+            departure_at,
+            max_num_explorable_connections,
+            verbose,
+        } = self;
+
+        Ok(JourneyArgs {
+            departure_stop_id,
+            arrival_stop_id,
+            departure_at: NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
+            max_num_explorable_connections,
             verbose,
         })
     }
@@ -96,7 +136,7 @@ struct IsochroneHectareArgsBuilder {
 
 #[cfg(feature = "hectare")]
 impl IsochroneHectareArgsBuilder {
-    pub(crate) fn finalize(self) -> Result<IsochroneHectareArgs, Box<dyn Error>> {
+    pub(crate) fn finalize(self) -> RResult<IsochroneHectareArgs> {
         let Self {
             departure_at,
             time_limit,
@@ -129,6 +169,11 @@ enum Mode {
     },
     /// Debug mode used to check if the examples still run
     Debug,
+    /// Journey mode to find a journey between two stop ids departing at a given time
+    Journey {
+        #[command(flatten)]
+        journey_args: JourneyArgsBuilder,
+    },
     /// Compare between two years for the optimal isochrone for a given duration
     Compare {
         #[command(flatten)]
@@ -235,6 +280,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let hrdf =
                 Hrdf::try_from_year(2025, cli.force_rebuild, cli.cache_prefix.clone()).await?;
             run_debug(hrdf);
+        }
+        Mode::Journey { journey_args } => {
+            let journey_args = journey_args.finalize()?;
+            let hrdf = Hrdf::try_from_date(
+                journey_args.departure_at.date(),
+                cli.force_rebuild,
+                cli.cache_prefix.clone(),
+            )
+            .await?;
+
+            let _ = plan_journey(
+                &hrdf,
+                journey_args.departure_stop_id,
+                journey_args.arrival_stop_id,
+                journey_args.departure_at,
+                journey_args.max_num_explorable_connections,
+                journey_args.verbose,
+            )
+            .unwrap_or_else(|| panic!("Error: no journey found for {journey_args}"));
         }
         Mode::Serve { address, ports } => {
             let hrdf_2026 =

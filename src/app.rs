@@ -1,9 +1,8 @@
 use orx_parallel::*;
-use std::error::Error;
 use std::time::Instant;
 
-use crate::IsochroneArgs;
 use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
+use crate::{IsochroneArgs, RResult};
 use chrono::Duration;
 use geo::MultiPolygon;
 use hrdf_parser::{Coordinates, Hrdf};
@@ -26,7 +25,7 @@ pub fn run_simple(
     isochrone_args: IsochroneArgs,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
-) -> Result<(), Box<dyn Error>> {
+) -> RResult<()> {
     let time_limit = isochrone_args.time_limit.num_minutes();
     let isochrone_interval = isochrone_args.interval.num_minutes();
 
@@ -58,7 +57,7 @@ pub fn run_average(
     isochrone_args: IsochroneArgs,
     delta_time: Duration,
     num_threads: usize,
-) -> Result<(), Box<dyn Error>> {
+) -> RResult<()> {
     let time_limit = isochrone_args.time_limit.num_minutes();
     let isochrone_interval = isochrone_args.interval.num_minutes();
 
@@ -99,7 +98,7 @@ pub fn run_surface_per_ha(
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
-) -> Result<Vec<HectareRecord>, Box<dyn Error>> {
+) -> RResult<Vec<HectareRecord>> {
     use std::sync::RwLock;
 
     let total_time = RwLock::new(Instant::now());
@@ -202,7 +201,7 @@ pub fn run_optimal(
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
-) -> Result<(), Box<dyn Error>> {
+) -> RResult<()> {
     let time_limit = isochrone_args.time_limit.num_minutes();
     let isochrone_interval = isochrone_args.interval.num_minutes();
 
@@ -238,7 +237,7 @@ pub fn run_worst(
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
-) -> Result<(), Box<dyn Error>> {
+) -> RResult<()> {
     let time_limit = isochrone_args.time_limit.num_minutes();
     let isochrone_interval = isochrone_args.interval.num_minutes();
 
@@ -274,7 +273,7 @@ pub fn run_comparison(
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
-) -> Result<(), Box<dyn Error>> {
+) -> RResult<()> {
     let time_limit = isochrone_args_2025.time_limit.num_minutes();
     let isochrone_interval = isochrone_args_2025.interval.num_minutes();
 
