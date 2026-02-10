@@ -1,4 +1,5 @@
 mod app;
+mod cli;
 mod debug;
 mod error;
 mod isochrone;
@@ -10,12 +11,13 @@ mod utils;
 #[cfg(feature = "hectare")]
 pub use app::run_surface_per_ha;
 pub use app::{run_average, run_comparison, run_optimal, run_simple, run_worst};
+pub use cli::{Cli, Mode};
 pub use debug::run_debug;
 pub use error::RResult;
 pub use isochrone::externals::{ExcludedPolygons, LAKES_GEOJSON_URLS};
 pub use isochrone::{IsochroneArgs, IsochroneDisplayMode};
 #[cfg(feature = "hectare")]
-pub use isochrone::{IsochroneHectareArgs, externals::HectareData};
+pub use isochrone::{IsochroneHectareArgs, compute_isochrones, externals::HectareData};
 pub use journey::JourneyArgs;
 pub use routing::{Route, plan_journey, plan_shortest_journey};
 pub use service::run_service;
