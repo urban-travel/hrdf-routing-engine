@@ -101,7 +101,7 @@ pub fn compute_optimal_isochrones(
     let max_date_time = departure_at + delta_time;
 
     let isochrone_map = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
+        min_date_time,
         max_date_time,
         Duration::minutes(1),
     )
@@ -182,7 +182,7 @@ pub fn compute_worst_isochrones(
     let max_date_time = departure_at + delta_time;
 
     let isochrone_map = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
+        min_date_time,
         max_date_time,
         Duration::minutes(1),
     )
@@ -269,7 +269,7 @@ pub fn compute_average_isochrones(
     let max_date_time = departure_at + delta_time;
 
     let data = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
+        min_date_time,
         max_date_time,
         Duration::minutes(1),
     )
