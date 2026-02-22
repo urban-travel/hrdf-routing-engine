@@ -123,7 +123,7 @@ impl RouteSection {
                     date,
                     is_departure_date,
                     departure_stop_id,
-                ).expect("No arrival date for stop id: {}, date: {}, is_departure_date: {is_departure_date}, departure_stop_id: {departure_stop_id}");
+                ).unwrap_or_else(|_| panic!("No arrival date for stop id: {}, date: {date}, is_departure_date: {is_departure_date}, departure_stop_id: {departure_stop_id}", stop.id()));
 
                 return Some((
                     RouteSection::new(

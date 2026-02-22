@@ -13,7 +13,9 @@ pub fn add_minutes_to_date_time(date_time: NaiveDateTime, minutes: i64) -> Naive
 }
 
 pub fn count_days_between_two_dates(date_1: NaiveDate, date_2: NaiveDate) -> usize {
-    usize::try_from((date_2 - date_1).num_days()).unwrap() + 1
+    usize::try_from((date_2 - date_1).num_days())
+        .unwrap_or_else(|_| panic!("date_2 ({date_2}) must not be before date_1 ({date_1})"))
+        + 1
 }
 
 pub fn create_date(year: i32, month: u32, day: u32) -> NaiveDate {
@@ -95,6 +97,14 @@ mod tests {
         let d1 = create_date(2026, 1, 30);
         let d2 = create_date(2026, 2, 1);
         assert_eq!(count_days_between_two_dates(d1, d2), 3);
+    }
+
+    #[test]
+    #[should_panic(expected = "must not be before")]
+    fn test_count_days_between_two_dates_reversed_panics() {
+        let d1 = create_date(2026, 1, 7);
+        let d2 = create_date(2026, 1, 1);
+        count_days_between_two_dates(d1, d2);
     }
 
     #[test]

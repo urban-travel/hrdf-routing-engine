@@ -100,13 +100,9 @@ pub fn compute_optimal_isochrones(
     let min_date_time = departure_at - delta_time;
     let max_date_time = departure_at + delta_time;
 
-    let isochrone_map = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
-        max_date_time,
-        Duration::minutes(1),
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
+    let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
+        .into_iter()
+        .collect::<Vec<_>>();
     let num_dates = isochrone_map.len();
 
     let isochrone_map = isochrone_map
@@ -181,13 +177,9 @@ pub fn compute_worst_isochrones(
     let min_date_time = departure_at - delta_time;
     let max_date_time = departure_at + delta_time;
 
-    let isochrone_map = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
-        max_date_time,
-        Duration::minutes(1),
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
+    let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
+        .into_iter()
+        .collect::<Vec<_>>();
     let total_dates = isochrone_map.len();
 
     let isochrone_map = isochrone_map
@@ -268,13 +260,9 @@ pub fn compute_average_isochrones(
     let min_date_time = departure_at - delta_time;
     let max_date_time = departure_at + delta_time;
 
-    let data = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
-        max_date_time,
-        Duration::minutes(1),
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
+    let data = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
+        .into_iter()
+        .collect::<Vec<_>>();
 
     let num_dates = data.len();
 
