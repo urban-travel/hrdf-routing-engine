@@ -199,7 +199,6 @@ impl Iterator for NaiveDateTimeRange {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{NaiveDate, NaiveTime};
 
     #[test]
     fn test_wgs84_to_lv95_bern_cathedral() {

@@ -30,19 +30,15 @@ pub fn create_date_time(year: i32, month: u32, day: u32, hour: u32, minute: u32)
     NaiveDateTime::new(create_date(year, month, day), create_time(hour, minute))
 }
 
-pub fn compute_remaining_threads(num_threads: usize, used_threads: usize) -> usize {
-    if used_threads > num_threads && num_threads != 0 {
-        panic!(
-            "Error used_threads: {used_threads} cannot be larger than the num_threads: {num_threads}"
-        );
-    }
-    let remaining_threads = num_threads as isize - used_threads as isize;
+/// Computes the number of threads to use in a nested parallel region.
+/// If `num_threads == 0`, the global pool is used and nesting is allowed.
+pub fn inner_threads(num_threads: usize, in_parallel: bool) -> usize {
     if num_threads == 0 {
         0
-    } else if remaining_threads > 1 {
-        remaining_threads as usize
+    } else if in_parallel {
+        1
     } else {
-        1usize
+        num_threads
     }
 }
 
@@ -131,27 +127,20 @@ mod tests {
     }
 
     #[test]
-    fn test_compute_remaining_threads_zero_total() {
-        assert_eq!(compute_remaining_threads(0, 0), 0);
-        assert_eq!(compute_remaining_threads(0, 10), 0);
+    fn test_inner_threads_global_pool_allows_nesting() {
+        assert_eq!(inner_threads(0, false), 0);
+        assert_eq!(inner_threads(0, true), 0);
     }
 
     #[test]
-    fn test_compute_remaining_threads_minimum_one() {
-        assert_eq!(compute_remaining_threads(4, 3), 1);
-        assert_eq!(compute_remaining_threads(4, 4), 1);
-        assert_eq!(compute_remaining_threads(1, 0), 1);
+    fn test_inner_threads_caps_when_nested() {
+        assert_eq!(inner_threads(4, true), 1);
+        assert_eq!(inner_threads(1, true), 1);
     }
 
     #[test]
-    fn test_compute_remaining_threads_many_remaining() {
-        assert_eq!(compute_remaining_threads(8, 2), 6);
-        assert_eq!(compute_remaining_threads(10, 0), 10);
-    }
-
-    #[test]
-    #[should_panic(expected = "used_threads: 5 cannot be larger than the num_threads: 4")]
-    fn test_compute_remaining_threads_panics_when_used_exceeds_total() {
-        compute_remaining_threads(4, 5);
+    fn test_inner_threads_uses_full_when_not_nested() {
+        assert_eq!(inner_threads(4, false), 4);
+        assert_eq!(inner_threads(1, false), 1);
     }
 }
