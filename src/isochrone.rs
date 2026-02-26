@@ -12,7 +12,7 @@ use std::time::Instant;
 use crate::isochrone::utils::haversine_distance;
 use crate::routing::Route;
 use crate::routing::compute_routes_from_origin;
-use crate::utils::compute_remaining_threads;
+use crate::utils::inner_threads;
 use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
 use geo::BooleanOps;
 use geo::MultiPolygon;
@@ -103,7 +103,6 @@ pub fn compute_optimal_isochrones(
     let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
         .into_iter()
         .collect::<Vec<_>>();
-    let num_dates = isochrone_map.len();
 
     let isochrone_map = isochrone_map
         .into_par()
@@ -123,7 +122,7 @@ pub fn compute_optimal_isochrones(
                     verbose,
                 },
                 display_mode,
-                compute_remaining_threads(num_threads, num_dates),
+                inner_threads(num_threads, true),
             )
         })
         .reduce(|lhs, rhs| {
@@ -180,7 +179,6 @@ pub fn compute_worst_isochrones(
     let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
         .into_iter()
         .collect::<Vec<_>>();
-    let total_dates = isochrone_map.len();
 
     let isochrone_map = isochrone_map
         .into_par()
@@ -200,7 +198,7 @@ pub fn compute_worst_isochrones(
                     verbose,
                 },
                 display_mode,
-                compute_remaining_threads(num_threads, total_dates),
+                inner_threads(num_threads, true),
             )
         })
         .reduce(|lhs, rhs| {
@@ -264,8 +262,6 @@ pub fn compute_average_isochrones(
         .into_iter()
         .collect::<Vec<_>>();
 
-    let num_dates = data.len();
-
     let data = data
         .par()
         .num_threads(num_threads)
@@ -277,7 +273,7 @@ pub fn compute_average_isochrones(
                 *dep,
                 time_limit,
                 num_starting_points,
-                compute_remaining_threads(num_threads, num_dates),
+                inner_threads(num_threads, true),
                 max_num_explorable_connections,
                 verbose,
             );

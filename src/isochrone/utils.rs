@@ -186,12 +186,13 @@ impl NaiveDateTimeRange {
 impl Iterator for NaiveDateTimeRange {
     type Item = NaiveDateTime;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.from > self.to {
+        if self.from >= self.to {
             return None;
         }
+        let current = self.from;
         let maybe_next = self.from + self.incr;
         self.from = maybe_next;
-        (self.from < self.to).then_some(maybe_next)
+        (current < self.to).then_some(current)
     }
 }
 
@@ -465,9 +466,10 @@ mod tests {
 
         let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
         let times: Vec<_> = range.collect();
-        assert_eq!(times.len(), 4);
+        assert_eq!(times.len(), 5);
 
         let expected = vec![
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
             NaiveDateTime::parse_from_str("2025-06-15 10:01:00", "%Y-%m-%d %H:%M:%S").unwrap(),
             NaiveDateTime::parse_from_str("2025-06-15 10:02:00", "%Y-%m-%d %H:%M:%S").unwrap(),
             NaiveDateTime::parse_from_str("2025-06-15 10:03:00", "%Y-%m-%d %H:%M:%S").unwrap(),
@@ -491,6 +493,17 @@ mod tests {
 
         // Should be empty when start > end
         assert_eq!(times.len(), 0);
+
+        let start =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let end =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+
+        let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
+        let times: Vec<_> = range.collect();
+
+        // Should be empty when start == end
+        assert_eq!(times.len(), 0);
     }
 
     #[test]
@@ -504,6 +517,11 @@ mod tests {
 
         let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
         let times: Vec<_> = range.collect();
-        assert_eq!(times.len(), 0);
+        assert_eq!(times.len(), 1);
+        let expected = vec![
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
+        ];
+
+        assert_eq!(times, expected);
     }
 }
