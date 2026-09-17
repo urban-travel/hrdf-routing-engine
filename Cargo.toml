@@ -1,7 +1,6 @@
 [package]
 name = "hrdf-routing-engine"
 version = "0.7.1"
-authors = ["Florian Burgener", "Orestis Malaspinas"]
 edition = "2024"
 description = "Public transport routing engine based on Swiss HRDF data."
 repository = "https://github.com/urban-travel/hrdf-routing-engine"
@@ -24,7 +23,7 @@ kd-tree = "0.6.2"
 log = "0.4.34"
 # For -Zminimal-versions
 native-tls = "0.2.18"
-orx-parallel = "3.4.0"
+orx-parallel = "4.0.0"
 postcard = { version = "1.1.3", features = ["use-std"] }
 pretty_assertions = "1.4.1"
 reqwest = "0.13.5"
