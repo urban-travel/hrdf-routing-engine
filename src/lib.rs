@@ -15,11 +15,11 @@ pub use cli::{Cli, Mode};
 pub use debug::run_debug;
 pub use error::RResult;
 pub use isochrone::externals::{ExcludedPolygons, LAKES_GEOJSON_URLS};
-pub use isochrone::{IsochroneArgs, IsochroneDisplayMode};
 #[cfg(feature = "hectare")]
-pub use isochrone::{IsochroneHectareArgs, compute_isochrones, externals::HectareData};
+pub use isochrone::{compute_isochrones, externals::HectareData, IsochroneHectareArgs};
+pub use isochrone::{IsochroneArgs, IsochroneDisplayMode};
 pub use journey::JourneyArgs;
-pub use routing::{Route, plan_journey, plan_shortest_journey};
+pub use routing::{plan_journey, plan_shortest_journey, Route};
 pub use service::run_service;
 
 #[cfg(test)]
@@ -27,17 +27,16 @@ mod tests {
     use std::{env, error::Error, fs::read_to_string, time::Instant};
 
     use crate::{
-        ExcludedPolygons, HectareData, LAKES_GEOJSON_URLS,
         isochrone::unique_coordinates_from_routes, routing::compute_routes_from_origin,
-        utils::create_date_time,
+        utils::create_date_time, ExcludedPolygons, HectareData, LAKES_GEOJSON_URLS,
     };
     use chrono::{Duration, TimeDelta, Timelike};
     use hrdf_parser::Hrdf;
-    use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
+    use ojp_rs::{SimplifiedLeg, SimplifiedTrip, OJP};
 
     use test_log::test;
 
-    use crate::{Route, plan_shortest_journey};
+    use crate::{plan_shortest_journey, Route};
     use futures::future::join_all;
 
     use pretty_assertions::assert_eq;
@@ -163,7 +162,7 @@ mod tests {
         // We are only interested in the "failures" of the hrdf routing engine
         let failed_comparison = ref_trips
             .into_iter()
-            .zip(hrdf_trips.into_iter())
+            .zip(hrdf_trips)
             .filter_map(|(rt, ht)| {
                 if let Some(ht) = ht
                     && !rt.approx_equal(&ht, 0.1)

@@ -50,7 +50,10 @@ fn parse_geojson_file(path: &str) -> RResult<MultiPolygon> {
         .into_iter()
         .filter_map(|feature| {
             feature.geometry.and_then(|geometry| {
-                if let geojson::Value::Polygon(exteriors) = geometry.value {
+                if let geojson::GeometryValue::Polygon {
+                    coordinates: exteriors,
+                } = geometry.value
+                {
                     let polygons: MultiPolygon = exteriors
                         .into_iter()
                         .map(|exterior| {
@@ -95,13 +98,13 @@ impl ExcludedPolygons {
         cache_prefix: Option<String>,
     ) -> RResult<MultiPolygon> {
         let cache_path = format!(
-            "{}/{:x}.cache",
+            "{}/{}.cache",
             cache_prefix.unwrap_or("./".to_string()),
-            Sha256::digest(
+            hex::encode(Sha256::digest(
                 urls.iter()
                     .fold(String::new(), |res, &s| res + s)
                     .as_bytes(),
-            )
+            ))
         )
         .replace("//", "/");
 
@@ -110,7 +113,7 @@ impl ExcludedPolygons {
         } else {
             let mut multis = Vec::new();
             for &url in urls {
-                let unique_filename = format!("{:x}", Sha256::digest(url.as_bytes()));
+                let unique_filename = hex::encode(Sha256::digest(url.as_bytes()));
 
                 // The cache must be built.
                 // If cache loading has failed, the cache must be rebuilt.
@@ -178,7 +181,7 @@ impl HectareData {
         force_rebuild_cache: bool,
         cache_prefix: Option<String>,
     ) -> RResult<Self> {
-        let unique_filename = format!("{:x}", Sha256::digest(url_or_path.as_bytes()));
+        let unique_filename = hex::encode(Sha256::digest(url_or_path.as_bytes()));
         let cache_path = format!(
             "{}/{unique_filename}.cache",
             cache_prefix.unwrap_or(String::from("./"))
