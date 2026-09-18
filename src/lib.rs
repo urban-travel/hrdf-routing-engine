@@ -15,11 +15,11 @@ pub use cli::{Cli, Mode};
 pub use debug::run_debug;
 pub use error::RResult;
 pub use isochrone::externals::{ExcludedPolygons, LAKES_GEOJSON_URLS};
-#[cfg(feature = "hectare")]
-pub use isochrone::{compute_isochrones, externals::HectareData, IsochroneHectareArgs};
 pub use isochrone::{IsochroneArgs, IsochroneDisplayMode};
+#[cfg(feature = "hectare")]
+pub use isochrone::{IsochroneHectareArgs, compute_isochrones, externals::HectareData};
 pub use journey::JourneyArgs;
-pub use routing::{plan_journey, plan_shortest_journey, Route};
+pub use routing::{Route, plan_journey, plan_shortest_journey};
 pub use service::run_service;
 
 #[cfg(test)]
@@ -27,16 +27,17 @@ mod tests {
     use std::{env, error::Error, fs::read_to_string, time::Instant};
 
     use crate::{
+        ExcludedPolygons, HectareData, LAKES_GEOJSON_URLS,
         isochrone::unique_coordinates_from_routes, routing::compute_routes_from_origin,
-        utils::create_date_time, ExcludedPolygons, HectareData, LAKES_GEOJSON_URLS,
+        utils::create_date_time,
     };
     use chrono::{Duration, Local, NaiveDateTime, TimeDelta, Timelike};
     use hrdf_parser::Hrdf;
-    use ojp_rs::{SimplifiedLeg, SimplifiedTrip, OJP};
+    use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
 
     use test_log::test;
 
-    use crate::{plan_shortest_journey, Route};
+    use crate::{Route, plan_shortest_journey};
     use futures::future::join_all;
 
     use pretty_assertions::assert_eq;
@@ -162,11 +163,10 @@ mod tests {
             .map(|st| async move {
                 let from_id = st.departure_id().expect("failed to get departure_id");
                 let to_id = st.arrival_id().expect("failed to get arrival_id");
-                let date_time = utc_naive_to_local(
-                    st.departure_time().expect("failed to get departure_time"),
-                )
-                .with_second(0)
-                .unwrap();
+                let date_time =
+                    utc_naive_to_local(st.departure_time().expect("failed to get departure_time"))
+                        .with_second(0)
+                        .unwrap();
                 log::info!("Testing trip: {from_id} - {to_id} at {date_time}");
                 plan_shortest_journey(hrdf, from_id, to_id, date_time, 10, false)
                     .as_ref()
