@@ -31,7 +31,8 @@ mod tests {
         isochrone::unique_coordinates_from_routes, routing::compute_routes_from_origin,
         utils::create_date_time,
     };
-    use chrono::{Duration, Local, NaiveDateTime, TimeDelta, Timelike};
+    use chrono::{Duration, NaiveDateTime, TimeDelta, Timelike};
+    use chrono_tz::Europe::Zurich;
     use hrdf_parser::Hrdf;
     use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
 
@@ -62,14 +63,14 @@ mod tests {
 
     fn local_to_utc_naive(local: NaiveDateTime) -> NaiveDateTime {
         local
-            .and_local_timezone(Local)
+            .and_local_timezone(Zurich)
             .single()
             .expect("ambiguous or non-existent local time")
             .naive_utc()
     }
 
     fn utc_naive_to_local(utc: NaiveDateTime) -> NaiveDateTime {
-        utc.and_utc().with_timezone(&Local).naive_local()
+        utc.and_utc().with_timezone(&Zurich).naive_local()
     }
 
     struct STrip(SimplifiedTrip);
