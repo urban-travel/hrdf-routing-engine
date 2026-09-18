@@ -106,8 +106,12 @@ fn can_explore_connections(
     let arrival_at = route.arrival_at();
 
     if let Some(&earliest_arrival) = earliest_arrival_by_stop_id.get(&stop_id) {
-        if arrival_at < earliest_arrival {
-            // The route arrived even earlier than the last route recorded for the stop.
+        if arrival_at <= earliest_arrival {
+            // The route arrived at least as early as the best route recorded for the stop.
+            // Using <= (not <) matters: two different paths can legitimately arrive at the
+            // exact same stop at the exact same time, and discarding one of them purely
+            // because it was processed second would silently drop a potentially better
+            // continuation.
             earliest_arrival_by_stop_id.insert(stop_id, arrival_at);
             true
         } else {

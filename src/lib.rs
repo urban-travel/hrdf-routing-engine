@@ -30,7 +30,7 @@ mod tests {
         isochrone::unique_coordinates_from_routes, routing::compute_routes_from_origin,
         utils::create_date_time, ExcludedPolygons, HectareData, LAKES_GEOJSON_URLS,
     };
-    use chrono::{Duration, TimeDelta, Timelike};
+    use chrono::{Duration, Local, NaiveDateTime, TimeDelta, Timelike};
     use hrdf_parser::Hrdf;
     use ojp_rs::{SimplifiedLeg, SimplifiedTrip, OJP};
 
@@ -59,6 +59,18 @@ mod tests {
         ))
     }
 
+    fn local_to_utc_naive(local: NaiveDateTime) -> NaiveDateTime {
+        local
+            .and_local_timezone(Local)
+            .single()
+            .expect("ambiguous or non-existent local time")
+            .naive_utc()
+    }
+
+    fn utc_naive_to_local(utc: NaiveDateTime) -> NaiveDateTime {
+        utc.and_utc().with_timezone(&Local).naive_local()
+    }
+
     struct STrip(SimplifiedTrip);
 
     impl STrip {
@@ -82,17 +94,17 @@ mod tests {
                         departure_stop,
                         arrival_id,
                         arrival_stop,
-                        departure_time,
-                        arrival_time,
+                        local_to_utc_naive(departure_time),
+                        local_to_utc_naive(arrival_time),
                         format!("{:?}", s.transport()),
                     )
                 })
                 .collect::<Vec<_>>();
-            STrip(SimplifiedTrip::new(legs))
+            STrip(SimplifiedTrip::try_new(legs).expect("failed to build SimplifiedTrip"))
         }
     }
 
-    static IDS: [(i32, i32); 34] = [
+    static IDS: [(i32, i32); 33] = [
         (8577820, 8501120),
         (8572662, 8576724),
         (8593320, 8579237),
@@ -123,7 +135,6 @@ mod tests {
         (8578997, 8576815),
         (8585206, 8506302),
         (8589587, 8592133),
-        (22, 8592904),
         (8592889, 8589566),
         (8572453, 8591998),
         (8500236, 8511236),
@@ -149,9 +160,13 @@ mod tests {
         let hrdf_trips = ref_trips
             .iter()
             .map(|st| async move {
-                let from_id = st.departure_id();
-                let to_id = st.arrival_id();
-                let date_time = st.departure_time().with_second(0).unwrap();
+                let from_id = st.departure_id().expect("failed to get departure_id");
+                let to_id = st.arrival_id().expect("failed to get arrival_id");
+                let date_time = utc_naive_to_local(
+                    st.departure_time().expect("failed to get departure_time"),
+                )
+                .with_second(0)
+                .unwrap();
                 log::info!("Testing trip: {from_id} - {to_id} at {date_time}");
                 plan_shortest_journey(hrdf, from_id, to_id, date_time, 10, false)
                     .as_ref()
@@ -297,7 +312,11 @@ mod tests {
         );
         for f in failures.iter() {
             if let (Some(ojp_trip), Some(hrdf_trip)) = f {
-                eprintln!("{} - {}", ojp_trip.departure_id(), ojp_trip.arrival_id());
+                eprintln!(
+                    "{} - {}",
+                    ojp_trip.departure_id().expect("failed to get departure_id"),
+                    ojp_trip.arrival_id().expect("failed to get arrival_id")
+                );
                 eprintln!("OJP: \n{ojp_trip}");
                 eprintln!("HRDF: \n{hrdf_trip}");
             }

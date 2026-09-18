@@ -81,8 +81,11 @@ pub fn next_departures(
         (journeys, max_departure_at)
     } else {
         let max_departure_at = if departure_at.time() < create_time(8, 0) {
-            // The maximum departure time is 08:00.
+            // The maximum departure time is at least 08:00 (but never less than 4 hours
+            // from departure_at, otherwise queries close to 08:00 get an unreasonably
+            // narrow window).
             NaiveDateTime::new(departure_at.date(), create_time(8, 0))
+                .max(departure_at.checked_add_signed(Duration::hours(4)).unwrap())
         } else {
             // The maximum departure time is 4 hours later.
             departure_at.checked_add_signed(Duration::hours(4)).unwrap()
