@@ -38,20 +38,25 @@ where
             continue;
         }
 
-        explore_last_route_section_more_if_possible(data_storage, &route, &mut routes);
+        let can_continue = can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id);
 
-        if !can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id) {
+        if !can_continue {
             // In some cases there are stops appearing multiple times in a Journey
             // for example see: *Z 011709 000801   in FPLAHN
-            // This can lead to an infinite loop. We will therefore check if the same route is explored
-            // a second time
+            // Extending such a route can reproduce an identical Route forever. Detect the
+            // repeat and stop extending *this* route, instead of discarding an unrelated
+            // one from the queue.
             if visited_routes.contains(&route) {
                 log::info!("Routes stayed the same: {}", routes.len());
                 visited_routes.remove(&route);
-                let _ = routes.pop();
-            } else {
-                visited_routes.insert(route.clone());
+                continue;
             }
+            visited_routes.insert(route.clone());
+        }
+
+        explore_last_route_section_more_if_possible(data_storage, &route, &mut routes);
+
+        if !can_continue {
             continue;
         }
 
