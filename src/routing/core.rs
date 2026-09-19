@@ -5,7 +5,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::utils::add_minutes_to_date_time;
 
 use super::{
-    connections::next_departures,
+    connections::{DepartureCache, next_departures},
     exploration::explore_routes,
     models::{Route, RouteResult, RouteSection, RoutingAlgorithmArgs, RoutingAlgorithmMode},
     utils::{RouteQueue, get_stop_connections},
@@ -19,12 +19,33 @@ pub fn compute_routing(
     verbose: bool,
     args: RoutingAlgorithmArgs,
 ) -> FxHashMap<i32, RouteResult> {
+    compute_routing_with_cache(
+        data_storage,
+        departure_stop_id,
+        departure_at,
+        max_num_explorable_connections,
+        verbose,
+        args,
+        &DepartureCache::default(),
+    )
+}
+
+pub fn compute_routing_with_cache<'a>(
+    data_storage: &'a DataStorage,
+    departure_stop_id: i32,
+    departure_at: NaiveDateTime,
+    max_num_explorable_connections: i32,
+    verbose: bool,
+    args: RoutingAlgorithmArgs,
+    departure_cache: &DepartureCache<'a>,
+) -> FxHashMap<i32, RouteResult> {
     let mut hash_route_cache = FxHashMap::default();
     let mut routes = create_initial_routes(
         data_storage,
         departure_stop_id,
         departure_at,
         &mut hash_route_cache,
+        departure_cache,
     );
     let mut earliest_arrival_by_stop_id = FxHashMap::default();
     let mut solutions = FxHashMap::default();
@@ -66,6 +87,7 @@ pub fn compute_routing(
             &mut journeys_to_ignore,
             &mut earliest_arrival_by_stop_id,
             &mut hash_route_cache,
+            departure_cache,
             can_continue_exploration,
         );
 
@@ -82,11 +104,12 @@ pub fn compute_routing(
         .collect()
 }
 
-pub fn create_initial_routes(
-    data_storage: &DataStorage,
+pub fn create_initial_routes<'a>(
+    data_storage: &'a DataStorage,
     departure_stop_id: i32,
     departure_at: NaiveDateTime,
     hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    departure_cache: &DepartureCache<'a>,
 ) -> RouteQueue {
     let mut routes = RouteQueue::new();
 
@@ -97,6 +120,7 @@ pub fn create_initial_routes(
         None,
         None,
         hash_route_cache,
+        departure_cache,
     ) {
         if let Some((section, mut visited_stops)) = RouteSection::find_next(
             data_storage,

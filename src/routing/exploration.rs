@@ -7,17 +7,18 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::utils::add_minutes_to_date_time;
 
 use super::{
-    connections::get_connections,
+    connections::{DepartureCache, get_connections},
     models::{Route, RouteSection},
     utils::{RouteQueue, clone_update_route, get_stop_connections},
 };
 
-pub fn explore_routes<F>(
-    data_storage: &DataStorage,
+pub fn explore_routes<'a, F>(
+    data_storage: &'a DataStorage,
     mut routes: RouteQueue,
     journeys_to_ignore: &mut FxHashSet<i32>,
     earliest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
     hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    departure_cache: &DepartureCache<'a>,
     mut can_continue_exploration: F,
 ) -> RouteQueue
 where
@@ -60,6 +61,7 @@ where
             &route,
             journeys_to_ignore,
             hash_route_cache,
+            departure_cache,
             &mut new_routes,
         );
     }
@@ -132,14 +134,21 @@ fn can_explore_connections(
     }
 }
 
-fn explore_connections(
-    data_storage: &DataStorage,
+fn explore_connections<'a>(
+    data_storage: &'a DataStorage,
     route: &Route,
     journeys_to_ignore: &FxHashSet<i32>,
     hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    departure_cache: &DepartureCache<'a>,
     new_routes: &mut RouteQueue,
 ) {
-    for route in get_connections(data_storage, route, journeys_to_ignore, hash_route_cache) {
+    for route in get_connections(
+        data_storage,
+        route,
+        journeys_to_ignore,
+        hash_route_cache,
+        departure_cache,
+    ) {
         new_routes.push(route);
     }
 }

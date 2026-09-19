@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use chrono::{Duration, NaiveDate, NaiveDateTime};
 use hrdf_parser::{DataStorage, Journey, Model, TransportType, timetable_end_date};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -8,11 +10,19 @@ use crate::utils::{
 
 use super::{models::Route, utils::get_routes_to_ignore};
 
-pub fn get_connections(
-    data_storage: &DataStorage,
+/// Maps `(stop_id, service_date)` to `(departures, latest_departure)`.
+/// Departures are unsorted `(borrowed Journey, departure_datetime)` pairs.
+/// An empty list uses service-date midnight as its latest departure.
+/// Entries are shared within one request, before query-specific filtering.
+pub(crate) type DepartureCache<'a> =
+    RwLock<FxHashMap<(i32, NaiveDate), (Arc<[(&'a Journey, NaiveDateTime)]>, NaiveDateTime)>>;
+
+pub fn get_connections<'a>(
+    data_storage: &'a DataStorage,
     route: &Route,
     journeys_to_ignore: &FxHashSet<i32>,
     hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    departure_cache: &DepartureCache<'a>,
 ) -> Vec<Route> {
     next_departures(
         data_storage,
@@ -21,6 +31,7 @@ pub fn get_connections(
         Some(get_routes_to_ignore(data_storage, route, hash_route_cache)),
         route.last_section().journey_id(),
         hash_route_cache,
+        departure_cache,
     )
     .into_iter()
     // A journey is removed if it has already been explored at a lower connection level.
@@ -43,15 +54,21 @@ pub fn next_departures<'a>(
     routes_to_ignore: Option<FxHashSet<u64>>,
     previous_journey_id: Option<i32>,
     hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    departure_cache: &DepartureCache<'a>,
 ) -> Vec<(&'a Journey, NaiveDateTime)> {
-    fn get_journeys(
-        data_storage: &DataStorage,
+    fn get_journeys<'a>(
+        data_storage: &'a DataStorage,
         date: NaiveDate,
         stop_id: i32,
-    ) -> (Vec<(&Journey, NaiveDateTime)>, NaiveDateTime) {
+        cache: &DepartureCache<'a>,
+    ) -> (Arc<[(&'a Journey, NaiveDateTime)]>, NaiveDateTime) {
+        if let Some(value) = cache.read().unwrap().get(&(stop_id, date)).cloned() {
+            return value;
+        }
+
         let mut max_departure_at = NaiveDateTime::new(date, create_time(0, 0));
 
-        let journeys = get_operating_journeys(data_storage, date, stop_id)
+        let journeys: Vec<_> = get_operating_journeys(data_storage, date, stop_id)
             .into_iter()
             .filter(|journey| !journey.is_last_stop(stop_id, true).unwrap())
             .filter_map(|journey| {
@@ -63,11 +80,22 @@ pub fn next_departures<'a>(
             })
             .collect();
 
-        (journeys, max_departure_at)
+        // Allow duplicate work on concurrent misses to keep preparation outside the lock.
+        let prepared = (Arc::from(journeys), max_departure_at);
+        cache
+            .write()
+            .unwrap()
+            .entry((stop_id, date))
+            .or_insert(prepared)
+            .clone()
     }
 
-    let (journeys_1, mut max_depearture_at_journeys_1_adjusted) =
-        get_journeys(data_storage, departure_at.date(), departure_stop_id);
+    let (journeys_1, mut max_depearture_at_journeys_1_adjusted) = get_journeys(
+        data_storage,
+        departure_at.date(),
+        departure_stop_id,
+        departure_cache,
+    );
     max_depearture_at_journeys_1_adjusted = max_depearture_at_journeys_1_adjusted
         .checked_add_signed(Duration::hours(-4))
         .unwrap();
@@ -76,7 +104,12 @@ pub fn next_departures<'a>(
         // The journeys of the next day are also loaded.
         // The maximum departure time is 08:00 the next day.
         let departure_date = add_1_day(departure_at.date());
-        let (journeys, _) = get_journeys(data_storage, departure_date, departure_stop_id);
+        let (journeys, _) = get_journeys(
+            data_storage,
+            departure_date,
+            departure_stop_id,
+            departure_cache,
+        );
         let max_departure_at = NaiveDateTime::new(departure_date, create_time(8, 0));
 
         (journeys, max_departure_at)
@@ -92,10 +125,10 @@ pub fn next_departures<'a>(
             departure_at.checked_add_signed(Duration::hours(4)).unwrap()
         };
 
-        (Vec::new(), max_departure_at)
+        (Arc::from([]), max_departure_at)
     };
 
-    let mut journeys: Vec<(&Journey, NaiveDateTime)> = [journeys_1, journeys_2]
+    let mut journeys: Vec<(&Journey, NaiveDateTime)> = [&*journeys_1, &*journeys_2]
         .concat()
         .into_iter()
         .filter(|&(_, journey_departure_at)| {

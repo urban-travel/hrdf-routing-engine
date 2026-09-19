@@ -18,7 +18,8 @@ pub use models::RouteResult as Route;
 pub use models::RouteSectionResult as RouteSection;
 use orx_parallel::*;
 
-use core::compute_routing;
+use connections::DepartureCache;
+use core::{compute_routing, compute_routing_with_cache};
 
 use chrono::{Duration, NaiveDateTime};
 use models::RoutingAlgorithmArgs;
@@ -187,7 +188,7 @@ pub fn compute_routes_from_origin(
     .take(num_starting_points)
     .collect::<Vec<_>>();
 
-    // then go over all these stops to compute each attainable route
+    let departure_cache = DepartureCache::default();
     let mut routes = departure_stops
         .par()
         .num_threads(num_threads)
@@ -209,14 +210,17 @@ pub fn compute_routes_from_origin(
                 );
             }
 
-            let local_routes: Vec<_> = find_reachable_stops_within_time_limit(
-                hrdf,
+            let local_routes: Vec<_> = compute_routing_with_cache(
+                hrdf.data_storage(),
                 departure_stop.id(),
                 adjusted_departure_at,
-                adjusted_time_limit,
-        max_num_explorable_connections,
+                max_num_explorable_connections,
                 verbose,
-            );
+                RoutingAlgorithmArgs::solve_from_departure_stop_to_reachable_arrival_stops(
+                    adjusted_departure_at.checked_add_signed(adjusted_time_limit).unwrap(),
+                ),
+                &departure_cache,
+            ).into_values().collect();
 
             local_routes
         })
