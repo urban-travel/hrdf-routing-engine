@@ -38,7 +38,8 @@ where
             continue;
         }
 
-        let can_continue = can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id);
+        let can_continue =
+            can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id);
 
         if !can_continue {
             // In some cases there are stops appearing multiple times in a Journey
