@@ -94,7 +94,12 @@ fn explore_last_route_section_more_if_possible(
     let new_route = route.extend(data_storage, journey_id, route.arrival_at().date(), false);
 
     if let Some(rou) = new_route {
-        routes.push(rou);
+        // A journey can visit the same stop several times (for example see: *Z 011709 000801
+        // in FPLAHN), in which case extending the route can give back the very same route.
+        // Pushing it would make it be popped, extended and pushed again forever.
+        if rou != *route {
+            routes.push(rou);
+        }
     }
 }
 
