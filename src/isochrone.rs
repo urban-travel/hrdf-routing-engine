@@ -889,6 +889,7 @@ mod polygon_tests {
     }
 
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_polygon_generation_performance() {
         let hrdf = Hrdf::try_from_year(2025, true, None).await.unwrap();
         let departure_at = create_date_time(2025, 6, 15, 12, 10);

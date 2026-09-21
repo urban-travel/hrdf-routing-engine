@@ -302,6 +302,7 @@ mod tests {
     }
 
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_journeys() {
         // First build hrdf file
         let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
@@ -333,6 +334,7 @@ mod tests {
     /// Schindelboden (8582811). The computation is done in another thread so that a regression
     /// fails the test instead of hanging the whole test suite.
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_no_infinite_loop_when_journey_revisits_a_stop() {
         use std::{sync::Arc, sync::mpsc, time::Duration as StdDuration};
 
@@ -364,6 +366,7 @@ mod tests {
     }
 
     #[test(tokio::test)]
+    #[ignore = "requires downloading external polygon data"]
     async fn test_real_polygons_cache() {
         let original = ExcludedPolygons::try_new(
             &LAKES_GEOJSON_URLS,
@@ -385,6 +388,7 @@ mod tests {
 
     #[test(tokio::test)]
     #[cfg(feature = "hectare")]
+    #[ignore = "requires downloading external hectare data"]
     async fn test_real_hectare_data_cache() {
         use std::env;
 
