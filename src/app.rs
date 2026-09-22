@@ -129,7 +129,7 @@ pub fn run_surface_per_ha(
             let he_re = if area.is_some() {
                 record
             } else {
-                use crate::utils::compute_remaining_threads;
+                use crate::utils::inner_threads;
 
                 let IsochroneHectareArgs {
                     departure_at,
@@ -154,7 +154,7 @@ pub fn run_surface_per_ha(
                     isochrone_args,
                     delta_time,
                     display_mode,
-                    compute_remaining_threads(num_threads, total)
+                    inner_threads(num_threads, true)
                 );
 
                 let area = opt_iso.compute_max_area();

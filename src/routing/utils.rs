@@ -2,8 +2,8 @@ use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
 use chrono::NaiveDateTime;
-use hrdf_parser::{DataStorage, StopConnection};
-use rustc_hash::FxHashSet;
+use hrdf_parser::{DataStorage, Model, StopConnection};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::models::{Route, RouteSection};
 
@@ -179,14 +179,24 @@ pub fn get_stop_connections(
         })
 }
 
-pub fn get_routes_to_ignore(data_storage: &DataStorage, route: &Route) -> FxHashSet<u64> {
+/// `hash_route` only depends on the (journey, stop) pair, never on the query
+/// date or the rest of the route, so its results can be memoized across the
+/// whole search (see `hash_route_cache` in `next_departures`, whose dedup
+/// loop is the main consumer/populator of this cache).
+pub fn get_routes_to_ignore(
+    data_storage: &DataStorage,
+    route: &Route,
+    hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+) -> FxHashSet<u64> {
+    let arrival_stop_id = route.arrival_stop_id();
     route
         .sections()
         .iter()
         .filter_map(|section| {
-            section
-                .journey(data_storage)
-                .and_then(|journey| journey.hash_route(route.arrival_stop_id()))
+            let journey = section.journey(data_storage)?;
+            *hash_route_cache
+                .entry((journey.id(), arrival_stop_id))
+                .or_insert_with(|| journey.hash_route(arrival_stop_id))
         })
         .collect()
 }

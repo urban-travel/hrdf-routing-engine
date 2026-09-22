@@ -148,7 +148,10 @@ impl Route {
     }
 
     pub fn count_connections(&self) -> usize {
-        self.sections_having_journey().len()
+        self.sections
+            .iter()
+            .filter(|section| section.journey_id().is_some())
+            .count()
     }
 }
 
@@ -194,9 +197,7 @@ impl RoutingAlgorithmArgs {
         )
     }
 
-    pub fn solve_from_arrival_stop_to_reachable_departure_stops(
-        time_limit: NaiveDateTime,
-    ) -> Self {
+    pub fn solve_from_arrival_stop_to_reachable_departure_stops(time_limit: NaiveDateTime) -> Self {
         Self::new(
             RoutingAlgorithmMode::SolveFromArrivalStopToReachableDepartureStops,
             None,

@@ -13,7 +13,7 @@ use crate::isochrone::utils::haversine_distance;
 use crate::routing::Route;
 use crate::routing::compute_routes_from_origin;
 use crate::routing::compute_routes_to_destination;
-use crate::utils::compute_remaining_threads;
+use crate::utils::inner_threads;
 use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
 use geo::BooleanOps;
 use geo::MultiPolygon;
@@ -123,14 +123,9 @@ pub fn compute_optimal_isochrones(
     let min_date_time = departure_at - delta_time;
     let max_date_time = departure_at + delta_time;
 
-    let isochrone_map = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
-        max_date_time,
-        Duration::minutes(1),
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
-    let num_dates = isochrone_map.len();
+    let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
+        .into_iter()
+        .collect::<Vec<_>>();
 
     let isochrone_map = isochrone_map
         .into_par()
@@ -150,7 +145,7 @@ pub fn compute_optimal_isochrones(
                     verbose,
                 },
                 display_mode,
-                compute_remaining_threads(num_threads, num_dates),
+                inner_threads(num_threads, true),
             )
         })
         .reduce(|lhs, rhs| {
@@ -204,14 +199,9 @@ pub fn compute_worst_isochrones(
     let min_date_time = departure_at - delta_time;
     let max_date_time = departure_at + delta_time;
 
-    let isochrone_map = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
-        max_date_time,
-        Duration::minutes(1),
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
-    let total_dates = isochrone_map.len();
+    let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
+        .into_iter()
+        .collect::<Vec<_>>();
 
     let isochrone_map = isochrone_map
         .into_par()
@@ -231,7 +221,7 @@ pub fn compute_worst_isochrones(
                     verbose,
                 },
                 display_mode,
-                compute_remaining_threads(num_threads, total_dates),
+                inner_threads(num_threads, true),
             )
         })
         .reduce(|lhs, rhs| {
@@ -291,15 +281,9 @@ pub fn compute_average_isochrones(
     let min_date_time = departure_at - delta_time;
     let max_date_time = departure_at + delta_time;
 
-    let data = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
-        max_date_time,
-        Duration::minutes(1),
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
-
-    let num_dates = data.len();
+    let data = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
+        .into_iter()
+        .collect::<Vec<_>>();
 
     let data = data
         .par()
@@ -312,7 +296,7 @@ pub fn compute_average_isochrones(
                 *dep,
                 time_limit,
                 num_starting_points,
-                compute_remaining_threads(num_threads, num_dates),
+                inner_threads(num_threads, true),
                 max_num_explorable_connections,
                 verbose,
             );
@@ -690,14 +674,9 @@ pub fn compute_optimal_isochrones_reverse(
     let min_date_time = arrival_at - delta_time;
     let max_date_time = arrival_at + delta_time;
 
-    let isochrone_map = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
-        max_date_time,
-        Duration::minutes(1),
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
-    let num_dates = isochrone_map.len();
+    let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
+        .into_iter()
+        .collect::<Vec<_>>();
 
     let isochrone_map = isochrone_map
         .into_par()
@@ -717,7 +696,7 @@ pub fn compute_optimal_isochrones_reverse(
                     verbose,
                 },
                 display_mode,
-                compute_remaining_threads(num_threads, num_dates),
+                inner_threads(num_threads, true),
             )
         })
         .reduce(|lhs, rhs| {
@@ -765,15 +744,9 @@ pub fn compute_average_isochrones_reverse(
     let min_date_time = arrival_at - delta_time;
     let max_date_time = arrival_at + delta_time;
 
-    let data = NaiveDateTimeRange::new(
-        min_date_time + Duration::minutes(1),
-        max_date_time,
-        Duration::minutes(1),
-    )
-    .into_iter()
-    .collect::<Vec<_>>();
-
-    let num_dates = data.len();
+    let data = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
+        .into_iter()
+        .collect::<Vec<_>>();
 
     let data = data
         .par()
@@ -786,7 +759,7 @@ pub fn compute_average_isochrones_reverse(
                 *arr,
                 time_limit,
                 num_starting_points,
-                compute_remaining_threads(num_threads, num_dates),
+                inner_threads(num_threads, true),
                 max_num_explorable_connections,
                 verbose,
             );
@@ -799,10 +772,10 @@ pub fn compute_average_isochrones_reverse(
         ((f64::MAX, f64::MAX), (f64::MIN, f64::MIN)),
         |cover_bb, d| {
             let bb = get_bounding_box(d, time_limit);
-            let x0 = f64::min(cover_bb.0 .0, bb.0 .0);
-            let x1 = f64::max(cover_bb.1 .0, bb.1 .0);
-            let y0 = f64::min(cover_bb.0 .1, bb.0 .1);
-            let y1 = f64::max(cover_bb.1 .1, bb.1 .1);
+            let x0 = f64::min(cover_bb.0.0, bb.0.0);
+            let x1 = f64::max(cover_bb.1.0, bb.1.0);
+            let y0 = f64::min(cover_bb.0.1, bb.0.1);
+            let y1 = f64::max(cover_bb.1.1, bb.1.1);
             ((x0, y0), (x1, y1))
         },
     );
@@ -948,12 +921,12 @@ pub(crate) fn unique_coordinates_from_routes_reverse(
     for route in routes {
         let first_section = route.sections().first().expect("Route sections was empty");
         let departure_stop_id = first_section.departure_stop_id();
-        let departure_stop_coords =
-            if let Some(c) = first_section.departure_stop_lv95_coordinates() {
-                c
-            } else {
-                continue;
-            };
+        let departure_stop_coords = if let Some(c) = first_section.departure_stop_lv95_coordinates()
+        {
+            c
+        } else {
+            continue;
+        };
         let new_duration = arrival_at - route.departure_at();
         if let Some((_, duration)) = coordinates_duration.get_mut(&departure_stop_id) {
             if new_duration < *duration {
@@ -1296,6 +1269,7 @@ mod polygon_tests {
     }
 
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_polygon_generation_performance() {
         let hrdf = Hrdf::try_from_year(2025, true, None).await.unwrap();
         let departure_at = create_date_time(2025, 6, 15, 12, 10);

@@ -43,7 +43,7 @@ impl Route {
             // When extending on the same journey, check intermediate stops for cycles
             // to prevent a journey from looping back on itself.
             // When transferring to a new journey, skip the cycle check — different journeys
-            // legitimately share stops, and the earliest_arrival_by_stop_id pruning already
+            // legitimately share stops, and the earliest-arrival pruning already
             // prevents redundant exploration at exchange points.
             if is_same_journey
                 && self.has_visited_any_stops(&new_visited_stops)
@@ -128,7 +128,7 @@ impl Route {
             // When extending on the same journey, check intermediate stops for cycles
             // to prevent a journey from looping back on itself.
             // When transferring to a new journey, skip the cycle check — different journeys
-            // legitimately share stops, and the latest_arrival_by_stop_id pruning already
+            // legitimately share stops, and the connection-time pruning already
             // prevents redundant exploration at exchange points.
             if is_same_journey
                 && self.has_visited_any_stops(&new_visited_stops)
@@ -364,7 +364,7 @@ impl RouteSection {
                     date,
                     is_departure_date,
                     departure_stop_id,
-                ).expect("No arrival date for stop id: {}, date: {}, is_departure_date: {is_departure_date}, departure_stop_id: {departure_stop_id}");
+                ).unwrap_or_else(|_| panic!("No arrival date for stop id: {}, date: {date}, is_departure_date: {is_departure_date}, departure_stop_id: {departure_stop_id}", stop.id()));
 
                 return Some((
                     RouteSection::new(

@@ -19,7 +19,8 @@ pub use models::RouteResult as Route;
 pub use models::RouteSectionResult as RouteSection;
 use orx_parallel::*;
 
-use core::{compute_routing, compute_routing_reverse};
+use connections::DepartureCache;
+use core::{compute_routing, compute_routing_reverse, compute_routing_with_cache};
 
 use chrono::{Duration, NaiveDateTime};
 use models::RoutingAlgorithmArgs;
@@ -213,8 +214,8 @@ fn find_stops_in_time_range(
         .entries()
         .into_iter()
         .filter(|stop| stop.wgs84_coordinates().is_some())
-        .filter(|stop| {
-            adjust_departure_at(
+        .filter_map(|stop| {
+            let remaining_minutes = adjust_departure_at(
                 departure_at,
                 time_limit,
                 origin_point_latitude,
@@ -222,34 +223,14 @@ fn find_stops_in_time_range(
                 stop,
             )
             .1
-            .num_minutes()
-                > 0
+            .num_minutes();
+            (remaining_minutes > 0).then_some((stop, remaining_minutes))
         })
         // The stop list cannot be empty.
         .collect::<Vec<_>>();
-    stops.sort_by(|lhs, rhs| {
-        adjust_departure_at(
-            departure_at,
-            time_limit,
-            origin_point_latitude,
-            origin_point_longitude,
-            rhs,
-        )
-        .1
-        .num_minutes()
-        .cmp(
-            &adjust_departure_at(
-                departure_at,
-                time_limit,
-                origin_point_latitude,
-                origin_point_longitude,
-                lhs,
-            )
-            .1
-            .num_minutes(),
-        )
-    });
-    stops
+    // Sort by remaining time descending (most slack first), matching the previous behavior.
+    stops.sort_by(|(_, lhs), (_, rhs)| rhs.cmp(lhs));
+    stops.into_iter().map(|(stop, _)| stop).collect::<Vec<_>>()
 }
 
 /// Given a starting point (long/lat) find the Routes given a time limit.
@@ -280,7 +261,7 @@ pub fn compute_routes_from_origin(
     .take(num_starting_points)
     .collect::<Vec<_>>();
 
-    // then go over all these stops to compute each attainable route
+    let departure_cache = DepartureCache::default();
     let mut routes = departure_stops
         .par()
         .num_threads(num_threads)
@@ -302,14 +283,17 @@ pub fn compute_routes_from_origin(
                 );
             }
 
-            let local_routes: Vec<_> = find_reachable_stops_within_time_limit(
-                hrdf,
+            let local_routes: Vec<_> = compute_routing_with_cache(
+                hrdf.data_storage(),
                 departure_stop.id(),
                 adjusted_departure_at,
-                adjusted_time_limit,
-        max_num_explorable_connections,
+                max_num_explorable_connections,
                 verbose,
-            );
+                RoutingAlgorithmArgs::solve_from_departure_stop_to_reachable_arrival_stops(
+                    adjusted_departure_at.checked_add_signed(adjusted_time_limit).unwrap(),
+                ),
+                &departure_cache,
+            ).into_values().collect();
 
             local_routes
         })

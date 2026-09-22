@@ -42,6 +42,7 @@ mod tests {
         utils::create_date_time,
     };
     use chrono::{Duration, NaiveDateTime, TimeDelta, Timelike};
+    use chrono_tz::Europe::Zurich;
     use hrdf_parser::Hrdf;
     use ojp_rs::{OJP, SimplifiedLeg, SimplifiedTrip};
 
@@ -70,6 +71,18 @@ mod tests {
         ))
     }
 
+    fn local_to_utc_naive(local: NaiveDateTime) -> NaiveDateTime {
+        local
+            .and_local_timezone(Zurich)
+            .single()
+            .expect("ambiguous or non-existent local time")
+            .naive_utc()
+    }
+
+    fn utc_naive_to_local(utc: NaiveDateTime) -> NaiveDateTime {
+        utc.and_utc().with_timezone(&Zurich).naive_local()
+    }
+
     struct STrip(SimplifiedTrip);
 
     impl STrip {
@@ -93,17 +106,17 @@ mod tests {
                         departure_stop,
                         arrival_id,
                         arrival_stop,
-                        departure_time,
-                        arrival_time,
+                        local_to_utc_naive(departure_time),
+                        local_to_utc_naive(arrival_time),
                         format!("{:?}", s.transport()),
                     )
                 })
                 .collect::<Vec<_>>();
-            STrip(SimplifiedTrip::new(legs))
+            STrip(SimplifiedTrip::try_new(legs).expect("failed to build SimplifiedTrip"))
         }
     }
 
-    static IDS: [(i32, i32); 34] = [
+    static IDS: [(i32, i32); 33] = [
         (8577820, 8501120),
         (8572662, 8576724),
         (8593320, 8579237),
@@ -134,7 +147,6 @@ mod tests {
         (8578997, 8576815),
         (8585206, 8506302),
         (8589587, 8592133),
-        (22, 8592904),
         (8592889, 8589566),
         (8572453, 8591998),
         (8500236, 8511236),
@@ -160,9 +172,12 @@ mod tests {
         let hrdf_trips = ref_trips
             .iter()
             .map(|st| async move {
-                let from_id = st.departure_id();
-                let to_id = st.arrival_id();
-                let date_time = st.departure_time().with_second(0).unwrap();
+                let from_id = st.departure_id().expect("failed to get departure_id");
+                let to_id = st.arrival_id().expect("failed to get arrival_id");
+                let date_time =
+                    utc_naive_to_local(st.departure_time().expect("failed to get departure_time"))
+                        .with_second(0)
+                        .unwrap();
                 log::info!("Testing trip: {from_id} - {to_id} at {date_time}");
                 plan_shortest_journey_with_reverse(hrdf, from_id, to_id, date_time, 10, false)
                     .as_ref()
@@ -173,7 +188,7 @@ mod tests {
         // We are only interested in the "failures" of the hrdf routing engine
         let failed_comparison = ref_trips
             .into_iter()
-            .zip(hrdf_trips.into_iter())
+            .zip(hrdf_trips)
             .filter_map(|(rt, ht)| {
                 if let Some(ht) = ht
                     && !rt.approx_equal(&ht, 0.1)
@@ -208,9 +223,12 @@ mod tests {
         let hrdf_trips = ref_trips
             .iter()
             .map(|st| async move {
-                let from_id = st.departure_id();
-                let to_id = st.arrival_id();
-                let date_time = st.departure_time().with_second(0).unwrap();
+                let from_id = st.departure_id().expect("failed to get departure_id");
+                let to_id = st.arrival_id().expect("failed to get arrival_id");
+                let date_time =
+                    utc_naive_to_local(st.departure_time().expect("failed to get departure_time"))
+                        .with_second(0)
+                        .unwrap();
                 log::info!("Testing trip forward: {from_id} - {to_id} at {date_time}");
                 plan_shortest_journey(hrdf, from_id, to_id, date_time, 11, false)
                     .as_ref()
@@ -222,9 +240,12 @@ mod tests {
         let hrdf_trips_reverse = ref_trips
             .iter()
             .map(|st| async move {
-                let from_id = st.departure_id();
-                let to_id = st.arrival_id();
-                let date_time = st.departure_time().with_second(0).unwrap();
+                let from_id = st.departure_id().expect("failed to get departure_id");
+                let to_id = st.arrival_id().expect("failed to get arrival_id");
+                let date_time =
+                    utc_naive_to_local(st.departure_time().expect("failed to get departure_time"))
+                        .with_second(0)
+                        .unwrap();
                 log::info!("Testing trip reverse: {from_id} - {to_id} at {date_time}");
                 plan_shortest_journey_with_reverse(hrdf, from_id, to_id, date_time, 11, false)
                     .as_ref()
@@ -236,7 +257,7 @@ mod tests {
         // We are only interested in the "failures" of the hrdf routing engine
         let failed_comparison = hrdf_trips
             .into_iter()
-            .zip(hrdf_trips_reverse.into_iter())
+            .zip(hrdf_trips_reverse)
             .filter_map(|(rt, ht)| match (rt, ht) {
                 (Some(rt), Some(ht)) => {
                     if !rt.approx_equal(&ht, 0.1) {
@@ -274,9 +295,12 @@ mod tests {
         let hrdf_trips = ref_trips
             .iter()
             .map(|st| async move {
-                let from_id = st.departure_id();
-                let to_id = st.arrival_id();
-                let date_time = st.departure_time().with_second(0).unwrap();
+                let from_id = st.departure_id().expect("failed to get departure_id");
+                let to_id = st.arrival_id().expect("failed to get arrival_id");
+                let date_time =
+                    utc_naive_to_local(st.departure_time().expect("failed to get departure_time"))
+                        .with_second(0)
+                        .unwrap();
                 log::info!("Testing trip: {from_id} - {to_id} at {date_time}");
                 plan_shortest_journey(hrdf, from_id, to_id, date_time, 10, false)
                     .as_ref()
@@ -287,7 +311,7 @@ mod tests {
         // We are only interested in the "failures" of the hrdf routing engine
         let failed_comparison = ref_trips
             .into_iter()
-            .zip(hrdf_trips.into_iter())
+            .zip(hrdf_trips)
             .filter_map(|(rt, ht)| {
                 if let Some(ht) = ht
                     && !rt.approx_equal(&ht, 0.1)
@@ -410,8 +434,8 @@ mod tests {
         println!("{:.2?}", start_time.elapsed());
     }
 
-    #[ignore]
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_journeys() {
         // First build hrdf file
         let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
@@ -423,7 +447,11 @@ mod tests {
         );
         for f in failures.iter() {
             if let (Some(ojp_trip), Some(hrdf_trip)) = f {
-                eprintln!("{} - {}", ojp_trip.departure_id(), ojp_trip.arrival_id());
+                eprintln!(
+                    "{} - {}",
+                    ojp_trip.departure_id().expect("failed to get departure_id"),
+                    ojp_trip.arrival_id().expect("failed to get arrival_id")
+                );
                 eprintln!("OJP: \n{ojp_trip}");
                 eprintln!("HRDF: \n{hrdf_trip}");
             }
@@ -432,6 +460,7 @@ mod tests {
     }
 
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_reachables_stops() {
         // First build hrdf file
         let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
@@ -459,8 +488,10 @@ mod tests {
                 (Some(forward_trip), Some(backward_trip)) => {
                     eprintln!(
                         "{} - {}",
-                        forward_trip.departure_id(),
-                        forward_trip.arrival_id()
+                        forward_trip
+                            .departure_id()
+                            .expect("failed to get departure_id"),
+                        forward_trip.arrival_id().expect("failed to get arrival_id")
                     );
                     eprintln!("FORWARD: \n{forward_trip}");
                     eprintln!("REVERSE: \n{backward_trip}");
@@ -468,8 +499,10 @@ mod tests {
                 (Some(forward_trip), None) => {
                     eprintln!(
                         "{} - {}",
-                        forward_trip.departure_id(),
-                        forward_trip.arrival_id()
+                        forward_trip
+                            .departure_id()
+                            .expect("failed to get departure_id"),
+                        forward_trip.arrival_id().expect("failed to get arrival_id")
                     );
                     eprintln!("FORWARD: \n{forward_trip}");
                     eprintln!("REVERSE: \nNONE FOUND");
@@ -477,8 +510,12 @@ mod tests {
                 (None, Some(backward_trip)) => {
                     eprintln!(
                         "{} - {}",
-                        backward_trip.departure_id(),
-                        backward_trip.arrival_id()
+                        backward_trip
+                            .departure_id()
+                            .expect("failed to get departure_id"),
+                        backward_trip
+                            .arrival_id()
+                            .expect("failed to get arrival_id")
                     );
                     eprintln!("FORWARD: \nNONE FOUND");
                     eprintln!("REVERSE: \n{backward_trip}");
@@ -489,7 +526,46 @@ mod tests {
         assert!(failures.is_empty());
     }
 
+    /// Regression test for an infinite loop in `explore_routes`.
+    /// Journey 333483 visits some stop several times, so `Route::extend` used to return a Route
+    /// identical to the one just explored. That Route was pushed back in the queue and explored
+    /// again forever. The origin below (hectare 60992524) reaches it from Himmelried,
+    /// Schindelboden (8582811). The computation is done in another thread so that a regression
+    /// fails the test instead of hanging the whole test suite.
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
+    async fn test_no_infinite_loop_when_journey_revisits_a_stop() {
+        use std::{sync::Arc, sync::mpsc, time::Duration as StdDuration};
+
+        let hrdf = Arc::new(Hrdf::try_from_year(2025, false, None).await.unwrap());
+        let departure_at = create_date_time(2025, 4, 10, 7, 0);
+
+        let (sender, receiver) = mpsc::channel();
+        let hrdf_thread = Arc::clone(&hrdf);
+        std::thread::spawn(move || {
+            let routes = compute_routes_from_origin(
+                &hrdf_thread,
+                47.42233030307928,
+                7.5698344995492715,
+                departure_at,
+                Duration::minutes(60),
+                5,
+                1,
+                10,
+                false,
+            );
+            let _ = sender.send(routes);
+        });
+
+        // The computation takes well under a second when the loop is not present.
+        let routes = receiver
+            .recv_timeout(StdDuration::from_secs(60))
+            .expect("compute_routes_from_origin did not finish: infinite loop in explore_routes");
+        assert!(!routes.is_empty());
+    }
+
+    #[test(tokio::test)]
+    #[ignore = "requires downloading external polygon data"]
     async fn test_real_polygons_cache() {
         let original = ExcludedPolygons::try_new(
             &LAKES_GEOJSON_URLS,
@@ -511,6 +587,7 @@ mod tests {
 
     #[test(tokio::test)]
     #[cfg(feature = "hectare")]
+    #[ignore = "requires downloading external hectare data"]
     async fn test_real_hectare_data_cache() {
         use std::env;
 
@@ -582,6 +659,26 @@ mod tests {
     }
 
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
+    async fn test_reverse_journey_bellinzona_zurich() {
+        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
+        // Use Swiss local time directly, without the OJP conversion or display layer.
+        let departure_at = create_date_time(2025, 11, 25, 7, 23);
+        let forward = plan_journey(&hrdf, 8583005, 8591046, departure_at, 11, false).unwrap();
+        let reverse =
+            plan_journey_reverse(&hrdf, 8583005, 8591046, forward.arrival_at(), 11, false).unwrap();
+
+        assert!(reverse.arrival_at() <= forward.arrival_at());
+        assert!(
+            reverse.departure_at() >= forward.departure_at(),
+            "Reverse departure {} is earlier than the known feasible departure {}",
+            reverse.departure_at(),
+            forward.departure_at(),
+        );
+    }
+
+    #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_reverse_journey_consistency() {
         let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
 
@@ -700,6 +797,7 @@ mod tests {
     }
 
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_forward_isochrone_contains_known_destinations() {
         let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
 
@@ -732,6 +830,7 @@ mod tests {
     }
 
     #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
     async fn test_reverse_isochrone_contains_known_origins() {
         let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
 

@@ -5,22 +5,29 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::utils::add_minutes_to_date_time;
 
 use super::{
-    connections::{get_connections, get_connections_reverse},
+    connections::{
+        ArrivalCache, DepartureCache, ReverseConnectionTimes, get_connections,
+        get_connections_reverse,
+    },
+    core::is_improving_solution_reverse,
     models::{Route, RouteSection},
     utils::{RouteQueue, RouteQueueReverse, clone_update_route, get_stop_connections},
 };
 
-pub fn explore_routes<F>(
-    data_storage: &DataStorage,
+pub fn explore_routes<'a, F>(
+    data_storage: &'a DataStorage,
     mut routes: RouteQueue,
     journeys_to_ignore: &mut FxHashSet<i32>,
     earliest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
+    hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    departure_cache: &DepartureCache<'a>,
     mut can_continue_exploration: F,
 ) -> RouteQueue
 where
     F: FnMut(&Route) -> bool,
 {
     let mut new_routes = RouteQueue::new();
+    let mut visited_routes = FxHashSet::default();
 
     while let Some(route) = routes.pop() {
         if !can_continue_exploration(&route) {
@@ -33,14 +40,38 @@ where
             continue;
         }
 
+        let can_continue =
+            can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id);
+
+        if !can_continue {
+            // In some cases there are stops appearing multiple times in a Journey
+            // for example see: *Z 011709 000801   in FPLAHN
+            // Extending such a route can reproduce an identical Route forever. Detect the
+            // repeat and stop extending *this* route, instead of discarding an unrelated
+            // one from the queue.
+            if visited_routes.contains(&route) {
+                log::info!("Routes stayed the same: {}", routes.len());
+                visited_routes.remove(&route);
+                continue;
+            }
+            visited_routes.insert(route.clone());
+        }
+
         explore_last_route_section_more_if_possible(data_storage, &route, &mut routes);
 
-        if !can_explore_connections(data_storage, &route, earliest_arrival_by_stop_id) {
+        if !can_continue {
             continue;
         }
 
         explore_nearby_stops(data_storage, &route, &mut routes);
-        explore_connections(data_storage, &route, journeys_to_ignore, &mut new_routes);
+        explore_connections(
+            data_storage,
+            &route,
+            journeys_to_ignore,
+            hash_route_cache,
+            departure_cache,
+            &mut new_routes,
+        );
     }
 
     // All new journeys are recorded as not available for the next connection level.
@@ -66,7 +97,12 @@ fn explore_last_route_section_more_if_possible(
     let new_route = route.extend(data_storage, journey_id, route.arrival_at().date(), false);
 
     if let Some(rou) = new_route {
-        routes.push(rou);
+        // A journey can visit the same stop several times (for example see: *Z 011709 000801
+        // in FPLAHN), in which case extending the route can give back the very same route.
+        // Pushing it would make it be popped, extended and pushed again forever.
+        if rou != *route {
+            routes.push(rou);
+        }
     }
 }
 
@@ -92,8 +128,12 @@ fn can_explore_connections(
     let arrival_at = route.arrival_at();
 
     if let Some(&earliest_arrival) = earliest_arrival_by_stop_id.get(&stop_id) {
-        if arrival_at < earliest_arrival {
-            // The route arrived even earlier than the last route recorded for the stop.
+        if arrival_at <= earliest_arrival {
+            // The route arrived at least as early as the best route recorded for the stop.
+            // Using <= (not <) matters: two different paths can legitimately arrive at the
+            // exact same stop at the exact same time, and discarding one of them purely
+            // because it was processed second would silently drop a potentially better
+            // continuation.
             earliest_arrival_by_stop_id.insert(stop_id, arrival_at);
             true
         } else {
@@ -107,13 +147,21 @@ fn can_explore_connections(
     }
 }
 
-fn explore_connections(
-    data_storage: &DataStorage,
+fn explore_connections<'a>(
+    data_storage: &'a DataStorage,
     route: &Route,
     journeys_to_ignore: &FxHashSet<i32>,
+    hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    departure_cache: &DepartureCache<'a>,
     new_routes: &mut RouteQueue,
 ) {
-    for route in get_connections(data_storage, route, journeys_to_ignore) {
+    for route in get_connections(
+        data_storage,
+        route,
+        journeys_to_ignore,
+        hash_route_cache,
+        departure_cache,
+    ) {
         new_routes.push(route);
     }
 }
@@ -152,17 +200,24 @@ fn explore_nearby_stops(data_storage: &DataStorage, route: &Route, routes: &mut 
     .for_each(|new_route| routes.push(new_route));
 }
 
-pub fn explore_routes_reverse<F>(
-    data_storage: &DataStorage,
+pub fn explore_routes_reverse<'a, F>(
+    data_storage: &'a DataStorage,
     mut routes: RouteQueueReverse,
     journeys_to_ignore: &mut FxHashSet<i32>,
-    latest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
+    connection_times: &mut ReverseConnectionTimes,
+    hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    arrival_cache: &ArrivalCache<'a>,
     mut can_continue_exploration: F,
 ) -> RouteQueueReverse
 where
     F: FnMut(&Route) -> bool,
 {
     let mut new_routes = RouteQueueReverse::new();
+
+    // Several transfers can lead to the same scheduled arrival/departure event.
+    // Its continuation has identical transfer times. Revisit it only if the
+    // alternative improves the usual transfer-count / stop-count preference.
+    let mut explored_events = FxHashMap::default();
 
     while let Some(route) = routes.pop() {
         if !can_continue_exploration(&route) {
@@ -173,13 +228,37 @@ where
             continue;
         }
 
+        if let Some(journey_id) = route.last_section().journey_id() {
+            let event = (journey_id, route.arrival_stop_id(), route.arrival_at());
+            if !is_improving_solution_reverse(data_storage, &route, &explored_events.get(&event)) {
+                continue;
+            }
+        }
+
         explore_last_route_section_more_if_possible_reverse(data_storage, &route, &mut routes);
 
-        if !can_explore_connections_reverse(data_storage, &route, latest_arrival_by_stop_id) {
-            continue;
+        if is_exchange_point(data_storage, &route) {
+            explore_nearby_stops_reverse(
+                data_storage,
+                &route,
+                &mut routes,
+                &mut connection_times.footpaths,
+            );
+            if connection_times.can_explore(&route) {
+                explore_connections_reverse(
+                    data_storage,
+                    &route,
+                    journeys_to_ignore,
+                    hash_route_cache,
+                    arrival_cache,
+                    &mut new_routes,
+                );
+            }
         }
-        explore_nearby_stops_reverse(data_storage, &route, &mut routes);
-        explore_connections_reverse(data_storage, &route, journeys_to_ignore, &mut new_routes);
+        if let Some(journey_id) = route.last_section().journey_id() {
+            let event = (journey_id, route.arrival_stop_id(), route.arrival_at());
+            explored_events.insert(event, route);
+        }
     }
 
     new_routes.iter_routes().for_each(|route| {
@@ -210,46 +289,21 @@ fn explore_last_route_section_more_if_possible_reverse(
     }
 }
 
-fn can_explore_connections_reverse(
-    data_storage: &DataStorage,
-    route: &Route,
-    latest_arrival_by_stop_id: &mut FxHashMap<i32, NaiveDateTime>,
-) -> bool {
-    let stop_id = route.arrival_stop_id();
-    let stop = data_storage.stops().find(stop_id);
-    let stop = if let Some(stop) = stop {
-        stop
-    } else {
-        log::debug!("Stop: {} not found.", stop_id);
-        return false;
-    };
-
-    let arrival_at = route.arrival_at();
-
-    if !stop.can_be_used_as_exchange_point() {
-        return false;
-    }
-
-    if let Some(&latest_arrival) = latest_arrival_by_stop_id.get(&stop_id) {
-        if arrival_at > latest_arrival {
-            latest_arrival_by_stop_id.insert(stop_id, arrival_at);
-            true
-        } else {
-            false
-        }
-    } else {
-        latest_arrival_by_stop_id.insert(stop_id, arrival_at);
-        true
-    }
-}
-
-fn explore_connections_reverse(
-    data_storage: &DataStorage,
+fn explore_connections_reverse<'a>(
+    data_storage: &'a DataStorage,
     route: &Route,
     journeys_to_ignore: &FxHashSet<i32>,
+    hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    arrival_cache: &ArrivalCache<'a>,
     new_routes: &mut RouteQueueReverse,
 ) {
-    for route in get_connections_reverse(data_storage, route, journeys_to_ignore) {
+    for route in get_connections_reverse(
+        data_storage,
+        route,
+        journeys_to_ignore,
+        hash_route_cache,
+        arrival_cache,
+    ) {
         new_routes.push(route);
     }
 }
@@ -258,6 +312,7 @@ fn explore_nearby_stops_reverse(
     data_storage: &DataStorage,
     route: &Route,
     routes: &mut RouteQueueReverse,
+    footpath_times: &mut FxHashMap<(i32, i32), NaiveDateTime>,
 ) {
     if route.last_section().journey_id().is_none() {
         return;
@@ -274,6 +329,19 @@ fn explore_nearby_stops_reverse(
             .contains_key(&stop_connection.stop_id_2())
     })
     .filter(|stop_connection| !route.visited_stops().contains(&stop_connection.stop_id_2()))
+    .filter(|stop_connection| {
+        let key = (route.arrival_stop_id(), stop_connection.stop_id_2());
+        let departure_at =
+            add_minutes_to_date_time(route.arrival_at(), -(stop_connection.duration() as i64));
+        if footpath_times
+            .get(&key)
+            .is_some_and(|&best| departure_at <= best)
+        {
+            return false;
+        }
+        footpath_times.insert(key, departure_at);
+        true
+    })
     .map(|stop_connection| {
         clone_update_route(route, |cloned_sections, cloned_visited_stops| {
             cloned_sections.push(RouteSection::new(
@@ -288,4 +356,15 @@ fn explore_nearby_stops_reverse(
         })
     })
     .for_each(|new_route| routes.push(new_route));
+}
+
+fn is_exchange_point(data_storage: &DataStorage, route: &Route) -> bool {
+    let stop_id = route.arrival_stop_id();
+    let Some(stop) = data_storage.stops().find(stop_id) else {
+        log::debug!("Stop: {} not found.", stop_id);
+        return false;
+    };
+
+    // The frontier of a journey is not necessarily usable for an interchange.
+    stop.can_be_used_as_exchange_point()
 }

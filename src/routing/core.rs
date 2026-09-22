@@ -5,7 +5,9 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::utils::add_minutes_to_date_time;
 
 use super::{
-    connections::{next_departures, previous_departures},
+    connections::{
+        ArrivalCache, DepartureCache, ReverseConnectionTimes, next_departures, previous_departures,
+    },
     exploration::{explore_routes, explore_routes_reverse},
     models::{Route, RouteResult, RouteSection, RoutingAlgorithmArgs, RoutingAlgorithmMode},
     utils::{RouteQueue, RouteQueueReverse, get_stop_connections},
@@ -19,7 +21,34 @@ pub fn compute_routing(
     verbose: bool,
     args: RoutingAlgorithmArgs,
 ) -> FxHashMap<i32, RouteResult> {
-    let mut routes = create_initial_routes(data_storage, departure_stop_id, departure_at);
+    compute_routing_with_cache(
+        data_storage,
+        departure_stop_id,
+        departure_at,
+        max_num_explorable_connections,
+        verbose,
+        args,
+        &DepartureCache::default(),
+    )
+}
+
+pub fn compute_routing_with_cache<'a>(
+    data_storage: &'a DataStorage,
+    departure_stop_id: i32,
+    departure_at: NaiveDateTime,
+    max_num_explorable_connections: i32,
+    verbose: bool,
+    args: RoutingAlgorithmArgs,
+    departure_cache: &DepartureCache<'a>,
+) -> FxHashMap<i32, RouteResult> {
+    let mut hash_route_cache = FxHashMap::default();
+    let mut routes = create_initial_routes(
+        data_storage,
+        departure_stop_id,
+        departure_at,
+        &mut hash_route_cache,
+        departure_cache,
+    );
     let mut earliest_arrival_by_stop_id = FxHashMap::default();
     let mut solutions = FxHashMap::default();
 
@@ -60,6 +89,8 @@ pub fn compute_routing(
             routes,
             &mut journeys_to_ignore,
             &mut earliest_arrival_by_stop_id,
+            &mut hash_route_cache,
+            departure_cache,
             can_continue_exploration,
         );
 
@@ -76,16 +107,24 @@ pub fn compute_routing(
         .collect()
 }
 
-pub fn create_initial_routes(
-    data_storage: &DataStorage,
+pub fn create_initial_routes<'a>(
+    data_storage: &'a DataStorage,
     departure_stop_id: i32,
     departure_at: NaiveDateTime,
+    hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    departure_cache: &DepartureCache<'a>,
 ) -> RouteQueue {
     let mut routes = RouteQueue::new();
 
-    for (journey, journey_departure_at) in
-        next_departures(data_storage, departure_stop_id, departure_at, None, None)
-    {
+    for (journey, journey_departure_at) in next_departures(
+        data_storage,
+        departure_stop_id,
+        departure_at,
+        None,
+        None,
+        hash_route_cache,
+        departure_cache,
+    ) {
         if let Some((section, mut visited_stops)) = RouteSection::find_next(
             data_storage,
             journey,
@@ -289,8 +328,22 @@ pub fn compute_routing_reverse(
     verbose: bool,
     args: RoutingAlgorithmArgs,
 ) -> FxHashMap<i32, RouteResult> {
-    let mut routes = create_initial_routes_reverse(data_storage, arrival_stop_id, arrival_at);
-    let mut latest_arrival_by_stop_id = FxHashMap::default();
+    let arrival_cache = ArrivalCache::default();
+    if matches!(
+        args.mode(),
+        RoutingAlgorithmMode::SolveFromArrivalStopToReachableDepartureStops
+    ) {
+        arrival_cache.minimum_time.set(Some(args.time_limit()));
+    }
+    let mut hash_route_cache = FxHashMap::default();
+    let mut connection_times = ReverseConnectionTimes::new(data_storage);
+    let mut routes = create_initial_routes_reverse(
+        data_storage,
+        arrival_stop_id,
+        arrival_at,
+        &mut hash_route_cache,
+        &arrival_cache,
+    );
     let mut solutions = FxHashMap::default();
 
     let mut journeys_to_ignore = routes
@@ -304,16 +357,18 @@ pub fn compute_routing_reverse(
         }
 
         let can_continue_exploration: Box<dyn FnMut(&Route) -> bool> = match args.mode() {
-            RoutingAlgorithmMode::SolveFromDepartureStopToArrivalStop => {
-                Box::new(|route| {
-                    can_continue_exploration_one_to_one_reverse(
-                        data_storage,
-                        route,
-                        &mut solutions,
-                        args.arrival_stop_id(),
-                    )
-                })
-            }
+            RoutingAlgorithmMode::SolveFromDepartureStopToArrivalStop => Box::new(|route| {
+                let can_continue = can_continue_exploration_one_to_one_reverse(
+                    data_storage,
+                    route,
+                    &mut solutions,
+                    args.arrival_stop_id(),
+                );
+                if let Some(solution) = solutions.get(&args.arrival_stop_id()) {
+                    arrival_cache.minimum_time.set(Some(solution.arrival_at()));
+                }
+                can_continue
+            }),
             RoutingAlgorithmMode::SolveFromArrivalStopToReachableDepartureStops => {
                 Box::new(|route| {
                     can_continue_exploration_one_to_many_reverse(
@@ -331,7 +386,9 @@ pub fn compute_routing_reverse(
             data_storage,
             routes,
             &mut journeys_to_ignore,
-            &mut latest_arrival_by_stop_id,
+            &mut connection_times,
+            &mut hash_route_cache,
+            &arrival_cache,
             can_continue_exploration,
         );
 
@@ -348,16 +405,24 @@ pub fn compute_routing_reverse(
         .collect()
 }
 
-pub fn create_initial_routes_reverse(
-    data_storage: &DataStorage,
+pub fn create_initial_routes_reverse<'a>(
+    data_storage: &'a DataStorage,
     arrival_stop_id: i32,
     arrival_at: NaiveDateTime,
+    hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
+    arrival_cache: &ArrivalCache<'a>,
 ) -> RouteQueueReverse {
     let mut routes = RouteQueueReverse::new();
 
-    for (journey, journey_arrival_at) in
-        previous_departures(data_storage, arrival_stop_id, arrival_at, None, None)
-    {
+    for (journey, journey_arrival_at) in previous_departures(
+        data_storage,
+        arrival_stop_id,
+        arrival_at,
+        None,
+        &FxHashSet::default(),
+        hash_route_cache,
+        arrival_cache,
+    ) {
         if let Some((section, mut visited_stops)) = RouteSection::find_previous(
             data_storage,
             journey,
@@ -526,7 +591,7 @@ fn can_improve_solution_reverse(route: &Route, solution: &Option<&Route>) -> boo
         .is_none_or(|sol| route.arrival_at() >= sol.arrival_at())
 }
 
-fn is_improving_solution_reverse(
+pub(super) fn is_improving_solution_reverse(
     data_storage: &DataStorage,
     candidate: &Route,
     solution: &Option<&Route>,
