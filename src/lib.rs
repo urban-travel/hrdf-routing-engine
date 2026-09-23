@@ -170,8 +170,10 @@ mod tests {
         let hrdf = shared_hrdf_2025().await;
         let start_date =
             hrdf_parser::timetable_start_date(hrdf.data_storage().timetable_metadata()).unwrap();
-        let arrival_at =
-            NaiveDateTime::new(start_date, chrono::NaiveTime::from_hms_opt(0, 30, 0).unwrap());
+        let arrival_at = NaiveDateTime::new(
+            start_date,
+            chrono::NaiveTime::from_hms_opt(0, 30, 0).unwrap(),
+        );
         // Reverse search near the timetable's first day used to panic looking up
         // the previous day. Only need to confirm this doesn't panic.
         let _ = plan_journey_reverse(&hrdf, 8503000, 8507000, arrival_at, 10, false);
@@ -233,7 +235,10 @@ mod tests {
         // case; none was found in this dataset).
         let arrival_at = create_date_time(2025, 6, 16, 6, 6);
         let route = plan_journey_reverse(&hrdf, 8503000, 8507483, arrival_at, 10, false);
-        assert!(route.is_some(), "a route arriving at 8507483 by 06:06 should be found");
+        assert!(
+            route.is_some(),
+            "a route arriving at 8507483 by 06:06 should be found"
+        );
     }
 
     pub async fn test_paths_validity_reverse(

@@ -187,12 +187,14 @@ pub fn get_incoming_stop_connections<'a>(
     incoming_stop_connections_by_stop_id: &FxHashMap<i32, FxHashSet<i32>>,
     stop_id: i32,
 ) -> Option<Vec<&'a StopConnection>> {
-    incoming_stop_connections_by_stop_id.get(&stop_id).map(|ids| {
-        data_storage
-            .stop_connections()
-            .resolve_ids(ids)
-            .unwrap_or_else(|| panic!("Ids {:?} not found.", ids))
-    })
+    incoming_stop_connections_by_stop_id
+        .get(&stop_id)
+        .map(|ids| {
+            data_storage
+                .stop_connections()
+                .resolve_ids(ids)
+                .unwrap_or_else(|| panic!("Ids {:?} not found.", ids))
+        })
 }
 
 /// `hash_route` only depends on the (journey, stop) pair, never on the query

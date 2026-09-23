@@ -102,11 +102,8 @@ impl ReverseConnectionTimes {
                 .and_modify(|bound| *bound = (*bound).max(entry.duration()))
                 .or_insert(global_max.max(entry.duration()));
         }
-        let incoming_stop_connections_by_stop_id = data_storage
-            .stop_connections()
-            .entries()
-            .into_iter()
-            .fold(
+        let incoming_stop_connections_by_stop_id =
+            data_storage.stop_connections().entries().into_iter().fold(
                 FxHashMap::default(),
                 |mut acc: FxHashMap<i32, FxHashSet<i32>>, stop_connection| {
                     acc.entry(stop_connection.stop_id_2())
