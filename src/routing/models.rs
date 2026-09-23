@@ -923,4 +923,40 @@ mod tests {
         // Total time should account for walking: (11:03) - (09:55) = 68 minutes
         assert_eq!(route.total_time().num_minutes(), 68);
     }
+
+    #[test]
+    fn unique_coordinates_from_routes_reverse_uses_the_given_deadline() {
+        use crate::isochrone::unique_coordinates_from_routes_reverse;
+        use hrdf_parser::CoordinateSystem;
+
+        let coords = Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0);
+        let dep_at =
+            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let arr_at =
+            NaiveDateTime::parse_from_str("2025-06-15 11:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let sections = vec![RouteSectionResult::new(
+            Some(1),
+            8503000,
+            Some(coords),
+            Some(coords),
+            8507000,
+            Some(coords),
+            Some(coords),
+            Some(dep_at),
+            Some(arr_at),
+            None,
+            Transport::Train,
+        )];
+        let route = RouteResult::new(dep_at, arr_at, sections);
+
+        // compute_average_isochrones_reverse computes routes for each sample's own
+        // deadline; this pins down that unique_coordinates_from_routes_reverse always
+        // measures duration relative to whatever deadline it's given, not a fixed one.
+        let given_deadline =
+            NaiveDateTime::parse_from_str("2025-06-15 11:45:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let result = unique_coordinates_from_routes_reverse(&[route], given_deadline);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].1, given_deadline - dep_at);
+    }
 }

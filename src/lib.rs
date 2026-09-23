@@ -164,6 +164,78 @@ mod tests {
             .clone()
     }
 
+    #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
+    async fn test_reverse_query_on_timetable_start_date_does_not_panic() {
+        let hrdf = shared_hrdf_2025().await;
+        let start_date =
+            hrdf_parser::timetable_start_date(hrdf.data_storage().timetable_metadata()).unwrap();
+        let arrival_at =
+            NaiveDateTime::new(start_date, chrono::NaiveTime::from_hms_opt(0, 30, 0).unwrap());
+        // Reverse search near the timetable's first day used to panic looking up
+        // the previous day. Only need to confirm this doesn't panic.
+        let _ = plan_journey_reverse(&hrdf, 8503000, 8507000, arrival_at, 10, false);
+    }
+
+    #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
+    async fn test_reverse_post_20h_window_covers_several_hours() {
+        let hrdf = shared_hrdf_2025().await;
+        // A direct service's departure isn't gated by the search window, so use a
+        // transfer (Zürich HB -> Zermatt) to exercise it.
+        let arrival_at = create_date_time(2025, 6, 15, 20, 5);
+        let route = plan_journey_reverse(&hrdf, 8503000, 8501689, arrival_at, 10, false)
+            .expect("a route should exist arriving by 20:05");
+        // Past 20:00, the search used to never look earlier than 20:00.
+        let cutoff = create_date_time(2025, 6, 15, 20, 0);
+        assert!(
+            route.departure_at() < cutoff,
+            "departure {:?} should be before 20:00, the old buggy window's floor",
+            route.departure_at()
+        );
+    }
+
+    #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
+    async fn test_reverse_finds_previous_leg_through_looping_journey() {
+        let hrdf = shared_hrdf_2025().await;
+        // A real bus loop: departs Archstrasse/HB (8594298) at 11:48, passes
+        // Turmstrasse (8591012) at 11:54, and returns to 8594298 at 12:02.
+        let arrival_at = create_date_time(2025, 6, 16, 12, 2);
+        let route = plan_journey_reverse(&hrdf, 8591012, 8594298, arrival_at, 10, false)
+            .expect("a route should be found");
+        // Must use this journey's own 11:54 -> 12:02 leg (it revisits its own
+        // stop), not some other route masking the bug.
+        assert_eq!(route.departure_at(), create_date_time(2025, 6, 16, 11, 54));
+        assert_eq!(route.arrival_at(), arrival_at);
+    }
+
+    #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
+    async fn test_reverse_uses_one_way_incoming_footpath() {
+        let hrdf = shared_hrdf_2025().await;
+        // A one-way footpath with no reverse entry: 8595133 -> 8579001, 6 minutes.
+        // A journey arrives 8595133 at 11:56, so 8579001 is reachable by 12:02
+        // only via this footpath (a walk alone isn't a valid solution).
+        let arrival_at = create_date_time(2025, 6, 16, 12, 2);
+        let route = plan_journey_reverse(&hrdf, 8579018, 8579001, arrival_at, 10, false)
+            .expect("a route should be found");
+        assert_eq!(route.arrival_at(), arrival_at);
+    }
+
+    #[test(tokio::test)]
+    #[ignore = "requires downloading external HRDF data"]
+    async fn test_reverse_exchange_time_exception_applies() {
+        let hrdf = shared_hrdf_2025().await;
+        // A real journey-pair exchange-time exception at stop 8507483 allows only 2
+        // minutes for a transfer that would otherwise need more. Exercises the
+        // exchange-time lookup's argument order (doesn't cover the midnight-crossing
+        // case; none was found in this dataset).
+        let arrival_at = create_date_time(2025, 6, 16, 6, 6);
+        let route = plan_journey_reverse(&hrdf, 8503000, 8507483, arrival_at, 10, false);
+        assert!(route.is_some(), "a route arriving at 8507483 by 06:06 should be found");
+    }
+
     pub async fn test_paths_validity_reverse(
         hrdf: &Hrdf,
         ids: &[(i32, i32)],
