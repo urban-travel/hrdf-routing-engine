@@ -10,7 +10,7 @@ use super::{
     },
     exploration::{explore_routes, explore_routes_reverse},
     models::{Route, RouteResult, RouteSection, RoutingAlgorithmArgs, RoutingAlgorithmMode},
-    utils::{RouteQueue, RouteQueueReverse, get_stop_connections},
+    utils::{RouteQueue, RouteQueueReverse, get_incoming_stop_connections, get_stop_connections},
 };
 
 pub fn compute_routing(
@@ -311,8 +311,8 @@ fn is_improving_solution(
         let stop_count_2 = count_stops(data_storage, sections_2[i]);
 
         if stop_count_1 != stop_count_2 {
-            // If the candidate crosses less stops than the solution, then it is a better solution.
-            return stop_count_1 < stop_count_2;
+            // If the candidate crosses more stops than the solution, then it is a better solution.
+            return stop_count_1 > stop_count_2;
         }
     }
 
@@ -343,6 +343,7 @@ pub fn compute_routing_reverse(
         arrival_at,
         &mut hash_route_cache,
         &arrival_cache,
+        &connection_times.incoming_stop_connections_by_stop_id,
     );
     let mut solutions = FxHashMap::default();
 
@@ -411,6 +412,7 @@ pub fn create_initial_routes_reverse<'a>(
     arrival_at: NaiveDateTime,
     hash_route_cache: &mut FxHashMap<(i32, i32), Option<u64>>,
     arrival_cache: &ArrivalCache<'a>,
+    incoming_stop_connections_by_stop_id: &FxHashMap<i32, FxHashSet<i32>>,
 ) -> RouteQueueReverse {
     let mut routes = RouteQueueReverse::new();
 
@@ -435,20 +437,22 @@ pub fn create_initial_routes_reverse<'a>(
         }
     }
 
-    if let Some(stop_connections) = get_stop_connections(data_storage, arrival_stop_id) {
+    if let Some(stop_connections) = get_incoming_stop_connections(
+        data_storage,
+        incoming_stop_connections_by_stop_id,
+        arrival_stop_id,
+    ) {
         stop_connections.iter().for_each(|stop_connection| {
             let mut visited_stops = FxHashSet::default();
             visited_stops.insert(stop_connection.stop_id_1());
             visited_stops.insert(stop_connection.stop_id_2());
 
-            // Reverse walking connection:
-            // We are at stop_id_1 (arrival_stop_id).
-            // We go to stop_id_2 (previous stop).
-            // Time at stop_id_2 = Time at stop_id_1 - Duration.
+            // Reverse walking connection: we are at stop_id_2 (arrival_stop_id),
+            // came from stop_id_1. Time at stop_id_1 = arrival_at - Duration.
             let section = RouteSection::new(
                 None,
-                stop_connection.stop_id_1(),
                 stop_connection.stop_id_2(),
+                stop_connection.stop_id_1(),
                 add_minutes_to_date_time(arrival_at, -(stop_connection.duration() as i64)),
                 Some(stop_connection.duration()),
             );
@@ -640,7 +644,8 @@ pub(super) fn is_improving_solution_reverse(
         let stop_count_2 = count_stops(data_storage, sections_2[i]);
 
         if stop_count_1 != stop_count_2 {
-            return stop_count_1 < stop_count_2;
+            // If the candidate crosses more stops than the solution, then it is a better solution.
+            return stop_count_1 > stop_count_2;
         }
     }
 

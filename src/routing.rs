@@ -354,47 +354,27 @@ fn find_stops_in_time_range_reverse(
     arrival_at: NaiveDateTime,
     time_limit: Duration,
 ) -> Vec<&Stop> {
-    let mut stops = data_storage
+    let mut stops: Vec<(&Stop, Duration)> = data_storage
         .stops()
         .entries()
         .into_iter()
         .filter(|stop| stop.wgs84_coordinates().is_some())
-        .filter(|stop| {
-            adjust_arrival_at(
+        .map(|stop| {
+            let (_, remaining) = adjust_arrival_at(
                 arrival_at,
                 time_limit,
                 destination_latitude,
                 destination_longitude,
                 stop,
-            )
-            .1
-            .num_minutes()
-                > 0
+            );
+            (stop, remaining)
         })
-        .collect::<Vec<_>>();
-    stops.sort_by(|lhs, rhs| {
-        adjust_arrival_at(
-            arrival_at,
-            time_limit,
-            destination_latitude,
-            destination_longitude,
-            rhs,
-        )
-        .1
-        .num_minutes()
-        .cmp(
-            &adjust_arrival_at(
-                arrival_at,
-                time_limit,
-                destination_latitude,
-                destination_longitude,
-                lhs,
-            )
-            .1
-            .num_minutes(),
-        )
-    });
-    stops
+        .filter(|(_, remaining)| remaining.num_minutes() > 0)
+        .collect();
+
+    stops.sort_by(|(_, lhs), (_, rhs)| rhs.num_minutes().cmp(&lhs.num_minutes()));
+
+    stops.into_iter().map(|(stop, _)| stop).collect()
 }
 
 /// Given a destination point (lat/lon) and arrival time, find all origin stops

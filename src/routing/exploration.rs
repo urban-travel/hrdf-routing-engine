@@ -11,7 +11,10 @@ use super::{
     },
     core::is_improving_solution_reverse,
     models::{Route, RouteSection},
-    utils::{RouteQueue, RouteQueueReverse, clone_update_route, get_stop_connections},
+    utils::{
+        RouteQueue, RouteQueueReverse, clone_update_route, get_incoming_stop_connections,
+        get_stop_connections,
+    },
 };
 
 pub fn explore_routes<'a, F>(
@@ -116,7 +119,7 @@ fn can_explore_connections(
     let stop = if let Some(stop) = stop {
         stop
     } else {
-        log::debug!("Stop: {} not found.", stop_id);
+        log::warn!("Stop: {} not found.", stop_id);
         return false;
     };
 
@@ -243,6 +246,7 @@ where
                 &route,
                 &mut routes,
                 &mut connection_times.footpaths,
+                &connection_times.incoming_stop_connections_by_stop_id,
             );
             if connection_times.can_explore(&route) {
                 explore_connections_reverse(
@@ -313,11 +317,16 @@ fn explore_nearby_stops_reverse(
     route: &Route,
     routes: &mut RouteQueueReverse,
     footpath_times: &mut FxHashMap<(i32, i32), NaiveDateTime>,
+    incoming_stop_connections_by_stop_id: &FxHashMap<i32, FxHashSet<i32>>,
 ) {
     if route.last_section().journey_id().is_none() {
         return;
     }
-    match get_stop_connections(data_storage, route.arrival_stop_id()) {
+    match get_incoming_stop_connections(
+        data_storage,
+        incoming_stop_connections_by_stop_id,
+        route.arrival_stop_id(),
+    ) {
         Some(stop_connections) => stop_connections,
         None => return,
     }
@@ -326,11 +335,11 @@ fn explore_nearby_stops_reverse(
         data_storage
             .stops()
             .data()
-            .contains_key(&stop_connection.stop_id_2())
+            .contains_key(&stop_connection.stop_id_1())
     })
-    .filter(|stop_connection| !route.visited_stops().contains(&stop_connection.stop_id_2()))
+    .filter(|stop_connection| !route.visited_stops().contains(&stop_connection.stop_id_1()))
     .filter(|stop_connection| {
-        let key = (route.arrival_stop_id(), stop_connection.stop_id_2());
+        let key = (route.arrival_stop_id(), stop_connection.stop_id_1());
         let departure_at =
             add_minutes_to_date_time(route.arrival_at(), -(stop_connection.duration() as i64));
         if footpath_times
@@ -346,13 +355,13 @@ fn explore_nearby_stops_reverse(
         clone_update_route(route, |cloned_sections, cloned_visited_stops| {
             cloned_sections.push(RouteSection::new(
                 None,
-                stop_connection.stop_id_1(),
                 stop_connection.stop_id_2(),
+                stop_connection.stop_id_1(),
                 // In reverse, we subtract the walking duration to find when we started walking
                 add_minutes_to_date_time(route.arrival_at(), -(stop_connection.duration() as i64)),
                 Some(stop_connection.duration()),
             ));
-            cloned_visited_stops.insert(stop_connection.stop_id_2());
+            cloned_visited_stops.insert(stop_connection.stop_id_1());
         })
     })
     .for_each(|new_route| routes.push(new_route));
@@ -361,7 +370,7 @@ fn explore_nearby_stops_reverse(
 fn is_exchange_point(data_storage: &DataStorage, route: &Route) -> bool {
     let stop_id = route.arrival_stop_id();
     let Some(stop) = data_storage.stops().find(stop_id) else {
-        log::debug!("Stop: {} not found.", stop_id);
+        log::warn!("Stop: {} not found.", stop_id);
         return false;
     };
 

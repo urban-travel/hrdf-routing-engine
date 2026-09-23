@@ -98,6 +98,10 @@ async fn compute_isochrones(
         return Err(StatusCode::BAD_REQUEST);
     }
 
+    if params.isochrone_interval == 0 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     if params.time_limit % params.isochrone_interval != 0 {
         // The result of dividing time_limit with isochrone_interval must be an integer.
         return Err(StatusCode::BAD_REQUEST);
@@ -168,6 +172,10 @@ async fn compute_reverse_isochrones(
     let end_date = timetable_end_date(hrdf.data_storage().timetable_metadata()).unwrap();
 
     if params.arrival_date < start_date || params.arrival_date > end_date {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    if params.isochrone_interval == 0 {
         return Err(StatusCode::BAD_REQUEST);
     }
 

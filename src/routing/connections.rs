@@ -58,6 +58,10 @@ pub(crate) struct ReverseConnectionTimes {
     best_ready_times: FxHashMap<i32, NaiveDateTime>,
     max_exchange_times: FxHashMap<i32, i16>,
     pub footpaths: FxHashMap<(i32, i32), NaiveDateTime>,
+    /// Walking `StopConnection`s indexed by arrival stop (`stop_id_2`), the
+    /// reverse of `stop_connections_by_stop_id` (keyed by `stop_id_1` only).
+    /// Built once per reverse search.
+    pub incoming_stop_connections_by_stop_id: FxHashMap<i32, FxHashSet<i32>>,
 }
 
 impl ReverseConnectionTimes {
@@ -98,10 +102,25 @@ impl ReverseConnectionTimes {
                 .and_modify(|bound| *bound = (*bound).max(entry.duration()))
                 .or_insert(global_max.max(entry.duration()));
         }
+        let incoming_stop_connections_by_stop_id = data_storage
+            .stop_connections()
+            .entries()
+            .into_iter()
+            .fold(
+                FxHashMap::default(),
+                |mut acc: FxHashMap<i32, FxHashSet<i32>>, stop_connection| {
+                    acc.entry(stop_connection.stop_id_2())
+                        .or_default()
+                        .insert(stop_connection.id());
+                    acc
+                },
+            );
+
         Self {
             best_ready_times: FxHashMap::default(),
             max_exchange_times,
             footpaths: FxHashMap::default(),
+            incoming_stop_connections_by_stop_id,
         }
     }
 
@@ -175,7 +194,10 @@ pub fn get_connections_reverse<'a>(
         data_storage,
         route.arrival_stop_id(),
         route.arrival_at(),
-        Some(get_routes_to_ignore(data_storage, route, hash_route_cache)),
+        // hash_route() hashes the forward suffix, the wrong dimension for
+        // reverse dedup. journeys_to_ignore already blocks re-using a
+        // journey (create_initial_routes_reverse passes None here too).
+        None,
         journeys_to_ignore,
         hash_route_cache,
         arrival_cache,
@@ -206,7 +228,7 @@ pub fn get_connections_reverse<'a>(
                     route.arrival_stop_id(),
                     journey.id(),
                     id,
-                    journey_arrival_at,
+                    route.arrival_at(),
                 );
                 add_minutes_to_date_time(journey_arrival_at, exchange_time.into())
                     <= route.arrival_at()
@@ -289,13 +311,9 @@ pub fn previous_departures<'a>(
 
         (journeys, min_arrival_at)
     } else {
-        let min_arrival_at = if arrival_at.time() > create_time(20, 0) {
-            // The minimum arrival time is 20:00.
-            NaiveDateTime::new(arrival_at.date(), create_time(20, 0))
-        } else {
-            // The minimum arrival time is 4 hours earlier.
-            arrival_at.checked_add_signed(Duration::hours(-4)).unwrap()
-        };
+        // Always 4 hours earlier: past 20:00 this is always before 20:00
+        // too, since 20:00-24:00 is itself only 4 hours wide.
+        let min_arrival_at = arrival_at.checked_sub_signed(Duration::hours(4)).unwrap();
 
         (Arc::from([]), min_arrival_at)
     };
@@ -485,7 +503,11 @@ pub fn get_operating_journeys(
         .bit_fields_by_stop_id()
         .get(&stop_id)
         .map_or(Vec::new(), |bit_fields_1| {
-            let bit_fields_2 = data_storage.bit_fields_by_day().get(&date).unwrap();
+            let Some(bit_fields_2) = data_storage.bit_fields_by_day().get(&date) else {
+                // date is outside the loaded timetable: no services to
+                // report, not a panic.
+                return Vec::new();
+            };
             let bit_fields: Vec<_> = bit_fields_1.intersection(bit_fields_2).collect();
 
             bit_fields
@@ -685,6 +707,7 @@ mod tests {
             best_ready_times: FxHashMap::default(),
             max_exchange_times: [(8503000, 7)].into_iter().collect(),
             footpaths: FxHashMap::default(),
+            incoming_stop_connections_by_stop_id: FxHashMap::default(),
         }
     }
 

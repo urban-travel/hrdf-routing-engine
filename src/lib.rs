@@ -152,6 +152,18 @@ mod tests {
         (8500236, 8511236),
     ];
 
+    static SHARED_HRDF_2025: tokio::sync::OnceCell<std::sync::Arc<Hrdf>> =
+        tokio::sync::OnceCell::const_new();
+
+    async fn shared_hrdf_2025() -> std::sync::Arc<Hrdf> {
+        SHARED_HRDF_2025
+            .get_or_init(|| async {
+                std::sync::Arc::new(Hrdf::try_from_year(2025, false, None).await.unwrap())
+            })
+            .await
+            .clone()
+    }
+
     pub async fn test_paths_validity_reverse(
         hrdf: &Hrdf,
         ids: &[(i32, i32)],
@@ -438,7 +450,7 @@ mod tests {
     #[ignore = "requires downloading external HRDF data"]
     async fn test_journeys() {
         // First build hrdf file
-        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
+        let hrdf = shared_hrdf_2025().await;
         let started = Instant::now();
         let failures = test_paths_validity(&hrdf, &IDS).await.unwrap();
         log::info!(
@@ -463,7 +475,7 @@ mod tests {
     #[ignore = "requires downloading external HRDF data"]
     async fn test_reachables_stops() {
         // First build hrdf file
-        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
+        let hrdf = shared_hrdf_2025().await;
         let started = Instant::now();
         test_find_reachable_stops_within_time_limit(&hrdf);
         log::info!(
@@ -476,7 +488,7 @@ mod tests {
     #[test(tokio::test)]
     async fn test_journeys_consistency() {
         // First build hrdf file
-        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
+        let hrdf = shared_hrdf_2025().await;
         let started = Instant::now();
         let failures = test_paths_validity_consistency(&hrdf, &IDS).await.unwrap();
         log::info!(
@@ -535,13 +547,13 @@ mod tests {
     #[test(tokio::test)]
     #[ignore = "requires downloading external HRDF data"]
     async fn test_no_infinite_loop_when_journey_revisits_a_stop() {
-        use std::{sync::Arc, sync::mpsc, time::Duration as StdDuration};
+        use std::{sync::mpsc, time::Duration as StdDuration};
 
-        let hrdf = Arc::new(Hrdf::try_from_year(2025, false, None).await.unwrap());
+        let hrdf = shared_hrdf_2025().await;
         let departure_at = create_date_time(2025, 4, 10, 7, 0);
 
         let (sender, receiver) = mpsc::channel();
-        let hrdf_thread = Arc::clone(&hrdf);
+        let hrdf_thread = std::sync::Arc::clone(&hrdf);
         std::thread::spawn(move || {
             let routes = compute_routes_from_origin(
                 &hrdf_thread,
@@ -661,7 +673,7 @@ mod tests {
     #[test(tokio::test)]
     #[ignore = "requires downloading external HRDF data"]
     async fn test_reverse_journey_bellinzona_zurich() {
-        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
+        let hrdf = shared_hrdf_2025().await;
         // Use Swiss local time directly, without the OJP conversion or display layer.
         let departure_at = create_date_time(2025, 11, 25, 7, 23);
         let forward = plan_journey(&hrdf, 8583005, 8591046, departure_at, 11, false).unwrap();
@@ -680,7 +692,7 @@ mod tests {
     #[test(tokio::test)]
     #[ignore = "requires downloading external HRDF data"]
     async fn test_reverse_journey_consistency() {
-        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
+        let hrdf = shared_hrdf_2025().await;
 
         // Case 1: Simple direct trip
         // Zürich HB (8503000) -> Bern (8507000)
@@ -799,7 +811,7 @@ mod tests {
     #[test(tokio::test)]
     #[ignore = "requires downloading external HRDF data"]
     async fn test_forward_isochrone_contains_known_destinations() {
-        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
+        let hrdf = shared_hrdf_2025().await;
 
         // Case 1: Zürich HB -> Bern (direct)
         eprintln!("Case 1: Zürich HB -> Bern");
@@ -832,7 +844,7 @@ mod tests {
     #[test(tokio::test)]
     #[ignore = "requires downloading external HRDF data"]
     async fn test_reverse_isochrone_contains_known_origins() {
-        let hrdf = Hrdf::try_from_year(2025, false, None).await.unwrap();
+        let hrdf = shared_hrdf_2025().await;
 
         // For reverse, we first find the forward arrival time, then use it as the reverse target.
 

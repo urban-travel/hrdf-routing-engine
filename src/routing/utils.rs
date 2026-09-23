@@ -179,6 +179,22 @@ pub fn get_stop_connections(
         })
 }
 
+/// Connections into `stop_id` (`stop_id_2 == stop_id`), the reverse of
+/// `get_stop_connections`. `stop_connections_by_stop_id` only indexes
+/// `stop_id_1`, so this needs the caller-built incoming index instead.
+pub fn get_incoming_stop_connections<'a>(
+    data_storage: &'a DataStorage,
+    incoming_stop_connections_by_stop_id: &FxHashMap<i32, FxHashSet<i32>>,
+    stop_id: i32,
+) -> Option<Vec<&'a StopConnection>> {
+    incoming_stop_connections_by_stop_id.get(&stop_id).map(|ids| {
+        data_storage
+            .stop_connections()
+            .resolve_ids(ids)
+            .unwrap_or_else(|| panic!("Ids {:?} not found.", ids))
+    })
+}
+
 /// `hash_route` only depends on the (journey, stop) pair, never on the query
 /// date or the rest of the route, so its results can be memoized across the
 /// whole search (see `hash_route_cache` in `next_departures`, whose dedup

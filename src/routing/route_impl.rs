@@ -106,16 +106,21 @@ impl Route {
             .find(journey_id)
             .unwrap_or_else(|| panic!("Journey {:?} not found.", journey_id));
 
-        // Check if we are at the first stop of the journey (physically)
-        // In reverse search, this means we cannot go further "back" on this journey.
-        let is_first = journey
-            .is_first_stop(self.arrival_stop_id(), false)
-            .unwrap_or_else(|_| panic!("Unable to get first stop for {}", self.arrival_stop_id()));
-        if is_first {
-            return None;
-        }
-
         let is_same_journey = self.last_section().journey_id() == Some(journey_id);
+
+        // Only check same-journey continuation here. A new candidate may
+        // revisit this stop later (a looping journey); find_previous
+        // determines that.
+        if is_same_journey {
+            let is_first = journey
+                .is_first_stop(self.arrival_stop_id(), false)
+                .unwrap_or_else(|_| {
+                    panic!("Unable to get first stop for {}", self.arrival_stop_id())
+                });
+            if is_first {
+                return None;
+            }
+        }
 
         RouteSection::find_previous(
             data_storage,
@@ -231,6 +236,16 @@ impl Route {
                         })
                         .ok();
 
+                    if arr_time.is_none() {
+                        log::warn!(
+                            "to_route_result_reverse: could not resolve arrival time for journey {} at stop {} (origin {}); falling back to departure time {}",
+                            journey.id(),
+                            physical_arr_stop,
+                            physical_dep_stop,
+                            dep_time,
+                        );
+                    }
+
                     let dep_stop_obj = data_storage.stops().find(physical_dep_stop);
                     let arr_stop_obj = data_storage.stops().find(physical_arr_stop);
 
@@ -262,14 +277,19 @@ impl Route {
             })
             .collect();
 
-        let departure_at = sections
-            .first()
-            .and_then(|s| s.departure_at())
-            .unwrap_or_else(|| panic!("No departure time for route"));
-        let arrival_at = sections
-            .last()
-            .and_then(|s| s.arrival_at())
-            .unwrap_or_else(|| panic!("No arrival time for route"));
+        let departure_at = if sections.first().unwrap().is_walking_trip() {
+            // This section is guaranteed not to be a walking trip.
+            sections[1].departure_at().unwrap()
+        } else {
+            sections.first().unwrap().departure_at().unwrap()
+        };
+
+        let arrival_at = if sections.last().unwrap().is_walking_trip() {
+            // This section is guaranteed not to be a walking trip.
+            sections[sections.len() - 2].arrival_at().unwrap()
+        } else {
+            sections.last().unwrap().arrival_at().unwrap()
+        };
 
         RouteResult::new(departure_at, arrival_at, sections)
     }
@@ -283,14 +303,19 @@ impl RouteSection {
         date: NaiveDate,
         is_arrival_date: bool,
     ) -> Option<(RouteSection, FxHashSet<i32>)> {
-        // Collect route entries before the FIRST occurrence of arrival_stop_id.
-        // Using forward iteration ensures we match the first occurrence, which is
-        // important for journeys that loop back through the same stop.
-        let before_stop: Vec<_> = journey
-            .route()
+        // Match the occurrence arrival_time_of() uses: the first from index 1
+        // (index 0 has no arrival time). Matters for journeys that loop back
+        // through the same stop.
+        let route = journey.route();
+        let Some(index) = route
             .iter()
-            .take_while(|entry| entry.stop_id() != arrival_stop_id)
-            .collect();
+            .skip(1)
+            .position(|entry| entry.stop_id() == arrival_stop_id)
+            .map(|i| i + 1)
+        else {
+            return None;
+        };
+        let before_stop: Vec<_> = route[..index].iter().collect();
 
         let mut visited_stops = FxHashSet::default();
 

@@ -764,7 +764,7 @@ pub fn compute_average_isochrones_reverse(
                 verbose,
             );
 
-            unique_coordinates_from_routes_reverse(&routes, arrival_at)
+            unique_coordinates_from_routes_reverse(&routes, *arr)
         })
         .collect::<Vec<_>>();
 
