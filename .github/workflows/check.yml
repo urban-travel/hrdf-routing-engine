@@ -113,7 +113,7 @@ jobs:
     strategy:
       matrix:
         # msrv: ["1.85.0"] # 2024 edition requires 1.85
-        msrv: ["1.89.0"] # Needed for unstable feature in 1.85
+        msrv: ["1.90.0"] # Needed for unstable feature in 1.85
     name: ubuntu / ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v7
