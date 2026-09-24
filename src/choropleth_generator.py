@@ -14,10 +14,10 @@ def generate_img_from_hectare(data_to_display: list[dict[str,float]], region_to_
                         projection="mercator")
     # fig.update_geos(fitbounds="locations", visible=False)
     fig.update_geos(
-        showcoastlines=True, coastlinecolor="RebeccaPurple",
-        showland=True, landcolor="LightGreen",
-        showocean=True, oceancolor="LightBlue",
-        # showlakes=True, lakecolor="Blue",
+        # showcoastlines=True, coastlinecolor="RebeccaPurple",
+        # showland=True, landcolor="LightGreen",
+        # showocean=True, oceancolor="LightBlue",
+        showlakes=False, lakecolor="Blue",
         showrivers=True, rivercolor="Blue",
         showcountries=True, countrycolor="RebeccaPurple",
         showsubunits=True, subunitcolor="Black",

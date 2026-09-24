@@ -20,6 +20,7 @@ from compute_hectare_display_values import load_and_update_hectare
 
 import matplotlib.pyplot as plt
 
+IMG_PREFIX = "img/tpg"
 
 @dataclass
 class MeasureStat:
@@ -219,7 +220,7 @@ def get_line_color(filter):
     return colors[total_value % len(colors)]
 
 
-def display_superposed_hist(values: dict[str,list[int | float]], fig_title: str, metric_names: list[str], save_img: str | None, save_only: bool, normalize: bool, sort_bars: bool):
+def display_superposed_hist(values: dict[str,list[int | float]], fig_title: str, metric_names: list[str], save_img: str | None, nb_to_display: int, save_only: bool, normalize: bool, sort_bars: bool):
     fig = plt.figure(layout="constrained", figsize=(40, 24))
     layout = "a;b;c;d;e;f"
     axs = fig.subplot_mosaic(layout)
@@ -233,7 +234,7 @@ def display_superposed_hist(values: dict[str,list[int | float]], fig_title: str,
               'xkcd:dark peach', 'xkcd:light lavender', 'xkcd:electric green', 'xkcd:slate grey', 'xkcd:teal green',
               'xkcd:barney purple', 'xkcd:bright orange', 'xkcd:darker green', 'xkcd:blush', 'xkcd:lemon', 'xkcd:forest',
               ]
-    values = sorted(values.items(), key=lambda v: v[1][0], reverse=True)
+    values = sorted(values.items(), key=lambda v: v[1][0], reverse=True)[:nb_to_display]
     values = [(k, v, get_line_color(k))
               for c, (k, v) in zip(colors, values)]
     for j, x in enumerate(layout.split(';')):
@@ -255,7 +256,7 @@ def display_superposed_hist(values: dict[str,list[int | float]], fig_title: str,
             line_name = k.split("/")[-1].split(".")[0].split("_")[-1].split('l')[-1]
             line_names.append(line_name)
             plot = axs[x].bar(br[i], displayed_values[j], color=c, width=bar_width, label=line_name)
-            axs[x].bar_label(plot, labels=[v[j]], rotation=90)
+            axs[x].bar_label(plot, labels=[label_values[j]], rotation=90)
         axs[x].set_xticks([r for r in range(len(line_names))], line_names)
         # plt.xticks([r + bar_width for r in range(len(line_names))], line_names)
         # plt.legend()
@@ -309,6 +310,7 @@ def write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_f
     lines: list[str] = []
     column_width = 30
     first_column_width = 20
+    hist_display_nb = 6
     wanted_hist = ["hectare_nb", "max_increase", "median", "total_surface", "per10", "per25"]
     display_dict: dict[str, dict[str, dict[str, FileStats]]] = create_display_dict(files_stats, out_files)
 
@@ -327,10 +329,10 @@ def write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_f
                     local_measures, local_glob = v.get_measure_dict()
                     measure = local_measures[measure_name]
                     if first:
-                        lines += [f"{measure_name.split("/")[-1].split(".")[0]}:"]
+                        lines += [f"{measure_name}:"]
                         lines += [" " * first_column_width + "|" + "|".join(measure.extract_header_list(column_width))]
                         first = False
-                    lines += ["|".join([filter.center(first_column_width)] + [str(e).center(column_width) for e in measure.extract_as_list(column_width)])]
+                    lines += ["|".join([filter.split("/")[-1].split(".")[0].center(first_column_width)] + [str(e).center(column_width) for e in measure.extract_as_list(column_width)])]
                     lines += ["_" * len(lines[-1])]
 
                 lines += ["Comments:"]
@@ -343,7 +345,7 @@ def write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_f
                     values_to_display = [e.get_measure_dict()[0][measure_name].__getattribute__(hist_attr) for e in val.values()]
                     interesting_ones += sorted(list(val.items()), key=lambda tu: tu[1].get_measure_dict()[0][measure_name].__getattribute__(hist_attr))[-5:]
                     keys = [key.split("/")[-1].split(".filter")[0] for key in val.keys()]
-                    folder_name = f"img/{measure_name}_{base}"
+                    folder_name = f"{IMG_PREFIX}/{measure_name}_{base}"
                     if not Path(folder_name).exists():
                         os.makedirs(folder_name)
                     fn = f"{folder_name}/hist_{hist_attr}_{date}"
@@ -353,13 +355,13 @@ def write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_f
                 interesting_ones = {key: [val.get_measure_dict()[0][measure_name].__getattribute__(hist_attr) for hist_attr in wanted_hist]
                                         for (key, val) in interesting_ones}
                 interesting_ones_invert = {hist: [v[i] for k, v in interesting_ones.items()] for i, hist in enumerate(wanted_hist)}
-                folder_name = f"img/{measure_name}_{base}"
+                folder_name = f"{IMG_PREFIX}/{measure_name}_{base}"
                 fn = f"{folder_name}/detailed_hist_{date}"
                 if not Path(fn).exists() or True:
-                    display_superposed_hist(interesting_ones, f"Most impactful lines for {folder_name} {date}", wanted_hist, fn, True, False, True)
+                    display_superposed_hist(interesting_ones, f"Most impactful lines for {folder_name} {date}", wanted_hist, fn, hist_display_nb, True, False, True)
                 fn = f"{folder_name}/detailed_hist_inv_{date}"
                 if not Path(fn).exists() or True:
-                    display_detailed_hist(interesting_ones, "surface modified", wanted_hist, fn, True, True)
+                    display_detailed_hist(interesting_ones, "surface modified", wanted_hist, fn, hist_display_nb, True, True)
                 interesting_ones = []
     if print_result:
         print("\n".join(lines))
@@ -452,8 +454,8 @@ def compute_stats(hectares: list[dict], attribute, wanted_percentiles, lines, fa
     max_increase = hectares[-1][attribute] * factor(hectares[-1])
     median = hectares[total_hectares // 2][attribute] * factor(hectares[total_hectares // 2])
     avg = sum(v[attribute] * factor(v) for v in hectares) / total_hectares
-    winning_nb = sum(factor(v) for v in hectares if v[attribute] > 0)
-    losing_nb = sum(factor(v) for v in hectares if v[attribute] < 0)
+    winning_nb = sum(1 for v in hectares if v[attribute] > 0)
+    losing_nb = sum(1 for v in hectares if v[attribute] < 0)
     total_surface = sum(factor(v) * v[attribute] for v in hectares)
     percentiles = []
     lines += f"Highest loss : {max_decrease}\n"
@@ -482,8 +484,8 @@ def compute_stats(hectares: list[dict], attribute, wanted_percentiles, lines, fa
         max_increase = tmp_hectares[-1][attribute] * factor(tmp_hectares[-1])
         median = tmp_hectares[hectares_nb // 2][attribute] * factor(tmp_hectares[hectares_nb // 2])
         avg = sum(v[attribute] * factor(v) for v in tmp_hectares) / hectares_nb
-        winning_nb = sum(factor(v) for v in tmp_hectares if v[attribute] > 0)
-        losing_nb = sum(factor(v) for v in tmp_hectares if v[attribute] < 0)
+        winning_nb = sum(1 for v in tmp_hectares if v[attribute] > 0)
+        losing_nb = sum(1 for v in tmp_hectares if v[attribute] < 0)
         total_surface = sum(factor(v) * v[attribute] for v in tmp_hectares)
         percentiles = []
         lines += f"#############################################\n"
@@ -509,7 +511,7 @@ def compute_stats(hectares: list[dict], attribute, wanted_percentiles, lines, fa
 
 if __name__ == "__main__":
     generate_img = 0
-    generate_stats = False
+    generate_stats = True
     print_stat = False
     compute_summary = True
     wanted_percentiles = 20
@@ -558,7 +560,7 @@ if __name__ == "__main__":
                 for base_ix, base in enumerate(["max", "mid", "min"]):
                     # attribute = attribute.split("_")[0] + "_diff_" + base + "_" + str(i)
                     stat_filename = hectare_file.split(".json")[0] + "_" + attribute + ".stat"
-                    img_filename = "tmp/"+hectare_file.split("/")[-1].split(".json")[0] + "_" + attribute + '.svg'
+                    img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
                     if (generate_stats and (not Path(stat_filename).exists() or getmtime(stat_filename) < data_modified_time)) or print_stat or compute_summary:
                         total_hectares = len(hectares)
                         total_inhabitant = sum(v["population"] for v in hectares)
@@ -572,11 +574,11 @@ if __name__ == "__main__":
 
                         # Now computing the same values but in percentage
                         per_total_stat, per_filtered_stats, per_lines = compute_stats(
-                            hectares, attribute, wanted_percentiles, "", lambda x: 1.0/x["area"][0][1][0][base_ix])
+                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0/x[f"ref_{base}"])
 
                         # Now computing the same values but weighted by concerned population
                         perpop_total_stat, perpop_filtered_stats, perpop_lines = compute_stats(
-                            hectares, attribute, wanted_percentiles, "", lambda x: x["population"]/total_inhabitant)
+                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0*x["population"]/(total_inhabitant*x[f"ref_{base}"]))
 
                         if print_stat:
                             print(lines)
@@ -615,7 +617,7 @@ if __name__ == "__main__":
                                                       img_filename)
                         if generate_img > 1:
                             # attribute = "area_" + str(i + 1) + "_" + base
-                            add_img_filename = "tmp/"+hectare_file.split("/")[-1].split(".json")[0] + "_" + attribute + '.svg'
+                            add_img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
                             if not Path(add_img_filename).exists() or getmtime(add_img_filename) < data_modified_time:
                                 generate_img_from_hectare(hectares, region_map, attribute, add_img_filename)
 
