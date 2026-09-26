@@ -106,13 +106,13 @@ impl IsochroneMap {
 
     #[cfg(feature = "svg")]
     pub fn write_svg(&self, path: &str, scale_factor: f64, c: Option<Coordinates>) -> RResult<()> {
-        const HEXES: [&str; 6] = [
-            "#36AB68", // Nearest.
-            "#91CF60", //
-            "#D7FF67", //
-            "#FFD767", //
-            "#FC8D59", //
-            "#E2453C", // Furthest.
+        const PALETTE: [(u8, u8, u8); 6] = [
+            (0x36, 0xAB, 0x68), // Nearest.
+            (0x91, 0xCF, 0x60), //
+            (0xD7, 0xFF, 0x67), //
+            (0xFF, 0xD7, 0x67), //
+            (0xFC, 0x8D, 0x59), //
+            (0xE2, 0x45, 0x3C), // Furthest.
         ];
         use svg::node::element::Line;
 
@@ -141,14 +141,21 @@ impl IsochroneMap {
             .ok_or_else(|| RError::NoBoundingRect)?;
         let (min_x, min_y) = bounding_rect.min().x_y();
         let (max_x, max_y) = bounding_rect.max().x_y();
-        // Spread the palette over the isochrones when there are more of them than colors.
+        // When there are more isochrones than colors, linearly interpolate between the
+        // palette colors so that every isochrone gets a distinct color.
         let num_polys = polys.len();
         let color_of = |num: usize| {
-            if num_polys <= HEXES.len() {
-                HEXES[num]
+            let (r, g, b) = if num_polys <= PALETTE.len() {
+                PALETTE[num]
             } else {
-                HEXES[num * HEXES.len() / num_polys]
-            }
+                let t = num as f64 / (num_polys - 1) as f64 * (PALETTE.len() - 1) as f64;
+                let i = (t.floor() as usize).min(PALETTE.len() - 2);
+                let frac = t - i as f64;
+                let lerp = |a: u8, b: u8| (a as f64 + (b as f64 - a as f64) * frac).round() as u8;
+                let (c0, c1) = (PALETTE[i], PALETTE[i + 1]);
+                (lerp(c0.0, c1.0), lerp(c0.1, c1.1), lerp(c0.2, c1.2))
+            };
+            format!("#{r:02X}{g:02X}{b:02X}")
         };
         let mut document = polys
             .into_iter()
