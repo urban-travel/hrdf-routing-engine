@@ -141,6 +141,15 @@ impl IsochroneMap {
             .ok_or_else(|| RError::NoBoundingRect)?;
         let (min_x, min_y) = bounding_rect.min().x_y();
         let (max_x, max_y) = bounding_rect.max().x_y();
+        // Spread the palette over the isochrones when there are more of them than colors.
+        let num_polys = polys.len();
+        let color_of = |num: usize| {
+            if num_polys <= HEXES.len() {
+                HEXES[num]
+            } else {
+                HEXES[num * HEXES.len() / num_polys]
+            }
+        };
         let mut document = polys
             .into_iter()
             .rev()
@@ -172,7 +181,7 @@ impl IsochroneMap {
 
                         doc_nested.add(
                             SvgPolygon::new()
-                                .set("fill", HEXES[num])
+                                .set("fill", color_of(num))
                                 .set("stroke", "black")
                                 .set("points", points_ext.join(" ")),
                         )
