@@ -1,1406 +1,437 @@
 mod circles;
-mod constants;
 mod contour_line;
 pub(crate) mod externals;
 mod models;
 pub(crate) mod utils;
 
-use std::collections::HashMap;
-use std::fmt::Display;
-use std::time::Instant;
-
-use crate::isochrone::utils::haversine_distance;
-use crate::routing::Route;
-use crate::routing::compute_routes_from_origin;
-use crate::routing::compute_routes_to_destination;
-use crate::utils::inner_threads;
-use constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
-use geo::BooleanOps;
-use geo::MultiPolygon;
-use hrdf_parser::{CoordinateSystem, Coordinates, DataStorage, Hrdf, Stop};
-pub use models::DisplayMode as IsochroneDisplayMode;
-pub use models::IsochroneMap;
+use std::{collections::HashMap, fmt, time::Instant};
 
 use chrono::{Duration, NaiveDateTime};
-
-use models::Isochrone;
+use geo::{BooleanOps, MultiPolygon};
+use hrdf_parser::{CoordinateSystem, Coordinates};
 use orx_parallel::*;
-use utils::lv95_to_wgs84;
-use utils::time_to_distance;
 
-use self::utils::NaiveDateTimeRange;
-use self::utils::wgs84_to_lv95;
+use crate::{
+    cli::{date_time, minutes},
+    routing::{Router, compute_routes_from_origin, compute_routes_to_destination},
+};
+use contour_line::Grid;
+use models::Isochrone;
+pub use models::{DisplayMode as IsochroneDisplayMode, IsochroneMap};
+use utils::{lv95, lv95_to_wgs84, walking_distance, wgs84_to_lv95};
 
-#[cfg(feature = "hectare")]
-#[derive(Clone, Debug)]
-pub struct IsochroneHectareArgs {
-    /// Departure date and time
-    pub departure_at: NaiveDateTime,
+/// Isochrones around a point: where one gets from it, or with `reverse` where one comes from
+/// to reach it, within `time_limit` of `at`, every `interval`.
+#[derive(clap::Args, Clone, Debug)]
+pub struct IsochroneArgs {
+    /// Latitude of the point
+    #[arg(long, default_value_t = 46.20956654)]
+    pub latitude: f64,
+    /// Longitude of the point
+    #[arg(long, default_value_t = 6.13536)]
+    pub longitude: f64,
+    /// Departure date and time (arrival in the reverse modes)
+    #[arg(short = 'd', long = "departure-at", visible_alias = "arrival-at", short_alias = 'a', value_parser = date_time, default_value = "2025-04-10 15:36:00")]
+    pub at: NaiveDateTime,
     /// Maximum time of the isochrone in minutes
+    #[arg(short, long, value_parser = minutes, default_value = "60")]
     pub time_limit: Duration,
-    /// Maximum number of connections
+    /// Time interval between two isochrones in minutes
+    #[arg(short, long, value_parser = minutes, default_value = "10")]
+    pub interval: Duration,
+    /// Maximum number of transfers
+    #[arg(short, long, default_value_t = 10)]
     pub max_num_explorable_connections: i32,
-    /// Number of starting points
+    /// Number of stops within walking distance to start from
+    #[arg(short, long, default_value_t = 5)]
     pub num_starting_points: usize,
     /// Verbose on or off
+    #[arg(short, long)]
     pub verbose: bool,
+    #[arg(skip)]
+    pub reverse: bool,
 }
 
-#[derive(Debug, Clone)]
-pub struct IsochroneArgs {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub departure_at: NaiveDateTime,
-    pub time_limit: Duration,
-    pub interval: Duration,
-    pub max_num_explorable_connections: i32,
-    pub num_starting_points: usize,
-    pub verbose: bool,
-}
-
-impl Display for IsochroneArgs {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for IsochroneArgs {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let at = if self.reverse {
+            "arrival_at"
+        } else {
+            "departure_at"
+        };
         write!(
             f,
-            "longitude: {}, latitude: {}, departure_at: {}, time_limit: {}, interval: {}",
-            self.longitude, self.latitude, self.departure_at, self.time_limit, self.interval
+            "longitude: {}, latitude: {}, {at}: {}, time_limit: {}, interval: {}",
+            self.longitude, self.latitude, self.at, self.time_limit, self.interval
         )
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ReverseIsochroneArgs {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub arrival_at: NaiveDateTime,
-    pub time_limit: Duration,
-    pub interval: Duration,
-    pub max_num_explorable_connections: i32,
-    pub num_starting_points: usize,
-    pub verbose: bool,
-}
-
-impl Display for ReverseIsochroneArgs {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "longitude: {}, latitude: {}, arrival_at: {}, time_limit: {}, interval: {}",
-            self.longitude, self.latitude, self.arrival_at, self.time_limit, self.interval
-        )
-    }
-}
-
-/// Computes the best isochrone in [departure_at - delta_time; departure_at + delta_time)
-/// Best is defined by the maximal surface covered by the largest isochrone
-pub fn compute_optimal_isochrones(
-    hrdf: &Hrdf,
-    excluded_polygons: &MultiPolygon,
-    isochrone_args: IsochroneArgs,
-    delta_time: Duration,
-    display_mode: models::DisplayMode,
-    num_threads: usize,
-) -> IsochroneMap {
-    let IsochroneArgs {
-        latitude,
-        longitude,
-        departure_at,
-        time_limit,
-        interval: isochrone_interval,
-        max_num_explorable_connections,
-        num_starting_points,
-        verbose,
-    } = isochrone_args;
-
-    if verbose {
-        log::info!(
-            "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes(),
-            delta_time.num_minutes(),
-        );
-    }
-    let start_time = Instant::now();
-    let min_date_time = departure_at - delta_time;
-    let max_date_time = departure_at + delta_time;
-
-    let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
-        .into_iter()
-        .collect::<Vec<_>>();
-
-    let isochrone_map = isochrone_map
-        .into_par()
-        .num_threads(num_threads)
-        .map(|dep| {
-            compute_isochrones(
-                hrdf,
-                excluded_polygons,
-                IsochroneArgs {
-                    latitude,
-                    longitude,
-                    departure_at: dep,
-                    time_limit,
-                    interval: isochrone_interval,
-                    max_num_explorable_connections,
-                    num_starting_points,
-                    verbose,
-                },
-                display_mode,
-                inner_threads(num_threads, true),
-            )
-        })
-        .reduce(|lhs, rhs| {
-            if lhs.compute_max_area() > rhs.compute_max_area() {
-                lhs
-            } else {
-                rhs
-            }
-        });
-
-    if verbose {
-        log::info!(
-            "Time computing the optimal solution : {:.2?}",
-            start_time.elapsed()
-        );
-    }
-    isochrone_map.expect("No isochrone_map found.")
-}
-
-/// Computes the worst isochrone in [departure_at - delta_time; departure_at + delta_time)
-/// Best is defined by the maximal surface covered by the largest isochrone
-#[allow(clippy::too_many_arguments)]
-pub fn compute_worst_isochrones(
-    hrdf: &Hrdf,
-    excluded_polygons: &MultiPolygon,
-    isochrone_args: IsochroneArgs,
-    delta_time: Duration,
-    display_mode: models::DisplayMode,
-    num_threads: usize,
-) -> IsochroneMap {
-    let IsochroneArgs {
-        latitude,
-        longitude,
-        departure_at,
-        time_limit,
-        interval: isochrone_interval,
-        max_num_explorable_connections,
-        num_starting_points,
-        verbose,
-    } = isochrone_args;
-
-    if verbose {
-        log::info!(
-            "longitude: {longitude}, latitude: {latitude}, departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, display_mode: {display_mode:?}, verbose: {verbose}",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes(),
-            delta_time.num_minutes(),
-        );
-    }
-    let start_time = Instant::now();
-    let min_date_time = departure_at - delta_time;
-    let max_date_time = departure_at + delta_time;
-
-    let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
-        .into_iter()
-        .collect::<Vec<_>>();
-
-    let isochrone_map = isochrone_map
-        .into_par()
-        .num_threads(num_threads)
-        .map(|dep| {
-            compute_isochrones(
-                hrdf,
-                excluded_polygons,
-                IsochroneArgs {
-                    latitude,
-                    longitude,
-                    departure_at: dep,
-                    time_limit,
-                    interval: isochrone_interval,
-                    max_num_explorable_connections,
-                    num_starting_points,
-                    verbose,
-                },
-                display_mode,
-                inner_threads(num_threads, true),
-            )
-        })
-        .reduce(|lhs, rhs| {
-            if lhs.compute_max_area() < rhs.compute_max_area() {
-                lhs
-            } else {
-                rhs
-            }
-        });
-
-    if verbose {
-        log::info!(
-            "Time computing the optimal solution : {:.2?}",
-            start_time.elapsed()
-        );
-    }
-    isochrone_map.expect("Could not find worst Isochrone Map")
-}
-
-/// Computes the average isochrone.
-/// The point of origin is used to find the departure stop (the nearest stop).
-/// The departure date and time must be within the timetable period.
-#[allow(clippy::too_many_arguments)]
-pub fn compute_average_isochrones(
-    hrdf: &Hrdf,
-    excluded_polygons: &MultiPolygon,
-    isochrone_args: IsochroneArgs,
-    delta_time: Duration,
-    num_threads: usize,
-) -> IsochroneMap {
-    let IsochroneArgs {
-        latitude,
-        longitude,
-        departure_at,
-        time_limit,
-        interval: isochrone_interval,
-        max_num_explorable_connections,
-        num_starting_points,
-        verbose,
-    } = isochrone_args;
-
-    if verbose {
-        log::info!(
-            "Computing average isochrone:\n longitude: {longitude}, latitude: {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, delta_time: {}, verbose: {verbose}",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes(),
-            delta_time.num_minutes()
-        );
-    }
-    // If there is no departue stop found we just use the default
-    let departure_coord = Coordinates::new(CoordinateSystem::WGS84, longitude, latitude);
-
-    let (easting, northing) = wgs84_to_lv95(latitude, longitude);
-    let departure_coord_lv95 = Coordinates::new(CoordinateSystem::LV95, easting, northing);
-
-    let start_time = Instant::now();
-    let min_date_time = departure_at - delta_time;
-    let max_date_time = departure_at + delta_time;
-
-    let data = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
-        .into_iter()
-        .collect::<Vec<_>>();
-
-    let data = data
-        .par()
-        .num_threads(num_threads)
-        .map(|dep| {
-            let routes = compute_routes_from_origin(
-                hrdf,
-                latitude,
-                longitude,
-                *dep,
-                time_limit,
-                num_starting_points,
-                inner_threads(num_threads, true),
-                max_num_explorable_connections,
-                verbose,
-            );
-
-            unique_coordinates_from_routes(&routes, departure_at)
-        })
-        .collect::<Vec<_>>();
-    let bounding_box = data.iter().fold(
-        ((f64::MAX, f64::MAX), (f64::MIN, f64::MIN)),
-        |cover_bb, d| {
-            let bb = get_bounding_box(d, time_limit);
-            let x0 = f64::min(cover_bb.0.0, bb.0.0);
-            let x1 = f64::max(cover_bb.1.0, bb.1.0);
-            let y0 = f64::min(cover_bb.0.1, bb.0.1);
-            let y1 = f64::max(cover_bb.1.1, bb.1.1);
-            ((x0, y0), (x1, y1))
-        },
-    );
-
-    let dx = 100.0;
-    let mut grids = data
-        .into_iter()
-        .map(|d| contour_line::create_grid(&d, bounding_box, time_limit, dx, num_threads))
-        .collect::<Vec<_>>();
-    let timesteps = grids.len();
-    let grid_ini = grids.pop().expect("Grids was empty");
-    let (total_grid, nx, ny, dx) =
-        grids
-            .into_iter()
-            .fold(grid_ini, |(total, nx, ny, dx), (g, _, _, _)| {
-                let new_grid = g
-                    .into_iter()
-                    .zip(total)
-                    .map(|((lc, ld), (_, rd))| (lc, (rd + ld)))
-                    .collect::<Vec<_>>();
-                (new_grid, nx, ny, dx)
-            });
-    let avg_grid = total_grid
-        .into_iter()
-        .map(|(c, d)| (c, d / timesteps as i32))
-        .collect::<Vec<_>>();
-    let isochrone_count = time_limit.num_minutes() / isochrone_interval.num_minutes();
-    let isochrones = (0..isochrone_count)
-        .map(|i| {
-            let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
-
-            let polygons = contour_line::get_polygons(
-                &avg_grid,
-                nx,
-                ny,
-                bounding_box.0,
-                current_time_limit,
-                dx,
-            );
-
-            let polygons = MultiPolygon(polygons.into_iter().collect());
-            let polygons = polygons.difference(excluded_polygons);
-            Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
-        })
-        .collect::<Vec<_>>();
-
-    let areas = isochrones.iter().map(|i| i.compute_area()).collect();
-    let max_distances = isochrones
-        .iter()
-        .map(|i| {
-            let ((x, y), max) = i.compute_max_distance(departure_coord_lv95);
-            let (w_x, w_y) = lv95_to_wgs84(x, y);
-            ((w_x, w_y), max)
-        })
-        .collect();
-
-    if verbose {
-        log::info!(
-            "Time for finding the isochrones : {:.2?}",
-            start_time.elapsed()
-        );
-    }
-    IsochroneMap::new(
-        isochrones,
-        areas,
-        max_distances,
-        departure_coord,
-        departure_at,
-        convert_bounding_box_to_wgs84(bounding_box),
-    )
-}
-
-/// Computes the isochrones.
-/// The point of origin is used to find the departure stop (the nearest stop).
-/// The departure date and time must be within the timetable period.
-#[allow(clippy::too_many_arguments)]
+/// The isochrones of `args`.
 pub fn compute_isochrones(
-    hrdf: &Hrdf,
+    router: &Router,
     excluded_polygons: &MultiPolygon,
-    isochrone_args: IsochroneArgs,
+    args: &IsochroneArgs,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
 ) -> IsochroneMap {
-    let IsochroneArgs {
-        latitude,
-        longitude,
-        departure_at,
-        time_limit,
-        interval: isochrone_interval,
-        max_num_explorable_connections,
-        num_starting_points,
-        verbose,
-    } = isochrone_args;
-
-    if verbose {
-        log::info!(
-            "longitude: {longitude}, latitude : {latitude},  departure_at: {departure_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, max_num_explorable_connections: {max_num_explorable_connections}, verbose: {verbose}",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes()
-        );
+    let started = Instant::now();
+    let data = reached(router, args, args.at, num_threads);
+    let bounding_box = bounding_box(&data, args.time_limit);
+    let grid = (display_mode == IsochroneDisplayMode::ContourLine)
+        .then(|| Grid::new(&data, bounding_box, args.time_limit, num_threads));
+    let isochrones = isochrones(args, excluded_polygons, |limit| match &grid {
+        Some(grid) => grid.polygons(limit),
+        None => circles::get_polygons(&data, limit, num_threads),
+    });
+    if args.verbose {
+        log::info!("Isochrones for {args} in {:.2?}", started.elapsed());
     }
-    // If there is no departue stop found we just use the default
-    let departure_coord = Coordinates::new(CoordinateSystem::WGS84, longitude, latitude);
-
-    let (easting, northing) = wgs84_to_lv95(latitude, longitude);
-    let departure_coord_lv95 = Coordinates::new(CoordinateSystem::LV95, easting, northing);
-
-    let start_time = Instant::now();
-
-    let routes = compute_routes_from_origin(
-        hrdf,
-        latitude,
-        longitude,
-        departure_at,
-        time_limit,
-        num_starting_points,
-        num_threads,
-        max_num_explorable_connections,
-        verbose,
-    );
-
-    if verbose {
-        log::info!("Time for finding the routes : {:.2?}", start_time.elapsed());
-    }
-
-    let start_time = Instant::now();
-
-    // We get only the stop coordinates
-    let data = unique_coordinates_from_routes(&routes, departure_at);
-
-    let bounding_box = get_bounding_box(&data, time_limit);
-    let dx = 100.0;
-
-    let grid = if display_mode == models::DisplayMode::ContourLine {
-        Some(contour_line::create_grid(
-            &data,
-            bounding_box,
-            time_limit,
-            dx,
-            num_threads,
-        ))
-    } else {
-        None
-    };
-
-    let isochrone_count = time_limit.num_minutes() / isochrone_interval.num_minutes();
-    let isochrones = (0..isochrone_count)
-        .map(|i| {
-            let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
-            // let prev_time_limit = Duration::minutes(isochrone_interval.num_minutes() * i);
-            let prev_time_limit = Duration::minutes(0);
-
-            let polygons = match display_mode {
-                IsochroneDisplayMode::Circles => {
-                    let num_points_circle = 6;
-                    circles::get_polygons(
-                        &data,
-                        current_time_limit,
-                        prev_time_limit,
-                        num_points_circle,
-                        num_threads,
-                    )
-                }
-                IsochroneDisplayMode::ContourLine => {
-                    let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
-                    contour_line::get_polygons(
-                        grid,
-                        *num_points_x,
-                        *num_points_y,
-                        bounding_box.0,
-                        current_time_limit,
-                        *dx,
-                    )
-                }
-            };
-            // let polygons = MultiPolygon(polygons.into_iter().collect());
-            let polygons = polygons.difference(excluded_polygons);
-
-            Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
-        })
-        .collect::<Vec<_>>();
-
-    let areas = isochrones.iter().map(|i| i.compute_area()).collect();
-    let max_distances = isochrones
-        .iter()
-        .map(|i| {
-            let ((x, y), max) = i.compute_max_distance(departure_coord_lv95);
-            let (w_x, w_y) = lv95_to_wgs84(x, y);
-            ((w_x, w_y), max)
-        })
-        .collect();
-
-    if verbose {
-        log::info!(
-            "Time for finding the isochrones : {:.2?}",
-            start_time.elapsed()
-        );
-    }
-    IsochroneMap::new(
-        isochrones,
-        areas,
-        max_distances,
-        departure_coord,
-        departure_at,
-        convert_bounding_box_to_wgs84(bounding_box),
-    )
+    map(isochrones, args, args.at, bounding_box)
 }
 
-/// Computes the reverse isochrone: finds all origin stops from which the destination
-/// can be reached within the time limit.
-#[allow(clippy::too_many_arguments)]
-pub fn compute_isochrones_reverse(
-    hrdf: &Hrdf,
+/// The isochrones with the largest area for a time in [at - delta_time, at + delta_time).
+pub fn compute_optimal_isochrones(
+    router: &Router,
     excluded_polygons: &MultiPolygon,
-    isochrone_args: ReverseIsochroneArgs,
-    display_mode: IsochroneDisplayMode,
-    num_threads: usize,
-) -> IsochroneMap {
-    let ReverseIsochroneArgs {
-        latitude,
-        longitude,
-        arrival_at,
-        time_limit,
-        interval: isochrone_interval,
-        max_num_explorable_connections,
-        num_starting_points,
-        verbose,
-    } = isochrone_args;
-
-    if verbose {
-        log::info!(
-            "Reverse isochrone: longitude: {longitude}, latitude: {latitude}, arrival_at: {arrival_at}, time_limit: {}, isochrone_interval: {}, display_mode: {display_mode:?}, verbose: {verbose}",
-            time_limit.num_minutes(),
-            isochrone_interval.num_minutes()
-        );
-    }
-
-    let destination_coord = Coordinates::new(CoordinateSystem::WGS84, longitude, latitude);
-    let (easting, northing) = wgs84_to_lv95(latitude, longitude);
-    let destination_coord_lv95 = Coordinates::new(CoordinateSystem::LV95, easting, northing);
-
-    let start_time = Instant::now();
-
-    let routes = compute_routes_to_destination(
-        hrdf,
-        latitude,
-        longitude,
-        arrival_at,
-        time_limit,
-        num_starting_points,
-        num_threads,
-        max_num_explorable_connections,
-        verbose,
-    );
-
-    if verbose {
-        log::info!("Time for finding the routes : {:.2?}", start_time.elapsed());
-    }
-
-    let start_time = Instant::now();
-
-    let data = unique_coordinates_from_routes_reverse(&routes, arrival_at);
-
-    let bounding_box = get_bounding_box(&data, time_limit);
-    let dx = 100.0;
-
-    let grid = if display_mode == models::DisplayMode::ContourLine {
-        Some(contour_line::create_grid(
-            &data,
-            bounding_box,
-            time_limit,
-            dx,
-            num_threads,
-        ))
-    } else {
-        None
-    };
-
-    let isochrone_count = time_limit.num_minutes() / isochrone_interval.num_minutes();
-    let isochrones = (0..isochrone_count)
-        .map(|i| {
-            let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
-            let prev_time_limit = Duration::minutes(0);
-
-            let polygons = match display_mode {
-                IsochroneDisplayMode::Circles => {
-                    let num_points_circle = 6;
-                    circles::get_polygons(
-                        &data,
-                        current_time_limit,
-                        prev_time_limit,
-                        num_points_circle,
-                        num_threads,
-                    )
-                }
-                IsochroneDisplayMode::ContourLine => {
-                    let (grid, num_points_x, num_points_y, dx) = grid.as_ref().unwrap();
-                    contour_line::get_polygons(
-                        grid,
-                        *num_points_x,
-                        *num_points_y,
-                        bounding_box.0,
-                        current_time_limit,
-                        *dx,
-                    )
-                }
-            };
-            let polygons = polygons.difference(excluded_polygons);
-            Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
-        })
-        .collect::<Vec<_>>();
-
-    let areas = isochrones.iter().map(|i| i.compute_area()).collect();
-    let max_distances = isochrones
-        .iter()
-        .map(|i| {
-            let ((x, y), max) = i.compute_max_distance(destination_coord_lv95);
-            let (w_x, w_y) = lv95_to_wgs84(x, y);
-            ((w_x, w_y), max)
-        })
-        .collect();
-
-    if verbose {
-        log::info!(
-            "Time for finding the isochrones : {:.2?}",
-            start_time.elapsed()
-        );
-    }
-    IsochroneMap::new(
-        isochrones,
-        areas,
-        max_distances,
-        destination_coord,
-        arrival_at,
-        convert_bounding_box_to_wgs84(bounding_box),
-    )
-}
-
-/// Computes the best reverse isochrone in [arrival_at - delta_time; arrival_at + delta_time)
-pub fn compute_optimal_isochrones_reverse(
-    hrdf: &Hrdf,
-    excluded_polygons: &MultiPolygon,
-    isochrone_args: ReverseIsochroneArgs,
+    args: &IsochroneArgs,
     delta_time: Duration,
-    display_mode: models::DisplayMode,
+    display_mode: IsochroneDisplayMode,
     num_threads: usize,
 ) -> IsochroneMap {
-    let ReverseIsochroneArgs {
-        latitude,
-        longitude,
-        arrival_at,
-        time_limit,
-        interval: isochrone_interval,
-        max_num_explorable_connections,
-        num_starting_points,
-        verbose,
-    } = isochrone_args;
+    pick(
+        router,
+        excluded_polygons,
+        args,
+        delta_time,
+        display_mode,
+        num_threads,
+        |a, b| a > b,
+    )
+}
 
-    let start_time = Instant::now();
-    let min_date_time = arrival_at - delta_time;
-    let max_date_time = arrival_at + delta_time;
+/// The isochrones with the smallest area for a time in [at - delta_time, at + delta_time).
+pub fn compute_worst_isochrones(
+    router: &Router,
+    excluded_polygons: &MultiPolygon,
+    args: &IsochroneArgs,
+    delta_time: Duration,
+    display_mode: IsochroneDisplayMode,
+    num_threads: usize,
+) -> IsochroneMap {
+    pick(
+        router,
+        excluded_polygons,
+        args,
+        delta_time,
+        display_mode,
+        num_threads,
+        |a, b| a < b,
+    )
+}
 
-    let isochrone_map = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
-        .into_iter()
-        .collect::<Vec<_>>();
-
-    let isochrone_map = isochrone_map
+/// The isochrones of the time in the window whose largest area is `better` than the others'.
+fn pick(
+    router: &Router,
+    excluded_polygons: &MultiPolygon,
+    args: &IsochroneArgs,
+    delta_time: Duration,
+    display_mode: IsochroneDisplayMode,
+    num_threads: usize,
+    better: fn(f64, f64) -> bool,
+) -> IsochroneMap {
+    let started = Instant::now();
+    let best = window(args, delta_time)
         .into_par()
         .num_threads(num_threads)
-        .map(|arr| {
-            compute_isochrones_reverse(
-                hrdf,
+        .map(|at| {
+            let args = IsochroneArgs { at, ..args.clone() };
+            compute_isochrones(
+                router,
                 excluded_polygons,
-                ReverseIsochroneArgs {
-                    latitude,
-                    longitude,
-                    arrival_at: arr,
-                    time_limit,
-                    interval: isochrone_interval,
-                    max_num_explorable_connections,
-                    num_starting_points,
-                    verbose,
-                },
+                &args,
                 display_mode,
-                inner_threads(num_threads, true),
+                inner_threads(num_threads),
             )
         })
         .reduce(|lhs, rhs| {
-            if lhs.compute_max_area() > rhs.compute_max_area() {
+            if better(lhs.compute_max_area(), rhs.compute_max_area()) {
                 lhs
             } else {
                 rhs
             }
         });
-
-    if verbose {
+    if args.verbose {
         log::info!(
-            "Time computing the optimal reverse isochrone : {:.2?}",
-            start_time.elapsed()
+            "Picked among the isochrones of {} times in {:.2?}",
+            2 * delta_time.num_minutes(),
+            started.elapsed()
         );
     }
-    isochrone_map.expect("No isochrone_map found.")
+    best.expect("The time window is empty")
 }
 
-/// Computes the average reverse isochrone over [arrival_at - delta_time; arrival_at + delta_time)
-#[allow(clippy::too_many_arguments)]
-pub fn compute_average_isochrones_reverse(
-    hrdf: &Hrdf,
+/// Contour isochrones of the time to reach each point, averaged over the times in
+/// [at - delta_time, at + delta_time).
+pub fn compute_average_isochrones(
+    router: &Router,
     excluded_polygons: &MultiPolygon,
-    isochrone_args: ReverseIsochroneArgs,
+    args: &IsochroneArgs,
     delta_time: Duration,
     num_threads: usize,
 ) -> IsochroneMap {
-    let ReverseIsochroneArgs {
-        latitude,
-        longitude,
-        arrival_at,
-        time_limit,
-        interval: isochrone_interval,
-        max_num_explorable_connections,
-        num_starting_points,
-        verbose,
-    } = isochrone_args;
-
-    let destination_coord = Coordinates::new(CoordinateSystem::WGS84, longitude, latitude);
-    let (easting, northing) = wgs84_to_lv95(latitude, longitude);
-    let destination_coord_lv95 = Coordinates::new(CoordinateSystem::LV95, easting, northing);
-
-    let start_time = Instant::now();
-    let min_date_time = arrival_at - delta_time;
-    let max_date_time = arrival_at + delta_time;
-
-    let data = NaiveDateTimeRange::new(min_date_time, max_date_time, Duration::minutes(1))
-        .into_iter()
-        .collect::<Vec<_>>();
-
-    let data = data
+    let started = Instant::now();
+    let data: Vec<_> = window(args, delta_time)
         .par()
         .num_threads(num_threads)
-        .map(|arr| {
-            let routes = compute_routes_to_destination(
-                hrdf,
-                latitude,
-                longitude,
-                *arr,
-                time_limit,
-                num_starting_points,
-                inner_threads(num_threads, true),
-                max_num_explorable_connections,
-                verbose,
-            );
-
-            unique_coordinates_from_routes_reverse(&routes, *arr)
-        })
-        .collect::<Vec<_>>();
-
-    let bounding_box = data.iter().fold(
-        ((f64::MAX, f64::MAX), (f64::MIN, f64::MIN)),
-        |cover_bb, d| {
-            let bb = get_bounding_box(d, time_limit);
-            let x0 = f64::min(cover_bb.0.0, bb.0.0);
-            let x1 = f64::max(cover_bb.1.0, bb.1.0);
-            let y0 = f64::min(cover_bb.0.1, bb.0.1);
-            let y1 = f64::max(cover_bb.1.1, bb.1.1);
-            ((x0, y0), (x1, y1))
-        },
-    );
-
-    let dx = 100.0;
-    let mut grids = data
-        .into_iter()
-        .map(|d| contour_line::create_grid(&d, bounding_box, time_limit, dx, num_threads))
-        .collect::<Vec<_>>();
-    let timesteps = grids.len();
-    let grid_ini = grids.pop().expect("Grids was empty");
-    let (total_grid, nx, ny, dx) =
-        grids
-            .into_iter()
-            .fold(grid_ini, |(total, nx, ny, dx), (g, _, _, _)| {
-                let new_grid = g
-                    .into_iter()
-                    .zip(total)
-                    .map(|((lc, ld), (_, rd))| (lc, (rd + ld)))
-                    .collect::<Vec<_>>();
-                (new_grid, nx, ny, dx)
-            });
-    let avg_grid = total_grid
-        .into_iter()
-        .map(|(c, d)| (c, d / timesteps as i32))
-        .collect::<Vec<_>>();
-
-    let isochrone_count = time_limit.num_minutes() / isochrone_interval.num_minutes();
-    let isochrones = (0..isochrone_count)
-        .map(|i| {
-            let current_time_limit = Duration::minutes(isochrone_interval.num_minutes() * (i + 1));
-
-            let polygons = contour_line::get_polygons(
-                &avg_grid,
-                nx,
-                ny,
-                bounding_box.0,
-                current_time_limit,
-                dx,
-            );
-
-            let polygons = MultiPolygon(polygons.into_iter().collect());
-            let polygons = polygons.difference(excluded_polygons);
-            Isochrone::new(polygons, current_time_limit.num_minutes() as u32)
-        })
-        .collect::<Vec<_>>();
-
-    let areas = isochrones.iter().map(|i| i.compute_area()).collect();
-    let max_distances = isochrones
-        .iter()
-        .map(|i| {
-            let ((x, y), max) = i.compute_max_distance(destination_coord_lv95);
-            let (w_x, w_y) = lv95_to_wgs84(x, y);
-            ((w_x, w_y), max)
-        })
+        .map(|&at| reached(router, args, at, inner_threads(num_threads)))
         .collect();
-
-    if verbose {
-        log::info!(
-            "Time for finding the reverse isochrones : {:.2?}",
-            start_time.elapsed()
-        );
+    let bounding_box = bounding_box(data.iter().flatten(), args.time_limit);
+    let grids = data
+        .iter()
+        .map(|d| Grid::new(d, bounding_box, args.time_limit, num_threads))
+        .collect();
+    let average = Grid::average(grids);
+    let isochrones = isochrones(args, excluded_polygons, |limit| average.polygons(limit));
+    if args.verbose {
+        log::info!("Average isochrones for {args} in {:.2?}", started.elapsed());
     }
-    IsochroneMap::new(
-        isochrones,
-        areas,
-        max_distances,
-        destination_coord,
-        arrival_at,
-        convert_bounding_box_to_wgs84(bounding_box),
-    )
+    map(isochrones, args, args.at, bounding_box)
 }
 
-#[allow(dead_code)]
-fn find_nearest_stop(
-    data_storage: &DataStorage,
-    origin_point_latitude: f64,
-    origin_point_longitude: f64,
-) -> &Stop {
-    data_storage
-        .stops()
-        .entries()
-        .into_iter()
-        .filter(|stop| stop.wgs84_coordinates().is_some())
-        .min_by(|a, b| {
-            let coord_1 = a.wgs84_coordinates().unwrap();
-            let distance_1 = haversine_distance(
-                origin_point_latitude,
-                origin_point_longitude,
-                coord_1.latitude().expect("Wrong coordinate system"),
-                coord_1.longitude().expect("Wrong coordinate system"),
-            );
+/// The times of the window around `args.at`, a minute apart.
+fn window(args: &IsochroneArgs, delta_time: Duration) -> Vec<NaiveDateTime> {
+    let minutes = delta_time.num_minutes();
+    (-minutes..minutes)
+        .map(|m| args.at + Duration::minutes(m))
+        .collect()
+}
 
-            let coord_2 = b.wgs84_coordinates().unwrap();
-            let distance_2 = haversine_distance(
-                origin_point_latitude,
-                origin_point_longitude,
-                coord_2.latitude().expect("Wrong coordinate system"),
-                coord_2.longitude().expect("Wrong coordinate system"),
-            );
+/// Threads for a computation already running in parallel with others: one, or the global pool
+/// (0) when that is what the outer computation uses.
+pub(crate) fn inner_threads(num_threads: usize) -> usize {
+    num_threads.min(1)
+}
 
-            distance_1.partial_cmp(&distance_2).unwrap()
+/// Every stop reached from (or reaching) the point at `at`, with its LV95 coordinates and the
+/// shortest time from (or to) `at`.
+fn reached(
+    router: &Router,
+    args: &IsochroneArgs,
+    at: NaiveDateTime,
+    num_threads: usize,
+) -> Vec<(Coordinates, Duration)> {
+    let routes = if args.reverse {
+        compute_routes_to_destination
+    } else {
+        compute_routes_from_origin
+    };
+    let routes = routes(
+        router,
+        args.latitude,
+        args.longitude,
+        at,
+        args.time_limit,
+        args.num_starting_points,
+        num_threads,
+        args.max_num_explorable_connections,
+        args.verbose,
+    );
+    let mut best: HashMap<i32, (Coordinates, Duration)> = HashMap::new();
+    for route in &routes {
+        let (stop_id, coordinates, duration) = if args.reverse {
+            let first = &route.sections[0];
+            (
+                first.departure_stop_id,
+                first.departure_stop_lv95,
+                at - route.departure_at,
+            )
+        } else {
+            let last = route.sections.last().expect("Route sections was empty");
+            (
+                last.arrival_stop_id,
+                last.arrival_stop_lv95,
+                route.arrival_at - at,
+            )
+        };
+        if let Some(coordinates) = coordinates {
+            let shortest = best.entry(stop_id).or_insert((coordinates, duration));
+            shortest.1 = shortest.1.min(duration);
+        }
+    }
+    best.into_values().collect()
+}
+
+/// The isochrones every `args.interval` up to `args.time_limit`, without the excluded areas.
+fn isochrones(
+    args: &IsochroneArgs,
+    excluded_polygons: &MultiPolygon,
+    polygons: impl Fn(Duration) -> MultiPolygon,
+) -> Vec<Isochrone> {
+    let count = args.time_limit.num_minutes() / args.interval.num_minutes();
+    (1..=count)
+        .map(|i| {
+            let limit = Duration::minutes(args.interval.num_minutes() * i);
+            Isochrone::new(
+                polygons(limit).difference(excluded_polygons),
+                limit.num_minutes() as u32,
+            )
         })
-        // The stop list cannot be empty.
-        .unwrap()
+        .collect()
 }
 
-/// Each coordinate should be kept only once with the minimum duration associated
-pub(crate) fn unique_coordinates_from_routes(
-    routes: &[Route],
-    departure_at: NaiveDateTime,
-) -> Vec<(Coordinates, Duration)> {
-    let mut coordinates_duration: HashMap<i32, (Coordinates, chrono::Duration)> = HashMap::new();
-    for route in routes {
-        let arrival_stop = route.sections().last().expect("Route sections was empty");
-        let arrival_stop_id = arrival_stop.arrival_stop_id();
-        let arrival_stop_coords = if let Some(c) = arrival_stop.arrival_stop_lv95_coordinates() {
-            c
-        } else {
-            continue;
-        };
-        let new_duration = route.arrival_at() - departure_at;
-        if let Some((_, duration)) = coordinates_duration.get_mut(&arrival_stop_id) {
-            // We want the shortest trip duration to be kept only
-            if new_duration < *duration {
-                *duration = new_duration;
-            }
-        } else {
-            let _ =
-                coordinates_duration.insert(arrival_stop_id, (arrival_stop_coords, new_duration));
-        }
-    }
-    coordinates_duration.into_values().collect()
-}
-
-/// Each coordinate should be kept only once with the minimum duration associated.
-/// For reverse isochrone: extracts the physical departure stop (origin) from each route.
-pub(crate) fn unique_coordinates_from_routes_reverse(
-    routes: &[Route],
-    arrival_at: NaiveDateTime,
-) -> Vec<(Coordinates, Duration)> {
-    let mut coordinates_duration: HashMap<i32, (Coordinates, chrono::Duration)> = HashMap::new();
-    for route in routes {
-        let first_section = route.sections().first().expect("Route sections was empty");
-        let departure_stop_id = first_section.departure_stop_id();
-        let departure_stop_coords = if let Some(c) = first_section.departure_stop_lv95_coordinates()
-        {
-            c
-        } else {
-            continue;
-        };
-        let new_duration = arrival_at - route.departure_at();
-        if let Some((_, duration)) = coordinates_duration.get_mut(&departure_stop_id) {
-            if new_duration < *duration {
-                *duration = new_duration;
-            }
-        } else {
-            coordinates_duration.insert(departure_stop_id, (departure_stop_coords, new_duration));
-        }
-    }
-    coordinates_duration.into_values().collect()
-}
-
-fn get_bounding_box(
-    data: &[(Coordinates, Duration)],
+/// The LV95 box around the stops and what can be walked from them in the time left.
+fn bounding_box<'a>(
+    data: impl IntoIterator<Item = &'a (Coordinates, Duration)>,
     time_limit: Duration,
 ) -> ((f64, f64), (f64, f64)) {
-    let min_x = data
-        .iter()
-        .fold(f64::INFINITY, |result, &(coord, duration)| {
-            let candidate = coord.easting().expect("Wrong coordinate system")
-                - time_to_distance(time_limit - duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-            f64::min(result, candidate)
-        });
-
-    let max_x = data
-        .iter()
-        .fold(f64::NEG_INFINITY, |result, &(coord, duration)| {
-            let candidate = coord.easting().expect("Wrong coordinate system")
-                + time_to_distance(time_limit - duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-            f64::max(result, candidate)
-        });
-
-    let min_y = data
-        .iter()
-        .fold(f64::INFINITY, |result, &(coord, duration)| {
-            let candidate = coord.northing().expect("Wrong coordinate system")
-                - time_to_distance(time_limit - duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-            f64::min(result, candidate)
-        });
-
-    let max_y = data
-        .iter()
-        .fold(f64::NEG_INFINITY, |result, &(coord, duration)| {
-            let candidate = coord.northing().expect("Wrong coordinate system")
-                + time_to_distance(time_limit - duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-            f64::max(result, candidate)
-        });
-
-    ((min_x, min_y), (max_x, max_y))
+    let empty = (
+        (f64::INFINITY, f64::INFINITY),
+        (f64::NEG_INFINITY, f64::NEG_INFINITY),
+    );
+    data.into_iter()
+        .fold(empty, |((x0, y0), (x1, y1)), (coordinates, duration)| {
+            let ((e, n), walk) = (lv95(coordinates), walking_distance(time_limit - *duration));
+            (
+                (x0.min(e - walk), y0.min(n - walk)),
+                (x1.max(e + walk), y1.max(n + walk)),
+            )
+        })
 }
 
-fn convert_bounding_box_to_wgs84(
-    bounding_box: ((f64, f64), (f64, f64)),
-) -> ((f64, f64), (f64, f64)) {
-    (
-        lv95_to_wgs84(bounding_box.0.0, bounding_box.0.1),
-        lv95_to_wgs84(bounding_box.1.0, bounding_box.1.1),
-    )
+fn map(
+    isochrones: Vec<Isochrone>,
+    args: &IsochroneArgs,
+    at: NaiveDateTime,
+    ((x0, y0), (x1, y1)): ((f64, f64), (f64, f64)),
+) -> IsochroneMap {
+    let (easting, northing) = wgs84_to_lv95(args.latitude, args.longitude);
+    let center = Coordinates::new(CoordinateSystem::LV95, easting, northing);
+    let areas = isochrones.iter().map(|i| i.compute_area()).collect();
+    let max_distances = (isochrones.iter())
+        .map(|i| {
+            let ((x, y), max) = i.compute_max_distance(center);
+            (lv95_to_wgs84(x, y), max)
+        })
+        .collect();
+    // ponytail: the point is stored as (longitude, latitude), unlike other WGS84 coordinates;
+    // kept as is because the map frontend reads it that way.
+    let point = Coordinates::new(CoordinateSystem::WGS84, args.longitude, args.latitude);
+    let bounding_box = (lv95_to_wgs84(x0, y0), lv95_to_wgs84(x1, y1));
+    IsochroneMap::new(isochrones, areas, max_distances, point, at, bounding_box)
 }
 
 #[cfg(test)]
-mod polygon_tests {
+mod tests {
     use super::*;
-    use crate::routing::compute_routes_from_origin;
-    use crate::utils::create_date_time;
     use geo::{Area, Contains, Point};
     use std::f64::consts::PI;
-    use std::fs::File;
-    use std::io::Write;
     use test_log::test;
 
-    /// Helper function that computes the area of an hexagon
-    fn hexagon_area(r: f64) -> f64 {
-        (3.0 * 3.0_f64.sqrt() / 2.0) * r * r
-    }
-
-    /// Helper to calculate area in square meters (converts WGS84 to LV95 first)
-    fn calculate_area_m2(polygon: &MultiPolygon) -> f64 {
-        utils::multi_polygon_to_lv95(polygon)
+    fn area_m2(polygons: &MultiPolygon) -> f64 {
+        utils::multi_polygon_to_lv95(polygons)
             .iter()
             .map(|p| p.unsigned_area())
             .sum()
     }
 
-    /// Helper to save polygon as GeoJSON for visual inspection
-    #[allow(dead_code)]
-    fn save_geojson(path: &str, polygon: &MultiPolygon) -> std::io::Result<()> {
-        use serde_json::json;
+    fn point(e: f64, n: f64, minutes: i64) -> (Coordinates, Duration) {
+        (
+            Coordinates::new(CoordinateSystem::LV95, e, n),
+            Duration::minutes(minutes),
+        )
+    }
 
-        let features = polygon
-            .0
-            .iter()
-            .map(|poly| {
-                let coords: Vec<Vec<[f64; 2]>> =
-                    vec![poly.exterior().coords().map(|c| [c.x, c.y]).collect()];
-
-                json!({
-                    "type": "Feature",
-                    "properties": {},
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": coords
-                    }
-                })
-            })
-            .collect::<Vec<_>>();
-
-        let geojson = json!({
-            "type": "FeatureCollection",
-            "features": features
-        });
-
-        let mut file = File::create(path)?;
-        file.write_all(serde_json::to_string_pretty(&geojson)?.as_bytes())?;
-        Ok(())
+    fn hexagon_area(radius: f64) -> f64 {
+        (3.0 * 3.0_f64.sqrt() / 2.0) * radius * radius
     }
 
     #[test]
-    fn test_circles_polygon_geometry_single_point() {
-        // Test data: single point with 30 min remaining time
-        let data = vec![(
-            Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0),
-            Duration::minutes(0),
-        )];
-
-        // The polygon is an hexagon (6 argument)
-        let result =
-            circles::get_polygons(&data, Duration::minutes(30), Duration::minutes(0), 6, 1);
-
-        // Basic assertions
-        assert!(!result.0.is_empty(), "Result should not be empty");
-        assert_eq!(result.0.len(), 1, "Should have exactly one polygon");
-
-        // Check area matches analytical formula for regular hexagon
-        let area = calculate_area_m2(&result);
-        let radius = time_to_distance(Duration::minutes(30), WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-        let expected_area = hexagon_area(radius);
-
-        let tolerance = 0.0001;
-        let diff = (area - expected_area).abs() / expected_area;
-        assert!(
-            diff < tolerance,
-            "Area difference too large: {:.2}% (got {:.2}, expected {:.2})",
-            diff * 100.0,
-            area,
-            expected_area
-        );
+    fn a_single_stop_gives_a_hexagon_growing_with_time() {
+        let data = [point(2600000.0, 1200000.0, 0)];
+        let area = |minutes| area_m2(&circles::get_polygons(&data, Duration::minutes(minutes), 1));
+        let expected = hexagon_area(walking_distance(Duration::minutes(30)));
+        assert!((area(30) - expected).abs() / expected < 1e-4);
+        assert!(area(20) < area(30) && area(30) < area(40));
     }
 
     #[test]
-    fn test_circles_polygon_geometry_multiple_points() {
-        let data = vec![
-            (
-                Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0),
-                Duration::minutes(10),
-            ),
-            (
-                Coordinates::new(CoordinateSystem::LV95, 2601000.0, 1200000.0),
-                Duration::minutes(20),
-            ),
-            (
-                Coordinates::new(CoordinateSystem::LV95, 2600500.0, 1200500.0),
-                Duration::minutes(15),
-            ),
+    fn circles_cover_the_stops_reached_in_time_only() {
+        let data = [
+            point(2600000.0, 1200000.0, 5),
+            point(2610000.0, 1200000.0, 35),
+            point(2600500.0, 1200500.0, 15),
         ];
-
-        let result =
-            circles::get_polygons(&data, Duration::minutes(30), Duration::minutes(0), 6, 1);
-        assert!(!result.0.is_empty(), "Result should not be empty");
-        assert_eq!(result.0.len(), 1, "Should be unioned into single polygon");
-
-        let area = calculate_area_m2(&result);
-        let radius = time_to_distance(Duration::minutes(30), WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-        let expected_max_area = 3.0 * hexagon_area(radius);
-        assert!(area > 0.0, "Area should be positive");
-        assert!(
-            area < expected_max_area,
-            "Area should be smaller than 3 times 30minutes hexagons"
-        );
+        let result = circles::get_polygons(&data, Duration::minutes(30), 1);
+        let contains = |e, n| {
+            let (lat, lon) = lv95_to_wgs84(e, n);
+            result.contains(&Point::new(lat, lon))
+        };
+        assert!(contains(2600000.0, 1200000.0) && contains(2600500.0, 1200500.0));
+        assert!(!contains(2610000.0, 1200000.0));
+        assert_eq!(result.0.len(), 1);
     }
 
     #[test]
-    fn test_circles_polygon_contains_reachable_points() {
-        let data = vec![
-            (
-                Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0),
-                Duration::minutes(10),
-            ),
-            (
-                Coordinates::new(CoordinateSystem::LV95, 2601000.0, 1200000.0),
-                Duration::minutes(20),
-            ),
-        ];
-
-        let result =
-            circles::get_polygons(&data, Duration::minutes(30), Duration::minutes(0), 6, 1);
-
-        for (coord_lv95, duration) in &data {
-            assert!(
-                *duration <= Duration::minutes(30),
-                "Duration should be smaller than 30min"
-            );
-            let (lat, lon) = lv95_to_wgs84(
-                coord_lv95.easting().unwrap(),
-                coord_lv95.northing().unwrap(),
-            );
-            let point = Point::new(lat, lon);
-
-            assert!(
-                result.contains(&point),
-                "Polygon should contain reachable point at ({}, {})",
-                lat,
-                lon
-            );
-        }
+    fn overlapping_circles_merge() {
+        let data: Vec<_> = (0..50)
+            .map(|i| point(2600000.0 + i as f64 * 100.0, 1200000.0, 5))
+            .collect();
+        let result = circles::get_polygons(&data, Duration::minutes(30), 1);
+        assert_eq!(result.0.len(), 1);
+        let area = area_m2(&result);
+        assert!(area > 0.0 && area < 50.0 * hexagon_area(walking_distance(Duration::minutes(25))));
     }
 
     #[test]
-    fn test_circles_edge_case_time_filter() {
-        let data = vec![
-            (
-                Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0),
-                Duration::minutes(5),
-            ),
-            (
-                Coordinates::new(CoordinateSystem::LV95, 2610000.0, 1200000.0),
-                Duration::minutes(35),
-            ), // Filtered out
-            (
-                Coordinates::new(CoordinateSystem::LV95, 2600500.0, 1200500.0),
-                Duration::minutes(15),
-            ),
-        ];
-
-        let result =
-            circles::get_polygons(&data, Duration::minutes(30), Duration::minutes(0), 6, 1);
-
-        // Should only include first and third points
-        assert!(!result.0.is_empty());
-
-        // Check the 35-minute point is NOT contained (it should be filtered)
-        let (lat, lon) = lv95_to_wgs84(2610000.0, 1200000.0);
-        let point = Point::new(lat, lon);
-        assert!(
-            !result.contains(&point),
-            "Polygon should not contain reachable point at ({}, {})",
-            lat,
-            lon
-        );
-    }
-
-    #[test]
-    fn test_circles_edge_case_overlapping_circles() {
-        // Many overlapping circles (stress test union operation)
-        let clustered: Vec<_> = (0..50)
-            .map(|i| {
-                let offset = i as f64 * 100.0; // 100m apart
-                (
-                    Coordinates::new(CoordinateSystem::LV95, 2600000.0 + offset, 1200000.0),
-                    Duration::minutes(5),
+    fn contour_lies_between_the_four_and_six_minute_circles() {
+        // Stops every 10 m, reached as if walking from the center.
+        let meters_per_minute = utils::WALKING_SPEED_IN_KILOMETERS_PER_HOUR * 1000.0 / 60.0;
+        let data: Vec<_> = (-50..50)
+            .flat_map(|i| (-50..50).map(move |j| (i as f64 * 10.0, j as f64 * 10.0)))
+            .map(|(de, dn)| {
+                point(
+                    2600000.0 + de,
+                    1200000.0 + dn,
+                    (de.hypot(dn) / meters_per_minute) as i64,
                 )
             })
             .collect();
-
-        let result = circles::get_polygons(
-            &clustered,
-            Duration::minutes(30),
-            Duration::minutes(0),
-            6,
+        let grid = Grid::new(
+            &data,
+            bounding_box(&data, Duration::minutes(10)),
+            Duration::minutes(10),
             1,
         );
-
-        assert!(!result.0.is_empty());
-        assert_eq!(result.0.len(), 1, "Should union into single polygon");
-
-        let area = calculate_area_m2(&result);
-        let expected_max_area = 50.0
-            * hexagon_area(time_to_distance(
-                Duration::minutes(25),
-                WALKING_SPEED_IN_KILOMETERS_PER_HOUR,
-            ));
-
-        assert!(area > 0.0, "Area must be positive but was {}", area);
-        assert!(
-            area < expected_max_area,
-            "The area should be smaller than the area of 50, we got area: {}, max_area: {}",
-            area,
-            expected_max_area
-        );
-    }
-
-    #[test]
-    fn test_contour_polygon_geometry() {
-        // Create sample grid data
-        let ce = 2600000.0;
-        let cn = 1200000.0;
-        let walking_speed_m_per_min = WALKING_SPEED_IN_KILOMETERS_PER_HOUR * 1000.0 / 60.0;
-        let data: Vec<_> = (-50..50)
-            .flat_map(|i| {
-                (-50..50).map(move |j| {
-                    let e = ce + i as f64 * 10.0;
-                    let n = cn + j as f64 * 10.0;
-                    let dist = (e - ce) * (e - ce) + (n - cn) * (n - cn);
-                    let duration =
-                        Duration::minutes((dist.sqrt() / walking_speed_m_per_min) as i64);
-                    (Coordinates::new(CoordinateSystem::LV95, e, n), duration)
-                })
-            })
-            .collect();
-
-        let bbox = get_bounding_box(&data, Duration::minutes(10));
-        let dx = 100.0;
-
-        let (grid, nx, ny, dx) =
-            contour_line::create_grid(&data, bbox, Duration::minutes(10), dx, 1);
-
-        let result = contour_line::get_polygons(&grid, nx, ny, bbox.0, Duration::minutes(5), dx);
-
-        assert!(!result.0.is_empty(), "Contour result should not be empty");
-        let area = calculate_area_m2(&result);
-        let max_six_min_area = PI
-            * time_to_distance(Duration::minutes(6), WALKING_SPEED_IN_KILOMETERS_PER_HOUR)
-            * time_to_distance(Duration::minutes(6), WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-        assert!(area > 0.0, "Contour area should be positive");
-        assert!(
-            area < max_six_min_area,
-            "Contour area should certainly be smaller than the 6 min circle, but we have: area = {}, circle = {}",
-            area,
-            max_six_min_area
-        );
-        let max_four_min_area = PI
-            * time_to_distance(Duration::minutes(4), WALKING_SPEED_IN_KILOMETERS_PER_HOUR)
-            * time_to_distance(Duration::minutes(4), WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-        assert!(
-            area > max_four_min_area,
-            "Contour area should certainly be larger than the 4 min circle, but we have: area = {}, circle = {}",
-            area,
-            max_four_min_area
-        );
+        let area = area_m2(&grid.polygons(Duration::minutes(5)));
+        let circle = |minutes| PI * walking_distance(Duration::minutes(minutes)).powi(2);
+        assert!(circle(4) < area && area < circle(6), "{area}");
     }
 
     #[test(tokio::test)]
     #[ignore = "requires downloading external HRDF data"]
-    async fn test_polygon_generation_performance() {
-        let hrdf = Hrdf::try_from_year(2025, true, None).await.unwrap();
-        let departure_at = create_date_time(2025, 6, 15, 12, 10);
-
-        let routes = compute_routes_from_origin(
-            &hrdf,
-            47.3769,
-            8.5417, // Zürich
-            departure_at,
-            Duration::minutes(60),
-            10,
-            8,
-            10,
-            false,
-        );
-
-        let data = unique_coordinates_from_routes(&routes, departure_at);
-
-        log::info!("Performance test with {} data points", data.len());
-
-        // Measure circles mode
-        let start = Instant::now();
-        let circles_result =
-            circles::get_polygons(&data, Duration::minutes(60), Duration::minutes(0), 24, 1);
-        let circles_time = start.elapsed();
-        log::info!(
-            "Time for computation of circles polygon: {:?}",
-            circles_time
-        );
-
-        // Measure contour mode
-        let bbox = get_bounding_box(&data, Duration::minutes(60));
-        let (grid, nx, ny, dx) =
-            contour_line::create_grid(&data, bbox, Duration::minutes(60), 50.0, 1);
-
-        let start = Instant::now();
-        let contour_result =
-            contour_line::get_polygons(&grid, nx, ny, bbox.0, Duration::minutes(60), dx);
-        let contour_time = start.elapsed();
-        log::info!(
-            "Time for computation of contour polygon: {:?}",
-            contour_time
-        );
-
-        assert!(!circles_result.0.is_empty());
-        assert!(!contour_result.0.is_empty());
-        let area_circles = calculate_area_m2(&circles_result);
-        let area_contour = calculate_area_m2(&contour_result);
+    async fn circles_and_contour_cover_the_same_area() {
+        let router = Router::new(hrdf_parser::Timetable::year(2025).load().await.unwrap());
+        let at = NaiveDateTime::parse_from_str("2025-06-15 12:10", "%Y-%m-%d %H:%M").unwrap();
+        let time_limit = Duration::minutes(60);
+        let args = IsochroneArgs {
+            latitude: 47.3769, // Zürich
+            longitude: 8.5417,
+            at,
+            time_limit,
+            interval: time_limit,
+            max_num_explorable_connections: 10,
+            num_starting_points: 10,
+            verbose: false,
+            reverse: false,
+        };
+        let data = reached(&router, &args, at, 8);
+        let circles = area_m2(&circles::get_polygons(&data, time_limit, 1));
+        let grid = Grid::new(&data, bounding_box(&data, time_limit), time_limit, 1);
+        let contour = area_m2(&grid.polygons(time_limit));
         assert!(
-            area_circles > 0.0 && area_contour > 0.0,
-            "Areas should be positive, but area_circles: {}, and area_contour: {}",
-            area_circles,
-            area_contour
-        );
-        let thres = 0.01;
-        let diff = (area_circles - area_contour).abs() / area_contour;
-        assert!(
-            diff < thres,
-            "We expect smaller than 1% difference between the 2 but, area_circles: {}, area_contour: {}, diff: {}",
-            area_circles,
-            area_contour,
-            diff
-        );
-    }
-
-    #[test]
-    fn test_polygon_area_bounds_single_point() {
-        // For a single point with 30 min time limit and 5 km/h walking speed:
-        // Maximum walkable distance = 30/60 * 5 = 2.5 km
-        // Expected area ≈ π * (2500)^2 ≈ 19.6 million m²
-
-        let single_point = vec![(
-            Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0),
-            Duration::minutes(0),
-        )];
-
-        let result = circles::get_polygons(
-            &single_point,
-            Duration::minutes(30),
-            Duration::minutes(0),
-            36, // More points for better circle approximation
-            1,
-        );
-
-        let area_m2 = calculate_area_m2(&result);
-        let distance =
-            time_to_distance(Duration::minutes(30), WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-        let expected_area = std::f64::consts::PI * distance * distance;
-
-        // Allow 1% tolerance for polygon approximation (more points = more accurate)
-        let tolerance = 0.01;
-        let diff = (area_m2 - expected_area).abs() / expected_area;
-        assert!(
-            diff < tolerance,
-            "Area difference too large: {:.2}% (got {:.2}, expected {:.2})",
-            diff * 100.0,
-            area_m2,
-            expected_area
-        );
-    }
-
-    #[test]
-    fn test_polygon_area_increases_with_time() {
-        // Create a single point but generate polygons for different time limits
-        let data = vec![(
-            Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0),
-            Duration::minutes(0),
-        )];
-
-        let poly_20 =
-            circles::get_polygons(&data, Duration::minutes(20), Duration::minutes(0), 6, 1);
-        let poly_30 =
-            circles::get_polygons(&data, Duration::minutes(30), Duration::minutes(0), 6, 1);
-        let poly_40 =
-            circles::get_polygons(&data, Duration::minutes(40), Duration::minutes(0), 6, 1);
-
-        let area_20 = calculate_area_m2(&poly_20);
-        let area_30 = calculate_area_m2(&poly_30);
-        let area_40 = calculate_area_m2(&poly_40);
-
-        assert!(
-            area_30 > area_20,
-            "Area should increase with time limit, but we have area_20: {}, area_30: {}",
-            area_20,
-            area_30
-        );
-        assert!(
-            area_40 > area_30,
-            "Area should increase with time limit, but we have area_30: {}, area_40: {}",
-            area_30,
-            area_40
+            (circles - contour).abs() / contour < 0.01,
+            "circles {circles}, contour {contour}"
         );
     }
 }

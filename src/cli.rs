@@ -3,372 +3,164 @@ use std::net::Ipv4Addr;
 use chrono::{Duration, NaiveDateTime};
 use clap::{Parser, Subcommand};
 
-#[cfg(feature = "hectare")]
-use crate::IsochroneHectareArgs;
-use crate::{
-    IsochroneArgs, IsochroneDisplayMode, JourneyArgs, RResult, ReverseIsochroneArgs,
-    ReverseJourneyArgs,
-};
+use crate::{IsochroneArgs, IsochroneDisplayMode};
 
-#[derive(Parser, Debug, Clone)]
-pub struct IsochroneArgsBuilder {
-    /// Departure latitude
-    #[arg(long, default_value_t = 46.20956654)]
-    latitude: f64,
-    /// Departure longitude
-    #[arg(long, default_value_t = 6.13536000)]
-    longitude: f64,
-    /// Departure date and time
-    #[arg(short, long, default_value_t = String::from("2025-04-10 15:36:00"))]
-    departure_at: String,
-    /// Maximum time of the isochrone in minutes
-    #[arg(short, long, default_value_t = 60)]
-    time_limit: i64,
-    /// Time interval between two isochrone in minutes
-    #[arg(short, long, default_value_t = 10)]
-    interval: i64,
-    /// Maximum number of connections
-    #[arg(short, long, default_value_t = 10)]
-    max_num_explorable_connections: i32,
-    /// Number of starting points
-    #[arg(short, long, default_value_t = 5)]
-    num_starting_points: usize,
-    /// Verbose on or off
-    #[arg(short, long, default_value_t = false)]
-    verbose: bool,
+pub(crate) fn date_time(s: &str) -> Result<NaiveDateTime, chrono::ParseError> {
+    NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
 }
 
-impl IsochroneArgsBuilder {
-    pub fn set_departure_at(mut self, departure_at: String) -> Self {
-        self.departure_at = departure_at;
-        self
-    }
-
-    pub fn finalize(self) -> RResult<IsochroneArgs> {
-        let Self {
-            latitude,
-            longitude,
-            departure_at,
-            time_limit,
-            interval,
-            max_num_explorable_connections,
-            num_starting_points,
-            verbose,
-        } = self;
-
-        Ok(IsochroneArgs {
-            latitude,
-            longitude,
-            departure_at: NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-            time_limit: Duration::minutes(time_limit),
-            interval: Duration::minutes(interval),
-            max_num_explorable_connections,
-            num_starting_points,
-            verbose,
-        })
-    }
+pub(crate) fn minutes(s: &str) -> Result<Duration, std::num::ParseIntError> {
+    s.parse().map(Duration::minutes)
 }
 
-#[derive(Parser, Debug, Clone)]
-pub struct JourneyArgsBuilder {
+#[derive(clap::Args, Debug, Clone)]
+pub struct JourneyArgs {
     /// Departure stop id
     #[arg(long, default_value_t = 8587418)]
-    departure_stop_id: i32,
-    /// Departure longitude
-    #[arg(long, default_value_t = 8595120)]
-    arrival_stop_id: i32,
-    /// Departure date and time
-    #[arg(short, long, default_value_t = String::from("2025-09-17 17:05:59"))]
-    departure_at: String,
-    /// Maximum number of connections
-    #[arg(short, long, default_value_t = 10)]
-    max_num_explorable_connections: i32,
-    /// Verbose on or off
-    #[arg(short, long, default_value_t = false)]
-    verbose: bool,
-}
-
-impl JourneyArgsBuilder {
-    pub fn finalize(self) -> RResult<JourneyArgs> {
-        let Self {
-            departure_stop_id,
-            arrival_stop_id,
-            departure_at,
-            max_num_explorable_connections,
-            verbose,
-        } = self;
-
-        Ok(JourneyArgs {
-            departure_stop_id,
-            arrival_stop_id,
-            departure_at: NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-            max_num_explorable_connections,
-            verbose,
-        })
-    }
-}
-
-#[derive(Parser, Debug, Clone)]
-pub struct ReverseJourneyArgsBuilder {
-    /// Departure stop id
-    #[arg(long, default_value_t = 8587418)]
-    departure_stop_id: i32,
+    pub departure_stop_id: i32,
     /// Arrival stop id
     #[arg(long, default_value_t = 8595120)]
-    arrival_stop_id: i32,
-    /// Arrival date and time
-    #[arg(short, long, default_value_t = String::from("2025-09-17 18:58:00"))]
-    arrival_at: String,
-    /// Maximum number of connections
+    pub arrival_stop_id: i32,
+    /// Departure date and time (arrival for reverse-journey)
+    #[arg(short = 'd', long = "departure-at", visible_alias = "arrival-at", short_alias = 'a', value_parser = date_time, default_value = "2025-09-17 17:05:59")]
+    pub at: NaiveDateTime,
+    /// Maximum number of transfers
     #[arg(short, long, default_value_t = 10)]
-    max_num_explorable_connections: i32,
+    pub max_num_explorable_connections: i32,
     /// Verbose on or off
-    #[arg(short, long, default_value_t = false)]
-    verbose: bool,
-}
-
-impl ReverseJourneyArgsBuilder {
-    pub fn finalize(self) -> RResult<ReverseJourneyArgs> {
-        let Self {
-            departure_stop_id,
-            arrival_stop_id,
-            arrival_at,
-            max_num_explorable_connections,
-            verbose,
-        } = self;
-
-        Ok(ReverseJourneyArgs {
-            departure_stop_id,
-            arrival_stop_id,
-            arrival_at: NaiveDateTime::parse_from_str(&arrival_at, "%Y-%m-%d %H:%M:%S")?,
-            max_num_explorable_connections,
-            verbose,
-        })
-    }
+    #[arg(short, long)]
+    pub verbose: bool,
 }
 
 #[cfg(feature = "hectare")]
-#[derive(Parser, Debug)]
-pub struct IsochroneHectareArgsBuilder {
+#[derive(clap::Args, Debug, Clone)]
+pub struct HectareArgs {
     /// Departure date and time
-    #[arg(short, long, default_value_t = String::from("2025-04-10 07:30:00"))]
-    departure_at: String,
+    #[arg(short, long, value_parser = date_time, default_value = "2025-04-10 07:30:00")]
+    pub departure_at: NaiveDateTime,
     /// Maximum time of the isochrone in minutes
-    #[arg(short, long, default_value_t = 60)]
-    time_limit: i64,
-    /// Maximum number of connections
+    #[arg(short, long, value_parser = minutes, default_value = "60")]
+    pub time_limit: Duration,
+    /// Maximum number of transfers
     #[arg(short, long, default_value_t = 10)]
-    max_num_explorable_connections: i32,
-    /// Number of starting points
+    pub max_num_explorable_connections: i32,
+    /// Number of stops within walking distance to start from
     #[arg(short, long, default_value_t = 5)]
-    num_starting_points: usize,
+    pub num_starting_points: usize,
     /// Verbose on or off
-    #[arg(short, long, default_value_t = false)]
-    verbose: bool,
-}
-
-#[cfg(feature = "hectare")]
-impl IsochroneHectareArgsBuilder {
-    pub fn finalize(self) -> RResult<IsochroneHectareArgs> {
-        let Self {
-            departure_at,
-            time_limit,
-            max_num_explorable_connections,
-            num_starting_points,
-            verbose,
-        } = self;
-
-        Ok(IsochroneHectareArgs {
-            departure_at: NaiveDateTime::parse_from_str(&departure_at, "%Y-%m-%d %H:%M:%S")?,
-            time_limit: Duration::minutes(time_limit),
-            max_num_explorable_connections,
-            num_starting_points,
-            verbose,
-        })
-    }
-}
-
-#[derive(Parser, Debug, Clone)]
-pub struct ReverseIsochroneArgsBuilder {
-    /// Destination latitude
-    #[arg(long, default_value_t = 46.20956654)]
-    latitude: f64,
-    /// Destination longitude
-    #[arg(long, default_value_t = 6.13536000)]
-    longitude: f64,
-    /// Arrival date and time
-    #[arg(short, long, default_value_t = String::from("2025-04-10 15:36:00"))]
-    arrival_at: String,
-    /// Maximum time of the isochrone in minutes
-    #[arg(short, long, default_value_t = 60)]
-    time_limit: i64,
-    /// Time interval between two isochrone in minutes
-    #[arg(short, long, default_value_t = 10)]
-    interval: i64,
-    /// Maximum number of connections
-    #[arg(short, long, default_value_t = 10)]
-    max_num_explorable_connections: i32,
-    /// Number of starting points
-    #[arg(short, long, default_value_t = 5)]
-    num_starting_points: usize,
-    /// Verbose on or off
-    #[arg(short, long, default_value_t = false)]
-    verbose: bool,
-}
-
-impl ReverseIsochroneArgsBuilder {
-    pub fn finalize(self) -> RResult<ReverseIsochroneArgs> {
-        let Self {
-            latitude,
-            longitude,
-            arrival_at,
-            time_limit,
-            interval,
-            max_num_explorable_connections,
-            num_starting_points,
-            verbose,
-        } = self;
-
-        Ok(ReverseIsochroneArgs {
-            latitude,
-            longitude,
-            arrival_at: NaiveDateTime::parse_from_str(&arrival_at, "%Y-%m-%d %H:%M:%S")?,
-            time_limit: Duration::minutes(time_limit),
-            interval: Duration::minutes(interval),
-            max_num_explorable_connections,
-            num_starting_points,
-            verbose,
-        })
-    }
+    #[arg(short, long)]
+    pub verbose: bool,
+    /// The +/- duration over which to look for the optimal isochrone (in minutes)
+    #[arg(long, value_parser = minutes, default_value = "30")]
+    pub delta_time: Duration,
+    /// Where to download the population per hectare from
+    #[arg(short, long, default_value_t = String::from("https://dam-api.bfs.admin.ch/hub/api/dam/assets/32686751/master"))]
+    pub url: String,
 }
 
 #[derive(Subcommand)]
 pub enum Mode {
     /// Serve mode to a given port
     Serve {
-        /// Tpv4 served, defaults to 0.0.0.0
+        /// IPv4 address served
         #[arg(short, long, default_value_t = Ipv4Addr::new(0, 0, 0, 0))]
         address: Ipv4Addr,
-
-        /// Port exposed on the server
-        #[arg(short, long, value_parser = clap::value_parser!(u16), num_args = 1.., default_values_t = [8100u16])]
+        /// Ports exposed by the server
+        #[arg(short, long, num_args = 1.., default_values_t = [8100u16])]
         ports: Vec<u16>,
     },
     /// Debug mode used to check if the examples still run
     Debug,
     /// Journey mode to find a journey between two stop ids departing at a given time
-    Journey {
-        #[command(flatten)]
-        journey_args: JourneyArgsBuilder,
-    },
+    Journey(JourneyArgs),
     /// Reverse Journey mode to find latest departure
-    ReverseJourney {
-        #[command(flatten)]
-        reverse_journey_args: ReverseJourneyArgsBuilder,
-    },
+    ReverseJourney(JourneyArgs),
     /// Compare between two years for the optimal isochrone for a given duration
     Compare {
         #[command(flatten)]
-        isochrone_args: IsochroneArgsBuilder,
+        isochrone_args: IsochroneArgs,
         /// Second departure date and time
-        #[arg(short, long, default_value_t = String::from("2025-04-11 15:36:00"))]
-        old_departure_at: String,
-        /// Display mode of the isochrones: circles or contour_line
-        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
-        mode: IsochroneDisplayMode,
-        /// The +/- duration on which to compute the average (in minutes)
-        #[arg(long, default_value_t = 30)]
-        delta_time: i64,
+        #[arg(short, long, value_parser = date_time, default_value = "2025-04-11 15:36:00")]
+        old_departure_at: NaiveDateTime,
+        #[command(flatten)]
+        window: Window,
+        #[command(flatten)]
+        display: Display,
     },
     /// Compute the optimal isochrones (largest surface)
-    Optimal {
-        #[command(flatten)]
-        isochrone_args: IsochroneArgsBuilder,
-        /// The +/- duration on which to compute the average (in minutes)
-        #[arg(long, default_value_t = 30)]
-        delta_time: i64,
-        /// Display mode of the isochrones: circles or contour_line
-        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
-        mode: IsochroneDisplayMode,
-    },
+    Optimal(Isochrones),
     /// Compute the worst isochrones (smallest surface)
-    Worst {
-        #[command(flatten)]
-        isochrone_args: IsochroneArgsBuilder,
-        /// The +/- duration on which to compute the average (in minutes)
-        #[arg(long, default_value_t = 30)]
-        delta_time: i64,
-        /// Display mode of the isochrones: circles or contour_line
-        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
-        mode: IsochroneDisplayMode,
-    },
+    Worst(Isochrones),
     /// Single isochrone at a specific location and date-time
     Simple {
         #[command(flatten)]
-        isochrone_args: IsochroneArgsBuilder,
-        /// Display mode of the isochrones: circles or contour_line
-        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
-        mode: IsochroneDisplayMode,
+        isochrone_args: IsochroneArgs,
+        #[command(flatten)]
+        display: Display,
     },
     /// Average surface isochrone given a specific location, date-time, and duration
     Average {
         #[command(flatten)]
-        isochrone_args: IsochroneArgsBuilder,
-        /// The +/- duration on which to compute the average (in minutes)
-        #[arg(long, default_value_t = 30)]
-        delta_time: i64,
+        isochrone_args: IsochroneArgs,
+        #[command(flatten)]
+        window: Window,
     },
     /// Reverse isochrone: find all origins from which a destination can be reached
     ReverseSimple {
         #[command(flatten)]
-        isochrone_args: ReverseIsochroneArgsBuilder,
-        /// Display mode of the isochrones: circles or contour_line
-        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
-        mode: IsochroneDisplayMode,
+        isochrone_args: IsochroneArgs,
+        #[command(flatten)]
+        display: Display,
     },
     /// Reverse optimal isochrone (largest surface)
-    ReverseOptimal {
-        #[command(flatten)]
-        isochrone_args: ReverseIsochroneArgsBuilder,
-        /// The +/- duration on which to compute the optimal (in minutes)
-        #[arg(long, default_value_t = 30)]
-        delta_time: i64,
-        /// Display mode of the isochrones: circles or contour_line
-        #[arg(long, default_value_t = IsochroneDisplayMode::Circles)]
-        mode: IsochroneDisplayMode,
-    },
+    ReverseOptimal(Isochrones),
     /// Reverse average isochrone
     ReverseAverage {
         #[command(flatten)]
-        isochrone_args: ReverseIsochroneArgsBuilder,
-        /// The +/- duration on which to compute the average (in minutes)
-        #[arg(long, default_value_t = 30)]
-        delta_time: i64,
+        isochrone_args: IsochroneArgs,
+        #[command(flatten)]
+        window: Window,
     },
     /// Surface per Hectare
     #[cfg(feature = "hectare")]
-    Hectare {
-        #[command(flatten)]
-        isochrone_args: IsochroneHectareArgsBuilder,
-        /// The +/- duration on which to compute the average (in minutes)
-        #[arg(long, default_value_t = 30)]
-        delta_time: i64,
-        /// The URL from where to download the necessary data for the Hectare computations
-        #[arg(short, long, default_value_t = String::from("https://dam-api.bfs.admin.ch/hub/api/dam/assets/32686751/master"))]
-        url: String,
-    },
+    Hectare(HectareArgs),
+}
+
+/// Isochrones picked in a time window.
+#[derive(clap::Args)]
+pub struct Isochrones {
+    #[command(flatten)]
+    pub isochrone_args: IsochroneArgs,
+    #[command(flatten)]
+    pub window: Window,
+    #[command(flatten)]
+    pub display: Display,
+}
+
+#[derive(clap::Args)]
+pub struct Window {
+    /// The +/- duration over which to compute (in minutes)
+    #[arg(long, value_parser = minutes, default_value = "30")]
+    pub delta_time: Duration,
+}
+
+#[derive(clap::Args)]
+pub struct Display {
+    /// Display mode of the isochrones
+    #[arg(long, value_enum, default_value = "circles")]
+    pub mode: IsochroneDisplayMode,
 }
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
-    /// Prefix path for the cache, when absent defaults lo "./"
+    /// Directory of the caches (default: current directory)
     #[arg(short, long)]
     pub cache_prefix: Option<String>,
     /// Force to rebuild the cache
     #[arg(short, long, default_value_t = false)]
     pub force_rebuild: bool,
-    // Maximum number of cores used. If 0 is given all cores are automatically assigned
+    /// Maximum number of cores used. If 0 is given all cores are automatically assigned
     #[arg(long, default_value_t = 4)]
     pub num_threads: usize,
     /// What mode is used

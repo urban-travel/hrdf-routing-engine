@@ -6,18 +6,10 @@ use zip::result::ZipError;
 
 #[derive(Debug, Error)]
 pub enum RError {
-    #[error("Hrdf error: {0}")]
-    HrdfError(#[from] hrdf_parser::Error),
-    #[error("Failed to parse date {0}")]
-    ParseDate(#[from] chrono::ParseError),
-    #[error("Empty MultiPolygon")]
-    EmptyMultiPolygon,
     #[error("No bounding rectangle exists")]
     NoBoundingRect,
     #[error("Io Error: {0}")]
     IoError(#[from] std::io::Error),
-    #[error("SerdeJsonError: {0}")]
-    SerdeJsonError(#[from] serde_json::Error),
     #[error("GeoJsonError: {0}")]
     GeoJsonError(Box<geojson::Error>),
     #[error("Postcard error: {0}")]

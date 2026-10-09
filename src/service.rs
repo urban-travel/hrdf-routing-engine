@@ -1,226 +1,147 @@
 use std::{
     net::{Ipv4Addr, SocketAddr},
-    str::FromStr,
     sync::Arc,
 };
 
-use axum::{Json, Router, extract::Query, http::StatusCode, routing::get};
+use axum::{
+    Json,
+    extract::{Query, State},
+    http::StatusCode,
+    routing::get,
+};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use geo::MultiPolygon;
-use hrdf_parser::{Hrdf, timetable_end_date, timetable_start_date};
 use serde::{Deserialize, Serialize};
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
-    IsochroneArgs, ReverseIsochroneArgs,
+    IsochroneArgs, Router,
     isochrone::{self, IsochroneDisplayMode, IsochroneMap},
+    planner,
 };
 
+pub struct AppState {
+    pub router: Arc<Router>,
+    pub index: planner::Index,
+    excluded_polygons: MultiPolygon,
+    num_threads: usize,
+}
+
+pub type AppStateRef = State<Arc<AppState>>;
+
 pub async fn run_service(
-    hrdf: Arc<Hrdf>,
+    router: Arc<Router>,
     num_threads: usize,
     excluded_polygons: MultiPolygon,
     ip_addr: Ipv4Addr,
     port: u16,
 ) {
     log::info!("Starting the server...");
-
-    let hrdf_1 = Arc::clone(&hrdf);
-    let hrdf_2 = Arc::clone(&hrdf);
-    let hrdf_3 = Arc::clone(&hrdf);
-    let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
-    let excluded_polygons = Arc::new(excluded_polygons);
-    let excluded_polygons_2 = Arc::clone(&excluded_polygons);
-
-    #[rustfmt::skip]
-    let app = Router::new()
-        .route(
-            "/metadata",
-            get(move || metadata(Arc::clone(&hrdf_1))),
-        )
+    let index = planner::Index::new(&router.timetable);
+    let state = Arc::new(AppState {
+        router,
+        index,
+        excluded_polygons,
+        num_threads,
+    });
+    let app = axum::Router::new()
+        .route("/metadata", get(metadata))
         .route(
             "/isochrones",
-            get(move |params| compute_isochrones(Arc::clone(&hrdf_2), num_threads, Arc::clone(&excluded_polygons), params)),
+            get(|state: AppStateRef, request| isochrones(state, request, false)),
         )
         .route(
             "/reverse-isochrones",
-            get(move |params| compute_reverse_isochrones(Arc::clone(&hrdf_3), num_threads, Arc::clone(&excluded_polygons_2), params)),
+            get(|state: AppStateRef, request| isochrones(state, request, true)),
         )
-        .layer(cors);
-    let address = SocketAddr::from((ip_addr, port));
-    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
-
+        .route("/stops", get(planner::stops))
+        .route("/journeys", get(planner::journeys))
+        .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any))
+        .with_state(state);
+    let listener = tokio::net::TcpListener::bind(SocketAddr::from((ip_addr, port)))
+        .await
+        .unwrap();
     log::info!("Listening on {ip_addr}:{port}...");
-
     axum::serve(listener, app).await.unwrap();
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 struct MetadataResponse {
     start_date: NaiveDate,
     end_date: NaiveDate,
 }
 
-async fn metadata(hrdf: Arc<Hrdf>) -> Json<MetadataResponse> {
+async fn metadata(State(state): AppStateRef) -> Json<MetadataResponse> {
+    let tt = &state.router.timetable;
     Json(MetadataResponse {
-        start_date: timetable_start_date(hrdf.data_storage().timetable_metadata()).unwrap(),
-        end_date: timetable_end_date(hrdf.data_storage().timetable_metadata()).unwrap(),
+        start_date: tt.start,
+        end_date: tt.end,
     })
 }
 
-#[derive(Debug, Deserialize)]
-struct ComputeIsochronesRequest {
+/// The point and time are the origin and departure, or the destination and arrival for the
+/// reverse isochrones (which also accept these names).
+#[derive(Deserialize)]
+struct IsochronesRequest {
+    #[serde(alias = "destination_latitude")]
     origin_point_latitude: f64,
+    #[serde(alias = "destination_longitude")]
     origin_point_longitude: f64,
+    #[serde(alias = "arrival_date")]
     departure_date: NaiveDate,
+    #[serde(alias = "arrival_time")]
     departure_time: NaiveTime,
     time_limit: u32,
     isochrone_interval: u32,
-    display_mode: String,
+    display_mode: IsochroneDisplayMode,
     find_optimal: bool,
 }
 
-async fn compute_isochrones(
-    hrdf: Arc<Hrdf>,
-    num_threads: usize,
-    excluded_polygons: Arc<MultiPolygon>,
-    Query(params): Query<ComputeIsochronesRequest>,
+async fn isochrones(
+    State(state): AppStateRef,
+    Query(request): Query<IsochronesRequest>,
+    reverse: bool,
 ) -> Result<Json<IsochroneMap>, StatusCode> {
-    // The coordinates are not checked but should be.
-
-    let max_num_explorable_connections = 10;
-    let num_starting_points = 5;
-    let start_date = timetable_start_date(hrdf.data_storage().timetable_metadata()).unwrap();
-    let end_date = timetable_end_date(hrdf.data_storage().timetable_metadata()).unwrap();
-
-    if params.departure_date < start_date || params.departure_date > end_date {
-        // The departure date is outside the possible dates for the timetable.
+    let tt = &state.router.timetable;
+    let (time_limit, interval) = (request.time_limit, request.isochrone_interval);
+    // The time limit must be a multiple of the interval.
+    if !(tt.start..=tt.end).contains(&request.departure_date)
+        || interval == 0
+        || time_limit % interval != 0
+    {
         return Err(StatusCode::BAD_REQUEST);
     }
-
-    if params.isochrone_interval == 0 {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    if params.time_limit % params.isochrone_interval != 0 {
-        // The result of dividing time_limit with isochrone_interval must be an integer.
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    if !["circles", "contour_line"].contains(&params.display_mode.as_str()) {
-        // The display mode is incorrect.
-        return Err(StatusCode::BAD_REQUEST);
-    }
-    let isochrone_args = IsochroneArgs {
-        latitude: params.origin_point_latitude,
-        longitude: params.origin_point_longitude,
-        departure_at: NaiveDateTime::new(params.departure_date, params.departure_time),
-        time_limit: Duration::minutes(params.time_limit.into()),
-        interval: Duration::minutes(params.isochrone_interval.into()),
-        max_num_explorable_connections,
-        num_starting_points,
+    let args = IsochroneArgs {
+        latitude: request.origin_point_latitude,
+        longitude: request.origin_point_longitude,
+        at: NaiveDateTime::new(request.departure_date, request.departure_time),
+        time_limit: Duration::minutes(time_limit.into()),
+        interval: Duration::minutes(interval.into()),
+        max_num_explorable_connections: 10,
+        num_starting_points: 5,
         verbose: false,
+        reverse,
     };
-    let result = if params.find_optimal {
-        log::info!("Computing Optimal Isochrones for {isochrone_args}");
-        let res = isochrone::compute_optimal_isochrones(
-            &hrdf,
-            &excluded_polygons,
-            isochrone_args,
+    log::info!(
+        "Computing isochrones for {args}, optimal: {}",
+        request.find_optimal
+    );
+    let (router, excluded, threads, mode) = (
+        &state.router,
+        &state.excluded_polygons,
+        state.num_threads,
+        request.display_mode,
+    );
+    Ok(Json(if request.find_optimal {
+        isochrone::compute_optimal_isochrones(
+            router,
+            excluded,
+            &args,
             Duration::minutes(30),
-            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-            num_threads,
-        );
-        log::info!("Optimal Computation Successful");
-        res
+            mode,
+            threads,
+        )
     } else {
-        log::info!("Computing Isochrones for {isochrone_args}");
-        let res = isochrone::compute_isochrones(
-            &hrdf,
-            &excluded_polygons,
-            isochrone_args,
-            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-            num_threads,
-        );
-        log::info!("Normal Computation Successful");
-        res
-    };
-    Ok(Json(result))
-}
-
-#[derive(Debug, Deserialize)]
-struct ComputeReverseIsochronesRequest {
-    destination_latitude: f64,
-    destination_longitude: f64,
-    arrival_date: NaiveDate,
-    arrival_time: NaiveTime,
-    time_limit: u32,
-    isochrone_interval: u32,
-    display_mode: String,
-    find_optimal: bool,
-}
-
-async fn compute_reverse_isochrones(
-    hrdf: Arc<Hrdf>,
-    num_threads: usize,
-    excluded_polygons: Arc<MultiPolygon>,
-    Query(params): Query<ComputeReverseIsochronesRequest>,
-) -> Result<Json<IsochroneMap>, StatusCode> {
-    let max_num_explorable_connections = 10;
-    let num_starting_points = 5;
-    let start_date = timetable_start_date(hrdf.data_storage().timetable_metadata()).unwrap();
-    let end_date = timetable_end_date(hrdf.data_storage().timetable_metadata()).unwrap();
-
-    if params.arrival_date < start_date || params.arrival_date > end_date {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    if params.isochrone_interval == 0 {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    if params.time_limit % params.isochrone_interval != 0 {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    if !["circles", "contour_line"].contains(&params.display_mode.as_str()) {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    let isochrone_args = ReverseIsochroneArgs {
-        latitude: params.destination_latitude,
-        longitude: params.destination_longitude,
-        arrival_at: NaiveDateTime::new(params.arrival_date, params.arrival_time),
-        time_limit: Duration::minutes(params.time_limit.into()),
-        interval: Duration::minutes(params.isochrone_interval.into()),
-        max_num_explorable_connections,
-        num_starting_points,
-        verbose: false,
-    };
-
-    let result = if params.find_optimal {
-        log::info!("Computing Optimal Reverse Isochrones for {isochrone_args}");
-        let res = isochrone::compute_optimal_isochrones_reverse(
-            &hrdf,
-            &excluded_polygons,
-            isochrone_args,
-            Duration::minutes(30),
-            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-            num_threads,
-        );
-        log::info!("Optimal Reverse Computation Successful");
-        res
-    } else {
-        log::info!("Computing Reverse Isochrones for {isochrone_args}");
-        let res = isochrone::compute_isochrones_reverse(
-            &hrdf,
-            &excluded_polygons,
-            isochrone_args,
-            IsochroneDisplayMode::from_str(&params.display_mode).unwrap(),
-            num_threads,
-        );
-        log::info!("Reverse Computation Successful");
-        res
-    };
-    Ok(Json(result))
+        isochrone::compute_isochrones(router, excluded, &args, mode, threads)
+    }))
 }

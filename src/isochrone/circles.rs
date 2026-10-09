@@ -1,74 +1,44 @@
-use orx_parallel::*;
 use std::f64::consts::PI;
 
 use chrono::Duration;
-use geo::MultiPolygon;
-use geo::{BooleanOps, LineString, Polygon};
-use hrdf_parser::{CoordinateSystem, Coordinates};
+use geo::{BooleanOps, LineString, MultiPolygon, Polygon};
+use hrdf_parser::Coordinates;
+use orx_parallel::*;
 
-use super::{
-    constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR,
-    utils::{lv95_to_wgs84, time_to_distance},
-};
+use super::utils::{lv95, lv95_to_wgs84, walking_distance};
 
-/// Returns the polygons in wgs84 coordinates from LV95 coordinates.
-// TODO: create two versions of this function for LV95 and WGS84
+const CIRCLE_POINTS: usize = 6;
+
+/// The union, in WGS84, of the circles that can be walked in the time left around each stop
+/// (LV95) reached within `time_limit`.
 pub fn get_polygons(
     data: &[(Coordinates, Duration)],
     time_limit: Duration,
-    prev_time_limit: Duration,
-    num_circle_points: usize,
     num_threads: usize,
 ) -> MultiPolygon {
     let mut reachable: Vec<_> = data
         .iter()
-        .filter(|(_, duration)| prev_time_limit <= *duration && *duration <= time_limit)
+        .filter(|(_, duration)| Duration::zero() <= *duration && *duration <= time_limit)
         .collect();
-    // Group nearby circles so early unions can simplify overlapping boundaries.
-    // Sort easting strips by northing, retaining all original coordinates.
-    reachable.sort_unstable_by(|(lhs, _), (rhs, _)| {
-        lhs.easting()
-            .expect("Wrong coordinate system")
-            .total_cmp(&rhs.easting().expect("Wrong coordinate system"))
-    });
+    // Group nearby circles so early unions can simplify overlapping boundaries: sort by
+    // easting, then each strip by northing.
+    reachable.sort_unstable_by(|(lhs, _), (rhs, _)| lv95(lhs).0.total_cmp(&lv95(rhs).0));
     let strip_size = (reachable.len() as f64).sqrt().ceil().max(1.0) as usize;
     for strip in reachable.chunks_mut(strip_size) {
-        strip.sort_unstable_by(|(lhs, _), (rhs, _)| {
-            lhs.northing()
-                .expect("Wrong coordinate system")
-                .total_cmp(&rhs.northing().expect("Wrong coordinate system"))
-        });
+        strip.sort_unstable_by(|(lhs, _), (rhs, _)| lv95(lhs).1.total_cmp(&lv95(rhs).1));
     }
 
     let mut polygons = reachable
         .par()
         .chunk_size(50)
         .num_threads(num_threads)
-        .map(|(center_lv95, duration)| {
-            let distance =
-                time_to_distance(time_limit - *duration, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-
-            let polygon = generate_lv95_circle_points(
-                center_lv95.easting().expect("Wrong coordinate system"),
-                center_lv95.northing().expect("Wrong coordinate system"),
-                distance,
-                num_circle_points,
-            )
-            .into_iter()
-            .map(|lv95| {
-                let wgs84 = lv95_to_wgs84(
-                    lv95.easting().expect("Wrong coordinate system"),
-                    lv95.northing().expect("Wrong coordinate system"),
-                );
-                (wgs84.0, wgs84.1)
-            })
-            .collect::<Vec<_>>();
-            MultiPolygon::new(vec![Polygon::new(LineString::from(polygon), vec![])])
+        .map(|(center, duration)| {
+            let (e, n) = lv95(center);
+            MultiPolygon::new(vec![circle(e, n, walking_distance(time_limit - *duration))])
         })
         .collect::<Vec<_>>();
 
-    // Combine similarly sized groups at each level. A sequential fold repeatedly
-    // overlays every new circle onto the entire accumulated boundary.
+    // Union pairs level by level: folding one circle at a time into the whole boundary is slow.
     while polygons.len() > 1 {
         let pairs: Vec<_> = polygons.chunks(2).collect();
         polygons = pairs
@@ -84,45 +54,31 @@ pub fn get_polygons(
     polygons.pop().expect("Could not compute Polygon")
 }
 
-fn generate_lv95_circle_points(e: f64, n: f64, radius: f64, num_points: usize) -> Vec<Coordinates> {
-    let mut points = Vec::new();
-    let angle_step = 2.0 * PI / num_points as f64;
-
-    for i in 0..num_points {
-        let angle = i as f64 * angle_step;
-        let de = radius * angle.cos();
-        let dn = radius * angle.sin();
-        points.push(Coordinates::new(CoordinateSystem::LV95, e + de, n + dn));
-    }
-
-    points
+/// A polygon approximating the circle around an LV95 point, in WGS84.
+fn circle(e: f64, n: f64, radius: f64) -> Polygon {
+    let step = 2.0 * PI / CIRCLE_POINTS as f64;
+    let points = (0..CIRCLE_POINTS).map(|i| {
+        let angle = i as f64 * step;
+        lv95_to_wgs84(e + radius * angle.cos(), n + radius * angle.sin())
+    });
+    Polygon::new(LineString::from(points.collect::<Vec<_>>()), vec![])
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::isochrone::utils::multi_polygon_to_lv95;
-    use geo::{Area, BooleanOps, Contains, Point, Rect};
+    use geo::{Area, Contains, Point, Rect};
+    use hrdf_parser::CoordinateSystem;
 
-    // Original sequential reduction, retained only for geometry regression checks.
+    /// The circles unioned one by one: the reference for the balanced union.
     fn incremental_polygons(
         data: &[(Coordinates, Duration)],
         time_limit: Duration,
-        prev_time_limit: Duration,
-        num_circle_points: usize,
     ) -> MultiPolygon {
         data.iter()
-            .filter(|(_, duration)| prev_time_limit <= *duration && *duration <= time_limit)
-            .map(|point| {
-                // A single input takes the unchanged circle-generation path above.
-                get_polygons(
-                    std::slice::from_ref(point),
-                    time_limit,
-                    prev_time_limit,
-                    num_circle_points,
-                    1,
-                )
-            })
+            .filter(|(_, duration)| *duration <= time_limit)
+            .map(|point| get_polygons(std::slice::from_ref(point), time_limit, 1))
             .reduce(|lhs, rhs| lhs.union(&rhs))
             .expect("Could not compute Polygon")
     }
@@ -142,11 +98,8 @@ mod tests {
             "symmetric difference {difference_area} m² for reference area {expected_area} m²"
         );
         assert_eq!(actual.0.len(), expected.0.len(), "disconnected regions");
-        assert_eq!(
-            actual.iter().map(|p| p.interiors().len()).sum::<usize>(),
-            expected.iter().map(|p| p.interiors().len()).sum::<usize>(),
-            "holes"
-        );
+        let holes = |m: &MultiPolygon| m.iter().map(|p| p.interiors().len()).sum::<usize>();
+        assert_eq!(holes(actual), holes(expected), "holes");
     }
 
     #[test]
@@ -167,7 +120,7 @@ mod tests {
             point(20000.0, 0.0, 31),
         ]);
         let limit = Duration::minutes(30);
-        let reference = incremental_polygons(&data, limit, Duration::zero(), 6);
+        let reference = incremental_polygons(&data, limit);
         assert_eq!(reference.0.len(), 2);
         assert_eq!(
             reference.iter().map(|p| p.interiors().len()).sum::<usize>(),
@@ -191,7 +144,7 @@ mod tests {
                 if reverse {
                     data.reverse();
                 }
-                let result = get_polygons(&data, limit, Duration::zero(), 6, threads);
+                let result = get_polygons(&data, limit, threads);
                 assert_equivalent(&result, &reference);
                 assert_equivalent(&result.difference(&excluded), &clipped_reference);
                 let hole = lv95_to_wgs84(2_600_000.0, 1_200_000.0);
@@ -201,23 +154,18 @@ mod tests {
     }
 
     #[test]
-    fn balanced_union_preserves_time_filter_boundaries() {
+    fn stops_reached_after_the_limit_are_left_out() {
         let data = [
             point(0.0, 0.0, 9),
-            point(10000.0, 0.0, 10),
-            point(20000.0, 0.0, 29),
-            point(30000.0, 0.0, 30),
-            point(40000.0, 0.0, 31),
+            point(10000.0, 0.0, 29),
+            point(20000.0, 0.0, 30),
+            point(30000.0, 0.0, 31),
         ];
         let limit = Duration::minutes(30);
-        let previous = Duration::minutes(10);
-        let reference = incremental_polygons(&data, limit, previous, 6);
+        let reference = incremental_polygons(&data, limit);
         assert_eq!(reference.0.len(), 2);
         for threads in [1, 4] {
-            assert_equivalent(
-                &get_polygons(&data, limit, previous, 6, threads),
-                &reference,
-            );
+            assert_equivalent(&get_polygons(&data, limit, threads), &reference);
         }
     }
 
@@ -225,9 +173,8 @@ mod tests {
     fn zero_radius_circle_preserves_the_positive_circle() {
         let data = [point(10000.0, 0.0, 30), point(0.0, 0.0, 10)];
         let limit = Duration::minutes(30);
-        let reference = incremental_polygons(&data, limit, Duration::zero(), 6);
-        let result = get_polygons(&data, limit, Duration::zero(), 6, 1);
+        let result = get_polygons(&data, limit, 1);
         assert!(multi_polygon_to_lv95(&result).unsigned_area() > 0.0);
-        assert_equivalent(&result, &reference);
+        assert_equivalent(&result, &incremental_polygons(&data, limit));
     }
 }

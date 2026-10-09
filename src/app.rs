@@ -1,437 +1,197 @@
-use orx_parallel::*;
-use std::time::Instant;
+//! The isochrone commands of the command line: compute, then draw into an SVG file.
 
-use crate::isochrone::{self, IsochroneDisplayMode, compute_isochrones};
-use crate::{IsochroneArgs, RResult, ReverseIsochroneArgs};
 use chrono::Duration;
 use geo::MultiPolygon;
-use hrdf_parser::{Coordinates, Hrdf};
-use isochrone::compute_optimal_isochrones;
+use hrdf_parser::{CoordinateSystem, Coordinates};
 
-#[cfg(feature = "hectare")]
 use crate::{
-    IsochroneHectareArgs,
-    isochrone::externals::{HectareData, HectareRecord},
+    IsochroneArgs, IsochroneDisplayMode, RResult, Router,
+    isochrone::{
+        IsochroneMap, compute_average_isochrones, compute_isochrones, compute_optimal_isochrones,
+        compute_worst_isochrones, utils::wgs84_to_lv95,
+    },
 };
 
-use self::isochrone::compute_average_isochrones;
-use self::isochrone::compute_average_isochrones_reverse;
-use self::isochrone::compute_isochrones_reverse;
-use self::isochrone::compute_optimal_isochrones_reverse;
-use self::isochrone::compute_worst_isochrones;
-use self::isochrone::utils::wgs84_to_lv95;
+/// Which isochrones of the time window around `IsochroneArgs::at`.
+#[derive(Clone, Copy)]
+pub enum Pick {
+    /// Those of `at` only.
+    Simple,
+    /// Those with the largest area.
+    Optimal,
+    /// Those with the smallest area.
+    Worst,
+    /// Those of the average time to each point.
+    Average,
+}
 
-#[allow(clippy::too_many_arguments)]
-pub fn run_simple(
-    hrdf: Hrdf,
-    excluded_polygons: MultiPolygon,
-    isochrone_args: IsochroneArgs,
+/// Draws the picked isochrones into `[reverse_][optimal_|worst_|average_]isochrones_<time
+/// limit>_<interval>[_<delta time, for average>].svg`.
+pub fn run_isochrones(
+    router: &Router,
+    excluded_polygons: &MultiPolygon,
+    args: &IsochroneArgs,
+    pick: Pick,
+    delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
 ) -> RResult<()> {
-    let time_limit = isochrone_args.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args.interval.num_minutes();
-
-    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    #[cfg(feature = "svg")]
-    let iso = compute_isochrones(
-        &hrdf,
-        &excluded_polygons,
-        isochrone_args,
-        display_mode,
-        num_threads,
-    );
-
-    #[cfg(feature = "svg")]
-    iso.write_svg(
-        &format!("isochrones_{}_{}.svg", time_limit, isochrone_interval),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-    Ok(())
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn run_average(
-    hrdf: Hrdf,
-    excluded_polygons: MultiPolygon,
-    isochrone_args: IsochroneArgs,
-    delta_time: Duration,
-    num_threads: usize,
-) -> RResult<()> {
-    let time_limit = isochrone_args.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args.interval.num_minutes();
-
-    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    #[cfg(feature = "svg")]
-    let iso = compute_average_isochrones(
-        &hrdf,
-        &excluded_polygons,
-        isochrone_args,
-        delta_time,
-        num_threads,
-    );
-
-    #[cfg(feature = "svg")]
-    iso.write_svg(
-        &format!(
-            "average_isochrones_{}_{}_{}.svg",
-            time_limit,
-            isochrone_interval,
-            delta_time.num_minutes()
+    let (map, name) = match pick {
+        Pick::Simple => (
+            compute_isochrones(router, excluded_polygons, args, display_mode, num_threads),
+            "",
         ),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-
-    Ok(())
+        Pick::Optimal => {
+            let map = compute_optimal_isochrones(
+                router,
+                excluded_polygons,
+                args,
+                delta_time,
+                display_mode,
+                num_threads,
+            );
+            (map, "optimal_")
+        }
+        Pick::Worst => {
+            let map = compute_worst_isochrones(
+                router,
+                excluded_polygons,
+                args,
+                delta_time,
+                display_mode,
+                num_threads,
+            );
+            (map, "worst_")
+        }
+        Pick::Average => (
+            compute_average_isochrones(router, excluded_polygons, args, delta_time, num_threads),
+            "average_",
+        ),
+    };
+    let reverse = if args.reverse { "reverse_" } else { "" };
+    let (time_limit, interval) = (args.time_limit.num_minutes(), args.interval.num_minutes());
+    let delta = if let Pick::Average = pick {
+        format!("_{}", delta_time.num_minutes())
+    } else {
+        String::new()
+    };
+    write_svg(
+        &map,
+        &format!("{reverse}{name}isochrones_{time_limit}_{interval}{delta}.svg"),
+        args,
+    )
 }
 
-#[cfg(feature = "hectare")]
+/// The optimal isochrones at two dates, each drawn into `isochrones_<date>_<time limit>_<interval>.svg`,
+/// with their area and reach.
 #[allow(clippy::too_many_arguments)]
-pub fn run_surface_per_ha(
-    hrdf: Hrdf,
-    excluded_polygons: MultiPolygon,
-    hectare: HectareData,
-    isochrone_args: IsochroneHectareArgs,
+pub fn run_comparison(
+    old_router: &Router,
+    new_router: &Router,
+    excluded_polygons: &MultiPolygon,
+    old: &IsochroneArgs,
+    new: &IsochroneArgs,
     delta_time: Duration,
     display_mode: IsochroneDisplayMode,
     num_threads: usize,
-) -> RResult<Vec<HectareRecord>> {
-    use std::sync::RwLock;
+) -> RResult<()> {
+    for (router, args) in [(old_router, old), (new_router, new)] {
+        let map = compute_optimal_isochrones(
+            router,
+            excluded_polygons,
+            args,
+            delta_time,
+            display_mode,
+            num_threads,
+        );
+        let (time_limit, interval) = (args.time_limit.num_minutes(), args.interval.num_minutes());
+        write_svg(
+            &map,
+            &format!("isochrones_{}_{time_limit}_{interval}.svg", args.at.date()),
+            args,
+        )?;
+        let reach = map.compute_max_distance(center(args)).1;
+        println!(
+            "time = {}, surface = {}, max_distance = {reach}",
+            map.departure_at(),
+            map.compute_max_area()
+        );
+    }
+    Ok(())
+}
 
-    let total_time = RwLock::new(Instant::now());
-    let locked_counter = RwLock::new(0);
-    let data = hectare.data();
-    let total = data.len();
-    let id_pos_surf = data
+/// The point of the isochrones, in LV95.
+fn center(args: &IsochroneArgs) -> Coordinates {
+    let (easting, northing) = wgs84_to_lv95(args.latitude, args.longitude);
+    Coordinates::new(CoordinateSystem::LV95, easting, northing)
+}
+
+fn write_svg(map: &IsochroneMap, path: &str, args: &IsochroneArgs) -> RResult<()> {
+    #[cfg(feature = "svg")]
+    map.write_svg(path, 1.0 / 100.0, Some(center(args)))?;
+    #[cfg(not(feature = "svg"))]
+    let _ = (map, path, args);
+    Ok(())
+}
+
+/// The area of the optimal isochrone of every hectare not computed yet.
+#[cfg(feature = "hectare")]
+pub fn run_surface_per_ha(
+    router: &Router,
+    excluded_polygons: &MultiPolygon,
+    records: Vec<crate::HectareRecord>,
+    args: &crate::cli::HectareArgs,
+    num_threads: usize,
+) -> Vec<crate::HectareRecord> {
+    use orx_parallel::*;
+    use std::{
+        sync::atomic::{AtomicU32, Ordering},
+        time::Instant,
+    };
+
+    let (started, done, total) = (Instant::now(), AtomicU32::new(0), records.len() as u32);
+    let area = |latitude, longitude| {
+        let isochrone_args = IsochroneArgs {
+            latitude,
+            longitude,
+            at: args.departure_at,
+            time_limit: args.time_limit,
+            interval: args.time_limit,
+            max_num_explorable_connections: args.max_num_explorable_connections,
+            num_starting_points: args.num_starting_points,
+            verbose: false,
+            reverse: false,
+        };
+        let threads = crate::isochrone::inner_threads(num_threads);
+        let map = compute_optimal_isochrones(
+            router,
+            excluded_polygons,
+            &isochrone_args,
+            args.delta_time,
+            IsochroneDisplayMode::Circles,
+            threads,
+        );
+        map.compute_max_area()
+    };
+    records
         .into_par()
         .num_threads(num_threads)
         .map(|record| {
-            let start = Instant::now();
-            let HectareRecord {
-                reli,
-                longitude,
-                latitude,
-                population,
-                area,
-            } = record;
-
-            let verbose =  isochrone_args.verbose;
-            if verbose {
-                log::info!("Computing max area for {reli} (longitude, latitude) = ({longitude}, {latitude}");
-            }
-
-            let he_re = if area.is_some() {
-                record
-            } else {
-                use crate::utils::inner_threads;
-
-                let IsochroneHectareArgs {
-                    departure_at,
-                    time_limit,
-                    max_num_explorable_connections,
-                    num_starting_points,
-                    verbose,
-                } = isochrone_args;
-                let isochrone_args = IsochroneArgs {
-                    latitude,
-                    longitude,
-                    departure_at,
-                    time_limit,
-                    interval: time_limit,
-                    max_num_explorable_connections,
-                    num_starting_points,
-                    verbose: !verbose,
-                };
-                let opt_iso = compute_optimal_isochrones(
-                    &hrdf,
-                    &excluded_polygons,
-                    isochrone_args,
-                    delta_time,
-                    display_mode,
-                    inner_threads(num_threads, true)
+            let area = record
+                .area
+                .unwrap_or_else(|| area(record.latitude, record.longitude));
+            if args.verbose {
+                let done = done.fetch_add(1, Ordering::Relaxed) + 1;
+                let left = started.elapsed() / done * (total - done);
+                log::info!(
+                    "Hectare {} done ({done} / {total}, about {left:.0?} left)",
+                    record.reli
                 );
-
-                let area = opt_iso.compute_max_area();
-                HectareRecord {
-                    reli,
-                    longitude,
-                    latitude,
-                    population,
-                    area: Some(area),
-                }
-            };
-            if verbose {
-                let time = start.elapsed();
-                {
-
-                    let  elapsed = total_time.read().unwrap().elapsed();
-                    {
-                        let mut w = locked_counter.write().unwrap();
-                        *w += 1;
-                        let avg_time = elapsed / *w;
-                        let remaining_time = avg_time * (total as i32 - *w as i32) as u32;
-                        let remaining_time = Duration::from_std(remaining_time).expect("Unable to convert to a duration.");
-                        let remaining_minutes = remaining_time - Duration::hours(remaining_time.num_hours());
-                        let remaining_seconds = remaining_minutes - Duration::minutes(remaining_minutes.num_minutes());
-                        log::info!(
-                            "Isochrone done for {reli} (longitude, latitude) = ({longitude}, {latitude}) in {time:.2?}"
-                        );
-                        log::info!(
-                            "{w} / {total} done in {time:.2?}. Remaining {}h:{}m:{}s. Avg time per isochrone: {avg_time:.2?}.",
-                            remaining_time.num_hours(), remaining_minutes.num_minutes(), remaining_seconds.num_seconds()
-                        );
-                    }
-                }
             }
-            he_re
+            crate::HectareRecord {
+                area: Some(area),
+                ..record
+            }
         })
-        .collect();
-
-    Ok(id_pos_surf)
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn run_optimal(
-    hrdf: Hrdf,
-    excluded_polygons: MultiPolygon,
-    isochrone_args: IsochroneArgs,
-    delta_time: Duration,
-    display_mode: IsochroneDisplayMode,
-    num_threads: usize,
-) -> RResult<()> {
-    let time_limit = isochrone_args.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args.interval.num_minutes();
-
-    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    let opt_iso = compute_optimal_isochrones(
-        &hrdf,
-        &excluded_polygons,
-        isochrone_args,
-        delta_time,
-        display_mode,
-        num_threads,
-    );
-
-    #[cfg(feature = "svg")]
-    opt_iso.write_svg(
-        &format!(
-            "optimal_isochrones_{}_{}.svg",
-            time_limit, isochrone_interval
-        ),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-
-    Ok(())
-}
-
-pub fn run_worst(
-    hrdf: Hrdf,
-    excluded_polygons: MultiPolygon,
-    isochrone_args: IsochroneArgs,
-    delta_time: Duration,
-    display_mode: IsochroneDisplayMode,
-    num_threads: usize,
-) -> RResult<()> {
-    let time_limit = isochrone_args.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args.interval.num_minutes();
-
-    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    let opt_iso = compute_worst_isochrones(
-        &hrdf,
-        &excluded_polygons,
-        isochrone_args,
-        delta_time,
-        display_mode,
-        num_threads,
-    );
-
-    #[cfg(feature = "svg")]
-    opt_iso.write_svg(
-        &format!("worst_isochrones_{}_{}.svg", time_limit, isochrone_interval),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-
-    Ok(())
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn run_comparison(
-    hrdf_2025: Hrdf,
-    hrdf_2026: Hrdf,
-    excluded_polygons: MultiPolygon,
-    isochrone_args_2025: IsochroneArgs,
-    isochrone_args_2026: IsochroneArgs,
-    delta_time: Duration,
-    display_mode: IsochroneDisplayMode,
-    num_threads: usize,
-) -> RResult<()> {
-    let time_limit = isochrone_args_2025.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args_2025.interval.num_minutes();
-
-    let (x, y) = wgs84_to_lv95(isochrone_args_2025.latitude, isochrone_args_2025.longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    let isochrones_2025 = compute_optimal_isochrones(
-        &hrdf_2025,
-        &excluded_polygons,
-        isochrone_args_2025,
-        delta_time,
-        display_mode,
-        num_threads,
-    );
-    #[cfg(feature = "svg")]
-    isochrones_2025.write_svg(
-        &format!("isochrones_2025_{}_{}.svg", time_limit, isochrone_interval),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-    println!(
-        "time = {}, surface = {}, max_distance = {}",
-        isochrones_2025.departure_at(),
-        isochrones_2025.compute_max_area(),
-        isochrones_2025.compute_max_distance(coord).1
-    );
-
-    let isochrones_2026 = compute_optimal_isochrones(
-        &hrdf_2026,
-        &excluded_polygons,
-        isochrone_args_2026,
-        delta_time,
-        display_mode,
-        num_threads,
-    );
-    #[cfg(feature = "svg")]
-    isochrones_2026.write_svg(
-        &format!("isochrones_2026_{}_{}.svg", time_limit, isochrone_interval),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-    println!(
-        "time = {}, surface = {}, max_distance = {}",
-        isochrones_2026.departure_at(),
-        isochrones_2026.compute_max_area(),
-        isochrones_2026.compute_max_distance(coord).1
-    );
-
-    Ok(())
-}
-
-pub fn run_simple_reverse(
-    hrdf: Hrdf,
-    excluded_polygons: MultiPolygon,
-    isochrone_args: ReverseIsochroneArgs,
-    display_mode: IsochroneDisplayMode,
-    num_threads: usize,
-) -> RResult<()> {
-    let time_limit = isochrone_args.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args.interval.num_minutes();
-
-    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    #[cfg(feature = "svg")]
-    let iso = compute_isochrones_reverse(
-        &hrdf,
-        &excluded_polygons,
-        isochrone_args,
-        display_mode,
-        num_threads,
-    );
-
-    #[cfg(feature = "svg")]
-    iso.write_svg(
-        &format!(
-            "reverse_isochrones_{}_{}.svg",
-            time_limit, isochrone_interval
-        ),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-    Ok(())
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn run_optimal_reverse(
-    hrdf: Hrdf,
-    excluded_polygons: MultiPolygon,
-    isochrone_args: ReverseIsochroneArgs,
-    delta_time: Duration,
-    display_mode: IsochroneDisplayMode,
-    num_threads: usize,
-) -> RResult<()> {
-    let time_limit = isochrone_args.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args.interval.num_minutes();
-
-    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    let opt_iso = compute_optimal_isochrones_reverse(
-        &hrdf,
-        &excluded_polygons,
-        isochrone_args,
-        delta_time,
-        display_mode,
-        num_threads,
-    );
-
-    #[cfg(feature = "svg")]
-    opt_iso.write_svg(
-        &format!(
-            "reverse_optimal_isochrones_{}_{}.svg",
-            time_limit, isochrone_interval
-        ),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-
-    Ok(())
-}
-
-pub fn run_average_reverse(
-    hrdf: Hrdf,
-    excluded_polygons: MultiPolygon,
-    isochrone_args: ReverseIsochroneArgs,
-    delta_time: Duration,
-    num_threads: usize,
-) -> RResult<()> {
-    let time_limit = isochrone_args.time_limit.num_minutes();
-    let isochrone_interval = isochrone_args.interval.num_minutes();
-
-    let (x, y) = wgs84_to_lv95(isochrone_args.latitude, isochrone_args.longitude);
-    let coord = Coordinates::new(hrdf_parser::CoordinateSystem::LV95, x, y);
-
-    #[cfg(feature = "svg")]
-    let iso = compute_average_isochrones_reverse(
-        &hrdf,
-        &excluded_polygons,
-        isochrone_args,
-        delta_time,
-        num_threads,
-    );
-
-    #[cfg(feature = "svg")]
-    iso.write_svg(
-        &format!(
-            "reverse_average_isochrones_{}_{}_{}.svg",
-            time_limit,
-            isochrone_interval,
-            delta_time.num_minutes()
-        ),
-        1.0 / 100.0,
-        Some(coord),
-    )?;
-
-    Ok(())
+        .collect()
 }

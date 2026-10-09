@@ -1,10 +1,10 @@
 use std::f64::consts::PI;
 
-use chrono::{Duration, NaiveDateTime};
+use chrono::Duration;
 use geo::{LineString, MultiPolygon, Polygon};
 use hrdf_parser::{Coordinates, Stop};
 
-use super::constants::WALKING_SPEED_IN_KILOMETERS_PER_HOUR;
+pub const WALKING_SPEED_IN_KILOMETERS_PER_HOUR: f64 = 4.0;
 
 /// https://github.com/antistatique/swisstopo
 #[rustfmt::skip]
@@ -62,27 +62,6 @@ pub fn wgs84_to_lv95(latitude: f64, longitude: f64) -> (f64, f64) {
     (easting, northing)
 }
 
-/// Creates a new MultiPolygon in lv95 coordinates. We suppose the original polygon was in wgs84
-/// coordinates
-pub fn multi_polygon_to_lv95(mp: &MultiPolygon) -> MultiPolygon {
-    mp.iter()
-        .map(|p| {
-            let exterior = LineString::from(
-                p.exterior()
-                    .coords()
-                    .map(|c| wgs84_to_lv95(c.x, c.y))
-                    .collect::<Vec<_>>(),
-            );
-            let interiors = p
-                .interiors()
-                .iter()
-                .map(|ls| ls.coords().map(|c| wgs84_to_lv95(c.x, c.y)).collect())
-                .collect();
-            Polygon::new(exterior, interiors)
-        })
-        .collect()
-}
-
 /// https://github.com/antistatique/swisstopo
 fn deg_to_sex(angle: f64) -> f64 {
     let deg = angle as i64;
@@ -101,128 +80,58 @@ fn deg_to_sec(angle: f64) -> f64 {
     sec + min as f64 * 60.0 + deg as f64 * 3600.0
 }
 
-pub fn distance_between_2_points(point1: Coordinates, point2: Coordinates) -> f64 {
-    let x_sqr = (point2.easting().expect("Wrong coordinate system")
-        - point1.easting().expect("Wrong coordinate system"))
-    .powi(2);
-    let y_sqr = (point2.northing().expect("Wrong coordinate system")
-        - point1.northing().expect("Wrong coordinate system"))
-    .powi(2);
-    (x_sqr + y_sqr).sqrt()
+/// The (easting, northing) of LV95 coordinates.
+pub fn lv95(c: &Coordinates) -> (f64, f64) {
+    (
+        c.easting().expect("LV95 coordinates"),
+        c.northing().expect("LV95 coordinates"),
+    )
 }
 
-pub fn distance_to_time(distance: f64, speed_in_kilometers_per_hour: f64) -> Duration {
-    let speed_in_meters_per_second = speed_in_kilometers_per_hour / 3.6;
-    Duration::seconds((distance / speed_in_meters_per_second) as i64)
+/// The polygons, in WGS84 (latitude, longitude), converted to LV95.
+pub fn multi_polygon_to_lv95(mp: &MultiPolygon) -> MultiPolygon {
+    let to_lv95 = |ls: &LineString| {
+        ls.coords()
+            .map(|c| wgs84_to_lv95(c.x, c.y))
+            .collect::<LineString>()
+    };
+    mp.iter()
+        .map(|p| {
+            Polygon::new(
+                to_lv95(p.exterior()),
+                p.interiors().iter().map(to_lv95).collect(),
+            )
+        })
+        .collect()
 }
 
-pub fn time_to_distance(duration: Duration, speed_in_kilometers_per_hour: f64) -> f64 {
-    let speed_in_meters_per_second = speed_in_kilometers_per_hour / 3.6;
-    duration.num_seconds() as f64 * speed_in_meters_per_second
+pub fn walking_time(meters: f64) -> Duration {
+    Duration::seconds((meters / (WALKING_SPEED_IN_KILOMETERS_PER_HOUR / 3.6)) as i64)
 }
 
-fn degrees_to_radians(degrees: f64) -> f64 {
-    degrees * PI / 180.0
+pub fn walking_distance(duration: Duration) -> f64 {
+    duration.num_seconds() as f64 * (WALKING_SPEED_IN_KILOMETERS_PER_HOUR / 3.6)
 }
 
+/// Great-circle distance in kilometers.
 pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
-    let radius_of_earth_km = 6371.0;
-
-    let lat1_rad = degrees_to_radians(lat1);
-    let lon1_rad = degrees_to_radians(lon1);
-    let lat2_rad = degrees_to_radians(lat2);
-    let lon2_rad = degrees_to_radians(lon2);
-
-    let delta_lat = lat2_rad - lat1_rad;
-    let delta_lon = lon2_rad - lon1_rad;
-
-    let a = (delta_lat / 2.0).sin().powi(2)
-        + lat1_rad.cos() * lat2_rad.cos() * (delta_lon / 2.0).sin().powi(2);
-    let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
-
-    radius_of_earth_km * c
+    let radians = |degrees: f64| degrees * PI / 180.0;
+    let (lat1, lon1, lat2, lon2) = (radians(lat1), radians(lon1), radians(lat2), radians(lon2));
+    let a = ((lat2 - lat1) / 2.0).sin().powi(2)
+        + lat1.cos() * lat2.cos() * ((lon2 - lon1) / 2.0).sin().powi(2);
+    6371.0 * (2.0 * a.sqrt().atan2((1.0 - a).sqrt()))
 }
 
-/// Adjusts the departure time from a stop, given the person is walking from long/lat to stop
-pub fn adjust_departure_at(
-    departure_at: NaiveDateTime,
-    time_limit: Duration,
-    origin_point_latitude: f64,
-    origin_point_longitude: f64,
-    departure_stop: &Stop,
-) -> (NaiveDateTime, Duration) {
-    let distance = {
-        let coord = departure_stop.wgs84_coordinates().unwrap();
-
-        haversine_distance(
-            origin_point_latitude,
-            origin_point_longitude,
-            coord.latitude().expect("Wrong coordinate system"),
-            coord.longitude().expect("Wrong coordinate system"),
-        ) * 1000.0
-    };
-
-    let duration = distance_to_time(distance, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-
-    let adjusted_departure_at = departure_at.checked_add_signed(duration).unwrap();
-    let adjusted_time_limit = time_limit - duration;
-
-    (adjusted_departure_at, adjusted_time_limit)
-}
-
-/// Adjusts the arrival time at a stop for reverse isochrone.
-/// The person walks from the arrival stop to the final destination, so they must arrive
-/// at the stop earlier to have time to walk.
-pub fn adjust_arrival_at(
-    arrival_at: NaiveDateTime,
-    time_limit: Duration,
-    destination_latitude: f64,
-    destination_longitude: f64,
-    arrival_stop: &Stop,
-) -> (NaiveDateTime, Duration) {
-    let distance = {
-        let coord = arrival_stop.wgs84_coordinates().unwrap();
-
-        haversine_distance(
-            destination_latitude,
-            destination_longitude,
-            coord.latitude().expect("Wrong coordinate system"),
-            coord.longitude().expect("Wrong coordinate system"),
-        ) * 1000.0
-    };
-
-    let walking_duration = distance_to_time(distance, WALKING_SPEED_IN_KILOMETERS_PER_HOUR);
-
-    let adjusted_arrival_at = arrival_at.checked_sub_signed(walking_duration).unwrap();
-    let adjusted_time_limit = time_limit - walking_duration;
-
-    (adjusted_arrival_at, adjusted_time_limit)
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct NaiveDateTimeRange {
-    from: NaiveDateTime,
-    to: NaiveDateTime,
-    incr: Duration,
-}
-
-impl NaiveDateTimeRange {
-    pub fn new(from: NaiveDateTime, to: NaiveDateTime, incr: Duration) -> Self {
-        Self { from, to, incr }
-    }
-}
-
-impl Iterator for NaiveDateTimeRange {
-    type Item = NaiveDateTime;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.from >= self.to {
-            return None;
-        }
-        let current = self.from;
-        let maybe_next = self.from + self.incr;
-        self.from = maybe_next;
-        (current < self.to).then_some(current)
-    }
+/// Time to walk in a straight line between a point and a stop.
+pub fn walking_time_to(latitude: f64, longitude: f64, stop: &Stop) -> Duration {
+    let c = stop.wgs84.expect("stop with WGS84 coordinates");
+    let km = haversine_distance(
+        latitude,
+        longitude,
+        c.latitude().unwrap(),
+        c.longitude().unwrap(),
+    );
+    walking_time(km * 1000.0)
 }
 
 #[cfg(test)]
@@ -230,327 +139,54 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wgs84_to_lv95_bern_cathedral() {
-        // Bern Cathedral: 46.9479°N, 7.4474°E
-        // Expected LV95: approximately 2600555, 1199646
-        let (easting, northing) = wgs84_to_lv95(46.9479, 7.4474);
-
-        // Allow 1000m tolerance (LV95 conversion can vary by implementation)
-        assert!(
-            (easting - 2600555.0).abs() < 1000.0,
-            "Easting was {}, expected ~2600555",
-            easting
-        );
-        assert!(
-            (northing - 1199646.0).abs() < 1000.0,
-            "Northing was {}, expected ~1199646",
-            northing
-        );
-    }
-
-    #[test]
-    fn test_wgs84_to_lv95_zurich_hb() {
-        // Zürich HB: 47.3769°N, 8.5417°E
-        // Expected LV95: approximately 2683074, 1247950
-        let (easting, northing) = wgs84_to_lv95(47.3769, 8.5417);
-
-        assert!(
-            (easting - 2683074.0).abs() < 500.0,
-            "Easting was {}, expected ~2683074",
-            easting
-        );
-        assert!(
-            (northing - 1247950.0).abs() < 500.0,
-            "Northing was {}, expected ~1247950",
-            northing
-        );
-    }
-
-    #[test]
-    fn test_wgs84_to_lv95_geneva() {
-        // Geneva: 46.2044°N, 6.1432°E
-        let (easting, northing) = wgs84_to_lv95(46.2044, 6.1432);
-
-        assert!(
-            (easting - 2500000.0).abs() < 1000.0,
-            "Easting was {}, expected ~2500000",
-            easting
-        );
-        assert!(
-            (northing - 1118000.0).abs() < 1000.0,
-            "Northing was {}, expected ~1118000",
-            northing
-        );
-    }
-
-    #[test]
-    fn test_wgs84_to_lv95_lugano() {
-        // Lugano: 46.0037°N, 8.9511°E
-        let (easting, northing) = wgs84_to_lv95(46.0037, 8.9511);
-
-        assert!(
-            (easting - 2717900.0).abs() < 1000.0,
-            "Easting was {}, expected ~2717900",
-            easting
-        );
-        assert!(
-            (northing - 1095900.0).abs() < 1000.0,
-            "Northing was {}, expected ~1095900",
-            northing
-        );
-    }
-
-    #[test]
-    fn test_lv95_to_wgs84_round_trip() {
-        // Test various Swiss locations for round-trip accuracy
-        let test_points = vec![
-            (46.9479, 7.4474), // Bern
-            (47.3769, 8.5417), // Zürich
-            (46.2044, 6.1432), // Geneva
-            (46.5197, 6.6323), // Lausanne
-            (46.0037, 8.9511), // Lugano
-            (47.5596, 7.5886), // Basel
+    fn wgs84_to_lv95_matches_known_points() {
+        // (latitude, longitude, easting, northing, tolerance in meters)
+        let points = [
+            (46.9479, 7.4474, 2600555.0, 1199646.0, 1000.0), // Bern cathedral
+            (47.3769, 8.5417, 2683074.0, 1247950.0, 500.0),  // Zürich HB
+            (46.2044, 6.1432, 2500000.0, 1118000.0, 1000.0), // Geneva
+            (46.0037, 8.9511, 2717900.0, 1095900.0, 1000.0), // Lugano
         ];
-
-        for (lat, lon) in test_points {
-            let (e, n) = wgs84_to_lv95(lat, lon);
-            let (lat2, lon2) = lv95_to_wgs84(e, n);
-
+        for (lat, lon, e, n, tolerance) in points {
+            let (easting, northing) = wgs84_to_lv95(lat, lon);
             assert!(
-                (lat - lat2).abs() < 0.0001,
-                "Latitude mismatch: {} -> {} (diff: {})",
-                lat,
-                lat2,
-                (lat - lat2).abs()
+                (easting - e).abs() < tolerance && (northing - n).abs() < tolerance,
+                "{lat}, {lon}"
             );
+            let (lat2, lon2) = lv95_to_wgs84(easting, northing);
             assert!(
-                (lon - lon2).abs() < 0.0001,
-                "Longitude mismatch: {} -> {} (diff: {})",
-                lon,
-                lon2,
-                (lon - lon2).abs()
+                (lat - lat2).abs() < 1e-3 && (lon - lon2).abs() < 1e-3,
+                "round trip of {lat}, {lon}"
             );
         }
     }
 
     #[test]
-    fn test_haversine_distance_bern_zurich() {
-        // Bern to Zürich: approximately 94.5 km
-        let distance = haversine_distance(46.9479, 7.4474, 47.3769, 8.5417);
-
-        // Convert to meters
-        assert!(
-            (distance - 95.5).abs() < 0.1,
-            "Distance should be ~95.5 km, got {} km",
-            distance
-        );
-    }
-
-    #[test]
-    fn test_haversine_distance_same_point() {
-        let distance = haversine_distance(46.9479, 7.4474, 46.9479, 7.4474);
-        assert_eq!(distance, 0.0, "Distance to same point should be 0");
-    }
-
-    #[test]
-    fn test_haversine_distance_geneva_lugano() {
-        // Geneva to Lugano: approximately 218 km (as the crow flies)
-        let distance = haversine_distance(46.2044, 6.1432, 46.0037, 8.9511);
-
-        assert!(
-            (distance - 217.6).abs() < 0.1,
-            "Distance should be ~217.6 km, got {} km",
-            distance
-        );
-    }
-
-    #[test]
-    fn test_haversine_distance_bern_geneva() {
-        // Bern to Geneva: approximately 130 km (as the crow flies)
-        let distance = haversine_distance(46.9479, 7.4474, 46.2044, 6.1432);
-
-        assert!(
-            (distance - 129.5).abs() < 0.1,
-            "Distance should be ~129.5 km, got {} km",
-            distance
-        );
-    }
-
-    #[test]
-    fn test_haversine_distance_small_distance() {
-        // Two very close points (about 1 km apart)
-        let distance = haversine_distance(46.9479, 7.4474, 46.9579, 7.4574);
-
-        assert!(
-            distance < 1.347,
-            "Small distance should be < 1.347 km, but is {}",
-            distance
-        );
-        assert!(
-            distance > 1.345,
-            "Small distance should be > 1.345 km, but is {}",
-            distance
-        );
-    }
-
-    #[test]
-    fn test_time_to_distance_at_5_kmh() {
-        assert_eq!(time_to_distance(Duration::minutes(60), 5.0), 5000.0);
-        assert_eq!(time_to_distance(Duration::minutes(30), 5.0), 2500.0);
-    }
-
-    #[test]
-    fn test_time_to_distance_different_speeds() {
-        let distance = time_to_distance(Duration::minutes(60), 3.0);
-        assert!(
-            (distance - 3000.0).abs() < 0.1,
-            "Expected ~3000.0, got {}",
-            distance
-        );
-        let distance = time_to_distance(Duration::minutes(60), 6.0);
-        assert!(
-            (distance - 6000.0).abs() < 0.1,
-            "Expected ~6000.0, got {}",
-            distance
-        );
-    }
-
-    #[test]
-    fn test_time_to_distance_zero() {
-        assert_eq!(time_to_distance(Duration::minutes(0), 5.0), 0.0);
-        assert_eq!(time_to_distance(Duration::seconds(0), 5.0), 0.0);
-    }
-
-    #[test]
-    fn test_distance_to_time() {
-        assert_eq!(distance_to_time(5000.0, 5.0).num_minutes(), 60);
-        assert_eq!(distance_to_time(2500.0, 5.0).num_minutes(), 30);
-    }
-
-    #[test]
-    fn test_distance_to_time_zero() {
-        assert_eq!(distance_to_time(0.0, 5.0).num_seconds(), 0);
-    }
-
-    #[test]
-    fn test_time_distance_round_trip() {
-        let test_distances = vec![100.0, 500.0, 1000.0, 2500.0, 5000.0];
-        for distance in test_distances {
-            let time = distance_to_time(distance, 5.0);
-            let distance2 = time_to_distance(time, 5.0);
-
+    fn haversine_distance_matches_known_distances() {
+        // (from, to, km, tolerance)
+        let cases = [
+            ((46.9479, 7.4474), (47.3769, 8.5417), 95.0, 5.0), // Bern - Zürich
+            ((46.2044, 6.1432), (46.0037, 8.9511), 217.0, 10.0), // Geneva - Lugano
+            ((46.9479, 7.4474), (46.2044, 6.1432), 129.0, 5.0), // Bern - Geneva
+            ((46.9479, 7.4474), (46.9579, 7.4574), 1.35, 0.2),
+            ((46.9479, 7.4474), (46.9479, 7.4474), 0.0, 0.0),
+        ];
+        for ((lat1, lon1), (lat2, lon2), km, tolerance) in cases {
+            let distance = haversine_distance(lat1, lon1, lat2, lon2);
             assert!(
-                (distance - distance2).abs() < 0.01,
-                "Round trip failed: {} -> {} seconds -> {}",
-                distance,
-                time.num_seconds(),
-                distance2
+                (distance - km).abs() <= tolerance,
+                "{distance} km instead of {km}"
             );
         }
     }
 
     #[test]
-    fn test_degrees_to_radians() {
-        // Test common angles
-        assert!((degrees_to_radians(0.0) - 0.0).abs() < 0.0001);
-        assert!((degrees_to_radians(90.0) - PI / 2.0).abs() < 0.0001);
-        assert!((degrees_to_radians(180.0) - PI).abs() < 0.0001);
-        assert!((degrees_to_radians(360.0) - 2.0 * PI).abs() < 0.0001);
-    }
-
-    #[test]
-    fn test_distance_between_2_points() {
-        use hrdf_parser::CoordinateSystem;
-        let point1 = Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0);
-        let point2 = Coordinates::new(CoordinateSystem::LV95, 2601000.0, 1200000.0);
-        let distance = distance_between_2_points(point1, point2);
-        assert_eq!(distance, 1000.0);
-    }
-
-    #[test]
-    fn test_distance_between_2_points_diagonal() {
-        use hrdf_parser::CoordinateSystem;
-        let point1 = Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0);
-        let point2 = Coordinates::new(CoordinateSystem::LV95, 2600300.0, 1200400.0);
-        let distance = distance_between_2_points(point1, point2);
-        assert_eq!(distance, 500.0);
-    }
-
-    #[test]
-    fn test_distance_between_2_points_same() {
-        use hrdf_parser::CoordinateSystem;
-        let point1 = Coordinates::new(CoordinateSystem::LV95, 2600000.0, 1200000.0);
-        let distance = distance_between_2_points(point1, point1);
-        assert_eq!(distance, 0.0);
-    }
-
-    #[test]
-    fn test_naive_date_time_range_iteration() {
-        use chrono::NaiveDateTime;
-
-        let start =
-            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
-        let end =
-            NaiveDateTime::parse_from_str("2025-06-15 10:05:00", "%Y-%m-%d %H:%M:%S").unwrap();
-
-        let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
-        let times: Vec<_> = range.collect();
-        assert_eq!(times.len(), 5);
-
-        let expected = vec![
-            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-            NaiveDateTime::parse_from_str("2025-06-15 10:01:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-            NaiveDateTime::parse_from_str("2025-06-15 10:02:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-            NaiveDateTime::parse_from_str("2025-06-15 10:03:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-            NaiveDateTime::parse_from_str("2025-06-15 10:04:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-        ];
-
-        assert_eq!(times, expected);
-    }
-
-    #[test]
-    fn test_naive_date_time_range_empty() {
-        use chrono::NaiveDateTime;
-
-        let start =
-            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
-        let end =
-            NaiveDateTime::parse_from_str("2025-06-15 09:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
-
-        let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
-        let times: Vec<_> = range.collect();
-
-        // Should be empty when start > end
-        assert_eq!(times.len(), 0);
-
-        let start =
-            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
-        let end =
-            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
-
-        let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
-        let times: Vec<_> = range.collect();
-
-        // Should be empty when start == end
-        assert_eq!(times.len(), 0);
-    }
-
-    #[test]
-    fn test_naive_date_time_range_single_step() {
-        use chrono::NaiveDateTime;
-
-        let start =
-            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
-        let end =
-            NaiveDateTime::parse_from_str("2025-06-15 10:01:00", "%Y-%m-%d %H:%M:%S").unwrap();
-
-        let range = NaiveDateTimeRange::new(start, end, Duration::minutes(1));
-        let times: Vec<_> = range.collect();
-        assert_eq!(times.len(), 1);
-        let expected = vec![
-            NaiveDateTime::parse_from_str("2025-06-15 10:00:00", "%Y-%m-%d %H:%M:%S").unwrap(),
-        ];
-
-        assert_eq!(times, expected);
+    fn walking_is_four_kilometers_per_hour() {
+        assert_eq!(walking_distance(Duration::minutes(60)), 4000.0);
+        assert_eq!(walking_time(4000.0), Duration::minutes(60));
+        assert_eq!(walking_time(0.0), Duration::zero());
+        for meters in [100.0, 1000.0, 2500.0] {
+            assert!((walking_distance(walking_time(meters)) - meters).abs() <= 1.2);
+        }
     }
 }

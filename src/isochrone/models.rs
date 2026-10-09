@@ -1,19 +1,7 @@
 use chrono::NaiveDateTime;
 use geo::{Area, Contains, MultiPolygon};
 use hrdf_parser::Coordinates;
-use serde::Serialize;
-use strum_macros::EnumString;
-
-#[cfg(feature = "svg")]
-use geo::BoundingRect;
-use std::fmt::Display;
-#[cfg(feature = "svg")]
-use svg::Document;
-#[cfg(feature = "svg")]
-use svg::node::element::Polygon as SvgPolygon;
-
-#[cfg(feature = "svg")]
-use crate::RResult;
+use serde::{Deserialize, Serialize};
 
 use super::utils::{multi_polygon_to_lv95, wgs84_to_lv95};
 
@@ -57,46 +45,35 @@ impl IsochroneMap {
             .collect()
     }
 
+    /// The farthest point of all isochrones from `c`, and its distance.
     pub fn compute_max_distance(&self, c: Coordinates) -> ((f64, f64), f64) {
-        self.compute_max_distances(c).into_iter().fold(
-            ((f64::MIN, f64::MIN), f64::MIN),
-            |((m_x, m_y), max), ((x, y), v)| {
-                if v > max {
-                    ((x, y), v)
-                } else {
-                    ((m_x, m_y), max)
-                }
-            },
-        )
+        let farthest =
+            |best: ((f64, f64), f64), d: ((f64, f64), f64)| if d.1 > best.1 { d } else { best };
+        self.compute_max_distances(c)
+            .into_iter()
+            .fold(((f64::MIN, f64::MIN), f64::MIN), farthest)
     }
 
-    /// Computes the area of the higher isochrone
+    /// The area of the largest isochrone.
     pub fn compute_max_area(&self) -> f64 {
-        self.compute_areas().iter().fold(
-            f64::MIN,
-            |max_area, area| if *area > max_area { *area } else { max_area },
-        )
+        self.compute_areas()
+            .into_iter()
+            .fold(f64::MIN, |max, area| if area > max { area } else { max })
     }
 
+    /// The isochrones, each with holes where the previous one is.
     pub fn get_polygons(&self) -> Vec<MultiPolygon> {
-        let mut polygons = self
-            .isochrones
-            .iter()
-            .map(|i| i.polygons().clone())
-            .collect::<Vec<_>>();
-
-        let polygons_original = polygons.clone();
-
+        let original: Vec<_> = self.isochrones.iter().map(|i| i.polygons.clone()).collect();
+        let mut polygons = original.clone();
         for i in 0..polygons.len() - 1 {
-            for p_ext in &mut polygons[i + 1] {
-                for p_int in &polygons_original[i] {
-                    if p_ext.contains(p_int) {
-                        p_ext.interiors_push(p_int.exterior().clone());
+            for outer in &mut polygons[i + 1] {
+                for inner in &original[i] {
+                    if outer.contains(inner) {
+                        outer.interiors_push(inner.exterior().clone());
                     }
                 }
             }
         }
-
         polygons
     }
 
@@ -104,45 +81,45 @@ impl IsochroneMap {
         self.departure_at
     }
 
+    /// Draws the isochrones (and the lines to their farthest point from `c`) in LV95.
     #[cfg(feature = "svg")]
-    pub fn write_svg(&self, path: &str, scale_factor: f64, c: Option<Coordinates>) -> RResult<()> {
-        const PALETTE: [(u8, u8, u8); 6] = [
-            (0x36, 0xAB, 0x68), // Nearest.
-            (0x91, 0xCF, 0x60), //
-            (0xD7, 0xFF, 0x67), //
-            (0xFF, 0xD7, 0x67), //
-            (0xFC, 0x8D, 0x59), //
-            (0xE2, 0x45, 0x3C), // Furthest.
-        ];
-        use svg::node::element::Line;
-
-        use crate::error::RError;
-
-        let polys = self
-            .get_polygons()
-            .into_iter()
-            .map(|m| multi_polygon_to_lv95(&m))
-            .collect::<Vec<_>>();
-        let areas = self.compute_areas();
-        let max_distances = if let Some(coord) = c {
-            self.compute_max_distances(coord)
-                .into_iter()
-                .map(Some)
-                .collect()
-        } else {
-            vec![None; areas.len()]
+    pub fn write_svg(
+        &self,
+        path: &str,
+        scale_factor: f64,
+        c: Option<Coordinates>,
+    ) -> crate::RResult<()> {
+        use geo::BoundingRect;
+        use svg::{
+            Document,
+            node::element::{Line, Polygon},
         };
 
-        let bounding_rect = polys
+        const PALETTE: [(u8, u8, u8); 6] = [
+            (0x36, 0xAB, 0x68), // Nearest.
+            (0x91, 0xCF, 0x60),
+            (0xD7, 0xFF, 0x67),
+            (0xFF, 0xD7, 0x67),
+            (0xFC, 0x8D, 0x59),
+            (0xE2, 0x45, 0x3C), // Furthest.
+        ];
+
+        let polys: Vec<_> = self
+            .get_polygons()
+            .iter()
+            .map(multi_polygon_to_lv95)
+            .collect();
+        let bounding_rect = (polys
             .last()
-            .ok_or_else(|| RError::EmptyMultiPolygon)
             .expect("MultiPolygons Vec is empty")
-            .bounding_rect()
-            .ok_or_else(|| RError::NoBoundingRect)?;
+            .bounding_rect())
+        .ok_or(crate::error::RError::NoBoundingRect)?;
         let (min_x, min_y) = bounding_rect.min().x_y();
         let (max_x, max_y) = bounding_rect.max().x_y();
-        // When there are more isochrones than colors, linearly interpolate between the
-        // palette colors so that every isochrone gets a distinct color.
+        let x = |x: f64| x * scale_factor;
+        let y = |y: f64| (min_y + (max_y - y)) * scale_factor;
+
+        // With more isochrones than colors, interpolate between the palette colors.
         let num_polys = polys.len();
         let color_of = |num: usize| {
             let (r, g, b) = if num_polys <= PALETTE.len() {
@@ -157,70 +134,36 @@ impl IsochroneMap {
             };
             format!("#{r:02X}{g:02X}{b:02X}")
         };
-        let mut document = polys
-            .into_iter()
-            .rev()
-            .enumerate()
-            .zip(areas.into_iter().rev())
-            .fold(
-                Document::new().set(
-                    "viewBox",
-                    (
-                        min_x * scale_factor,
-                        min_y * scale_factor,
-                        (max_x - min_x) * scale_factor,
-                        (max_y - min_y) * scale_factor,
-                    ),
-                ),
-                |mut doc, ((num, pi), _area)| {
-                    doc = pi.iter().fold(doc, |doc_nested, p| {
-                        let points_ext = p
-                            .exterior()
-                            .coords()
-                            .map(|coord| {
-                                format!(
-                                    "{},{}",
-                                    coord.x * scale_factor,
-                                    (min_y + (max_y - coord.y)) * scale_factor
-                                )
-                            })
-                            .collect::<Vec<_>>();
 
-                        doc_nested.add(
-                            SvgPolygon::new()
-                                .set("fill", color_of(num))
-                                .set("stroke", "black")
-                                .set("points", points_ext.join(" ")),
-                        )
-                    });
-                    doc
-                },
-            );
-        document = max_distances
-            .into_iter()
-            .rev()
-            .fold(document, |mut doc, dist| {
-                if let Some(coord) = c {
-                    if let Some(((x, y), _)) = dist {
-                        doc = doc.add(
-                            Line::new()
-                                .set("x1", x * scale_factor)
-                                .set("y1", (min_y + (max_y - y)) * scale_factor)
-                                .set("x2", coord.easting().unwrap() * scale_factor)
-                                .set(
-                                    "y2",
-                                    (min_y + (max_y - coord.northing().unwrap())) * scale_factor,
-                                )
-                                .set("stroke", "black"),
-                        );
-                        doc
-                    } else {
-                        doc
-                    }
-                } else {
-                    doc
-                }
-            });
+        let view_box = (
+            x(min_x),
+            min_y * scale_factor,
+            (max_x - min_x) * scale_factor,
+            (max_y - min_y) * scale_factor,
+        );
+        let mut document = Document::new().set("viewBox", view_box);
+        for (num, polygons) in polys.iter().rev().enumerate() {
+            for p in polygons {
+                let points: Vec<_> = p
+                    .exterior()
+                    .coords()
+                    .map(|c| format!("{},{}", x(c.x), y(c.y)))
+                    .collect();
+                let polygon = Polygon::new()
+                    .set("fill", color_of(num))
+                    .set("stroke", "black");
+                document = document.add(polygon.set("points", points.join(" ")));
+            }
+        }
+        if let Some(c) = c {
+            for ((px, py), _) in self.compute_max_distances(c).into_iter().rev() {
+                let line = Line::new().set("x1", x(px)).set("y1", y(py));
+                let line = line
+                    .set("x2", x(c.easting().unwrap()))
+                    .set("y2", y(c.northing().unwrap()));
+                document = document.add(line.set("stroke", "black"));
+            }
+        }
         svg::save(path, &document)?;
         Ok(())
     }
@@ -228,8 +171,10 @@ impl IsochroneMap {
 
 #[derive(Debug, Serialize)]
 pub struct Isochrone {
+    /// In WGS84.
     polygons: MultiPolygon,
-    time_limit: u32, // In minutes.
+    /// In minutes.
+    time_limit: u32,
 }
 
 impl Isochrone {
@@ -240,55 +185,44 @@ impl Isochrone {
         }
     }
 
-    /// Transforms the isochrone polygons into geo::MultiPolygons to be able to use various
-    /// functionalities of the crate. The polygons are in lv95 coordinates
     pub fn polygons(&self) -> &MultiPolygon {
         &self.polygons
     }
 
+    /// In square meters.
     pub fn compute_area(&self) -> f64 {
-        multi_polygon_to_lv95(self.polygons())
+        multi_polygon_to_lv95(&self.polygons)
             .iter()
             .map(|p| p.unsigned_area())
             .sum()
     }
 
-    /// Computes the max distance from all the points in the isochrone to the c Coord.
-    /// The distance is given in meters and the position in LV95 coordinates
+    /// The point of the isochrone farthest from `c`, in LV95, and its distance in meters.
     pub fn compute_max_distance(&self, c: Coordinates) -> ((f64, f64), f64) {
-        self.polygons().iter().flat_map(|p| p.exterior()).fold(
-            ((f64::MIN, f64::MIN), f64::MIN),
-            |((o_x, o_y), max), coord| {
-                let (cx_lv95, cy_lv95) = wgs84_to_lv95(coord.x, coord.y);
-                let (c_x, c_y) = if let (Some(x), Some(y)) = (c.easting(), c.northing()) {
-                    (x, y)
-                } else {
-                    wgs84_to_lv95(c.latitude().unwrap(), c.longitude().unwrap())
-                };
-                let dist = f64::sqrt(f64::powi(c_x - cx_lv95, 2) + f64::powi(c_y - cy_lv95, 2));
-                if dist > max {
-                    ((cx_lv95, cy_lv95), dist)
-                } else {
-                    ((o_x, o_y), max)
-                }
-            },
-        )
+        let (c_x, c_y) = match (c.easting(), c.northing()) {
+            (Some(x), Some(y)) => (x, y),
+            _ => wgs84_to_lv95(c.latitude().unwrap(), c.longitude().unwrap()),
+        };
+        let points = self
+            .polygons
+            .iter()
+            .flat_map(|p| p.exterior())
+            .map(|coord| wgs84_to_lv95(coord.x, coord.y));
+        points.fold(((f64::MIN, f64::MIN), f64::MIN), |farthest, (x, y)| {
+            let distance = f64::sqrt(f64::powi(c_x - x, 2) + f64::powi(c_y - y, 2));
+            if distance > farthest.1 {
+                ((x, y), distance)
+            } else {
+                farthest
+            }
+        })
     }
 }
 
-#[derive(Debug, EnumString, PartialEq, Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, clap::ValueEnum, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DisplayMode {
-    #[strum(serialize = "circles")]
     Circles,
-    #[strum(serialize = "contour_line")]
+    #[value(name = "contour_line")]
     ContourLine,
-}
-
-impl Display for DisplayMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Circles => write!(f, "circles"),
-            Self::ContourLine => write!(f, "contour_line"),
-        }
-    }
 }

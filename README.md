@@ -28,6 +28,32 @@ git clone https://github.com/florianburgener/hrdf-routing-engine
 cd hrdf-routing-engine
 ```
 
+## Library
+
+```rust,no_run
+use chrono::NaiveDate;
+use hrdf_parser::Timetable;
+use hrdf_routing_engine::{Router, plan_journey};
+
+# async fn example() -> Result<(), hrdf_parser::Error> {
+let router = Router::new(Timetable::year(2026).cache_dir("cache").load().await?);
+let departure_at = NaiveDate::from_ymd_opt(2026, 10, 13).unwrap().and_hms_opt(8, 0, 0).unwrap();
+// Zürich HB to Bern, at most 10 transfers.
+if let Some(route) = plan_journey(&router, 8503000, 8507000, departure_at, 10, false) {
+    route.print(&router.timetable);
+}
+# Ok(())
+# }
+```
+
+Routing uses RAPTOR (round-based public transit routing). `plan_journey` returns the earliest
+arrival, leaving as late as possible for it; `plan_journey_reverse` the latest departure for a
+given arrival. The first query of a date builds that day's network (about 0.4 s); later queries
+take about 15 ms, and the routes for a 60-minute isochrone about 3 ms, on one core.
+
+`cargo run --release --example ojp -- <hrdf.zip> test_xml` compares `plan_journey` with recorded
+responses of OJP, the Swiss national journey planner.
+
 ## Usage
 
 There are many modes of use of this library, but currently the main one is the computation of isochrones.
@@ -56,7 +82,16 @@ Each of the modes has a separate use as described below.
 
 ### Serve
 
-Launches a server that can be used with the [isochrone frontend](https://github.com/florianburgener/interactive-isochrone-map).
+Launches a server (port 8100 by default) on timetable 2026, used by the
+[isochrone frontend](https://github.com/florianburgener/interactive-isochrone-map) and by the
+journey planner in `../journey-app` (open its `index.html` once the server runs).
+
+| Endpoint | Returns |
+|---|---|
+| `/metadata` | the timetable period |
+| `/isochrones`, `/reverse-isochrones` | isochrones from or to a point |
+| `/stops?q=zurich` | stops matching a name |
+| `/journeys?from=8503000&to=8507000&date=2026-10-13&time=08:00[&arrival=true][&count=4]` | the next connections, with the routing time |
 
 ### Debug
 
