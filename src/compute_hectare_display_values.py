@@ -1,5 +1,9 @@
 import json
+from typing import Any
+
 import pandas as pd
+from geopandas.geodataframe import GeoDataFrame
+
 
 def load_and_update_hectare(hectare_file: str, base_dict: dict|bool) -> tuple[list, int]:
     file_time = hectare_file.split(".filter_")[1].split("_PT")[0]
@@ -9,6 +13,16 @@ def load_and_update_hectare(hectare_file: str, base_dict: dict|bool) -> tuple[li
         hectares = json.load(file)
         pd_hectares = pd.read_json(hectare_file)
 
+    return update_hectares(base_dict, hectares, standalone_file)
+
+def update_geo_hectare(pd_hectares: pd.DataFrame, pd_base_hectares: pd.DataFrame | bool):
+    if isinstance(pd_base_hectares, bool):
+        raise NotImplementedError("This case is not yet handled, create the base file")
+    pd_hectares["diff"] = pd_hectares["area"] - pd_base_hectares["area"]
+    return pd_hectares
+
+
+def update_hectares(base_dict: dict[Any, Any] | bool, hectares, standalone_file: bool) -> tuple[Any, int]:
     highest_cmp = 0
     filter_base_name = "base"
     for hectare_index, h in enumerate(hectares):
@@ -19,20 +33,20 @@ def load_and_update_hectare(hectare_file: str, base_dict: dict|bool) -> tuple[li
             filters[key] = [value[0]]
             if len(value) > highest_cmp:
                 highest_cmp = len(value)
-            if len(value) < 2 :
+            if len(value) < 2:
                 continue
             for i, a in enumerate(value[1:]):
                 max, mid, min = a
                 if i == 0:
-                    h[key + "_area_"+str(i)+"_max"] = max
-                    h[key + "_area_"+str(i)+"_mid"] = mid
-                    h[key + "_area_"+str(i)+"_min"] = min
-                h[key + "_area_"+str(i+1)+"_max"] = max
-                h[key + "_area_"+str(i+1)+"_mid"] = mid
-                h[key + "_area_"+str(i+1)+"_min"] = min
-                h[key + "_diff_max_"+str(i)] = previous_max - max
-                h[key + "_diff_mid_"+str(i)] = previous_mid - mid
-                h[key + "_diff_min_"+str(i)] = previous_min - min
+                    h[key + "_area_" + str(i) + "_max"] = max
+                    h[key + "_area_" + str(i) + "_mid"] = mid
+                    h[key + "_area_" + str(i) + "_min"] = min
+                h[key + "_area_" + str(i + 1) + "_max"] = max
+                h[key + "_area_" + str(i + 1) + "_mid"] = mid
+                h[key + "_area_" + str(i + 1) + "_min"] = min
+                h[key + "_diff_max_" + str(i)] = previous_max - max
+                h[key + "_diff_mid_" + str(i)] = previous_mid - mid
+                h[key + "_diff_min_" + str(i)] = previous_min - min
                 previous_max, previous_mid, previous_min = a
                 filters[key].append(a)
         # Then compare filters to each other
@@ -52,6 +66,7 @@ def load_and_update_hectare(hectare_file: str, base_dict: dict|bool) -> tuple[li
                         h[f'ref_{metric}'] = base_val
 
     return hectares, highest_cmp - 1
+
 
 def write_hectare(hectare_file: str, hectares: list):
     with open(hectare_file + "_split" + ".json", "w") as out_file:
