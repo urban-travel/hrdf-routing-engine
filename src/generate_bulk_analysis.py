@@ -1,7 +1,9 @@
+import itertools
 import json
 import os
 
 import geopandas as gpd
+import pandas as pd
 import folium
 import glob
 import sys
@@ -13,20 +15,20 @@ from pathlib import Path
 
 import numpy as np
 from kaleido._utils import fig_tools
-from pandas.core.interchange import column
 
 from choropleth_generator import generate_img_from_hectare
-from compute_hectare_display_values import load_and_update_hectare
+from compute_hectare_display_values import load_and_update_hectare, update_hectares, update_geo_hectare
 
 import matplotlib.pyplot as plt
 
-IMG_PREFIX = "img/tpg"
+IMG_PREFIX = "tmp"
 
 @dataclass
 class MeasureStat:
     max_decrease: float
     max_increase: float
     median: float
+    median_surface_for_pop: float
     average: float
     winning_nb: float
     losing_nb: float
@@ -359,9 +361,6 @@ def write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_f
                 fn = f"{folder_name}/detailed_hist_{date}"
                 if not Path(fn).exists() or True:
                     display_superposed_hist(interesting_ones, f"Most impactful lines for {folder_name} {date}", wanted_hist, fn, hist_display_nb, True, False, True)
-                fn = f"{folder_name}/detailed_hist_inv_{date}"
-                if not Path(fn).exists() or True:
-                    display_detailed_hist(interesting_ones, "surface modified", wanted_hist, fn, hist_display_nb, True, True)
                 interesting_ones = []
     if print_result:
         print("\n".join(lines))
@@ -448,69 +447,91 @@ def old_write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], o
             f.write("\n".join(lines))
 
 
-def compute_stats(hectares: list[dict], attribute, wanted_percentiles, lines, factor) -> tuple[MeasureStat, MeasureStat, str]:
-    hectares.sort(key=lambda v: v[attribute] * factor(v))
-    max_decrease = hectares[0][attribute] * factor(hectares[0])
-    max_increase = hectares[-1][attribute] * factor(hectares[-1])
-    median = hectares[total_hectares // 2][attribute] * factor(hectares[total_hectares // 2])
-    avg = sum(v[attribute] * factor(v) for v in hectares) / total_hectares
-    winning_nb = sum(1 for v in hectares if v[attribute] > 0)
-    losing_nb = sum(1 for v in hectares if v[attribute] < 0)
-    total_surface = sum(factor(v) * v[attribute] for v in hectares)
+def compute_stats(hectares_info: list[dict], attribute_to_analyse, nb_wanted_percentiles, lines_to_print: str, factor) -> tuple[MeasureStat, MeasureStat, str]:
+    hectares_info.sort(key=lambda v: v[attribute_to_analyse] * factor(v))
+    max_decrease = hectares_info[0][attribute_to_analyse] * factor(hectares_info[0])
+    max_increase = hectares_info[-1][attribute_to_analyse] * factor(hectares_info[-1])
+    median = hectares_info[total_hectares // 2][attribute_to_analyse] * factor(hectares_info[total_hectares // 2])
+    avg = sum(v[attribute_to_analyse] * factor(v) for v in hectares_info) / total_hectares
+    winning_nb = sum(1 for v in hectares_info if v[attribute_to_analyse] > 0)
+    losing_nb = sum(1 for v in hectares_info if v[attribute_to_analyse] < 0)
+    total_surface = sum(factor(v) * v[attribute_to_analyse] for v in hectares_info)
     percentiles = []
-    lines += f"Highest loss : {max_decrease}\n"
-    lines += f"Highest increase : {max_increase}\n"
-    lines += f"Median : {median}\n"
-    lines += f"Average: {avg}\n"
-    lines += f"Winning hectares: {winning_nb}\n"
-    lines += f"Losing hectares: {losing_nb}\n"
-    lines += f"For the percentile | we have at most won | m²\n"
-    lines += f"_____________________________________________\n"
-    for p in range(wanted_percentiles):
-        concerned_hectare = hectares[(total_hectares * p) // wanted_percentiles]
-        percentile = concerned_hectare[attribute] * factor(concerned_hectare)
+    lines_to_print += f"Highest loss : {max_decrease}\n"
+    lines_to_print += f"Highest increase : {max_increase}\n"
+    lines_to_print += f"Median : {median}\n"
+    lines_to_print += f"Average: {avg}\n"
+    lines_to_print += f"Winning hectares: {winning_nb}\n"
+    lines_to_print += f"Losing hectares: {losing_nb}\n"
+    lines_to_print += f"For the percentile | we have at most won | m²\n"
+    lines_to_print += f"_____________________________________________\n"
+    for p in range(nb_wanted_percentiles):
+        concerned_hectare = hectares_info[(total_hectares * p) // nb_wanted_percentiles]
+        percentile = concerned_hectare[attribute_to_analyse] * factor(concerned_hectare)
         percentiles.append(percentile)
-        p_line = f"{p * 100 / wanted_percentiles}% | {percentile} m²\n"
-        lines += p_line
-    total_stats = MeasureStat(max_decrease, max_increase, median, avg, winning_nb, losing_nb, percentiles, total_surface, total_hectares)
+        p_line = f"{p * 100 / nb_wanted_percentiles}% | {percentile} m²\n"
+        lines_to_print += p_line
+
+    median_ref_attr = "population"
+    median_attr = "area"
+    # hectares.sort(key=lambda v: v[median_attr])
+    cumulated_pop = list(itertools.accumulate([h[median_ref_attr] for h in hectares_info]))
+    max_attr_val = cumulated_pop[-1]
+    median_surface = next(h[median_attr] for h, a in zip(hectares_info, cumulated_pop) if a >= max_attr_val // 2)
+    total_stats = MeasureStat(max_decrease=max_decrease,
+                              max_increase=max_increase, median=median, median_surface_for_pop=median_surface,
+                              average=avg, winning_nb=winning_nb, losing_nb=losing_nb, percentiles=percentiles,
+                              total_surface=total_surface, hectare_nb=total_hectares)
     # todo: evaluate and compute distance of the modification metric
     
     # add stats for only modified hectares
     validity_threshold: int = 1
-    tmp_hectares = [h for h in hectares if abs(h[attribute]) > validity_threshold]
+    tmp_hectares = [h for h in hectares_info if abs(h[attribute_to_analyse]) > validity_threshold]
+    tmp_hectares.sort(key=lambda v: v[attribute_to_analyse] * factor(v))
     hectares_nb = len(tmp_hectares)
     if hectares_nb > 0:
-        max_decrease = tmp_hectares[0][attribute] * factor(tmp_hectares[0])
-        max_increase = tmp_hectares[-1][attribute] * factor(tmp_hectares[-1])
-        median = tmp_hectares[hectares_nb // 2][attribute] * factor(tmp_hectares[hectares_nb // 2])
-        avg = sum(v[attribute] * factor(v) for v in tmp_hectares) / hectares_nb
-        winning_nb = sum(1 for v in tmp_hectares if v[attribute] > 0)
-        losing_nb = sum(1 for v in tmp_hectares if v[attribute] < 0)
-        total_surface = sum(factor(v) * v[attribute] for v in tmp_hectares)
+        max_decrease = tmp_hectares[0][attribute_to_analyse] * factor(tmp_hectares[0])
+        max_increase = tmp_hectares[-1][attribute_to_analyse] * factor(tmp_hectares[-1])
+        median = tmp_hectares[hectares_nb // 2][attribute_to_analyse] * factor(tmp_hectares[hectares_nb // 2])
+        avg = sum(v[attribute_to_analyse] * factor(v) for v in tmp_hectares) / hectares_nb
+        winning_nb = sum(1 for v in tmp_hectares if v[attribute_to_analyse] > 0)
+        losing_nb = sum(1 for v in tmp_hectares if v[attribute_to_analyse] < 0)
+        total_surface = sum(factor(v) * v[attribute_to_analyse] for v in tmp_hectares)
         percentiles = []
-        lines += f"#############################################\n"
-        lines += f"Statistics only for hectares having a modification of at least {validity_threshold}\n"
-        lines += f"Number of impacted hectared : {hectares_nb}\n"
-        lines += f"Highest loss : {max_decrease}\n"
-        lines += f"Highest increase : {max_increase}\n"
-        lines += f"Median : {median}\n"
-        lines += f"Average: {avg}\n"
-        lines += f"Winning hectares: {winning_nb}\n"
-        lines += f"Losing hectares: {losing_nb}\n"
-        lines += f"For the percentile | we have at most won | m²\n"
-        lines += f"_____________________________________________\n"
-        for p in range(wanted_percentiles):
-            concerned_hectare = tmp_hectares[(hectares_nb * p) // wanted_percentiles]
-            percentile = concerned_hectare[attribute] * factor(concerned_hectare)
+        lines_to_print += f"#############################################\n"
+        lines_to_print += f"Statistics only for hectares having a modification of at least {validity_threshold}\n"
+        lines_to_print += f"Number of impacted hectared : {hectares_nb}\n"
+        lines_to_print += f"Highest loss : {max_decrease}\n"
+        lines_to_print += f"Highest increase : {max_increase}\n"
+        lines_to_print += f"Median : {median}\n"
+        lines_to_print += f"Average: {avg}\n"
+        lines_to_print += f"Winning hectares: {winning_nb}\n"
+        lines_to_print += f"Losing hectares: {losing_nb}\n"
+        lines_to_print += f"For the percentile | we have at most won | m²\n"
+        lines_to_print += f"_____________________________________________\n"
+        for p in range(nb_wanted_percentiles):
+            concerned_hectare = tmp_hectares[(hectares_nb * p) // nb_wanted_percentiles]
+            percentile = concerned_hectare[attribute_to_analyse] * factor(concerned_hectare)
             percentiles.append(percentile)
-            p_line = f"{p * 100 / wanted_percentiles}% | {percentile} m²\n"
-            lines += p_line
-    filter_stats = MeasureStat(max_decrease, max_increase, median, avg, winning_nb, losing_nb, percentiles, total_surface, hectares_nb)
-    return total_stats, filter_stats, lines
+            p_line = f"{p * 100 / nb_wanted_percentiles}% | {percentile} m²\n"
+            lines_to_print += p_line
+
+        median_ref_attr = "population"
+        median_attr = "area"
+        # tmp_hectares.sort(key=lambda v: v[median_attr])
+        cumulated_pop = list(itertools.accumulate([h[median_ref_attr] for h in tmp_hectares]))
+        max_attr_val = cumulated_pop[-1]
+        median_surface = next(h[median_attr] for h, a in zip(tmp_hectares, cumulated_pop) if a >= max_attr_val//2)
+
+    filter_stats = MeasureStat(max_decrease=max_decrease,
+                               max_increase=max_increase, median=median, median_surface_for_pop=median_surface,
+                               average=avg, winning_nb=winning_nb, losing_nb=losing_nb, percentiles=percentiles,
+                               total_surface=total_surface, hectare_nb=hectares_nb)
+    return total_stats, filter_stats, lines_to_print
 
 
 if __name__ == "__main__":
-    generate_img = 0
+    generate_img = 1
     generate_stats = True
     print_stat = False
     compute_summary = True
@@ -522,19 +543,21 @@ if __name__ == "__main__":
     else:
         hectare_files = glob.glob("hectare_resources/hectare_*.json")
 
+    geojson_background_fn = "geo_ressources/geo_communes_geneva_wgs84.geojson"
+    geojson_background = gpd.read_file(geojson_background_fn)
+
     geojson_filename = "geo_ressources/geo_grid_swiss_wgs84_combined_filtered"
     with open(geojson_filename + '.geojson') as geo_file:
         # with open('geo_ressources/geo_romandie_wgs84_PROD_v1.json') as geo_file:
         region_map = json.load(geo_file)
         geodata = gpd.read_file(geojson_filename + '.geojson')
-        geodata.plot()
-        # plt.show()
-        plt.close()
 
     base_files = [fil for fil in hectare_files if "base" in fil]
     base_hectares = {}
+    base_geo_hectares = {}
     for base_file in base_files:
         base_hectares[base_file] = load_and_update_hectare(base_file, False)
+        base_geo_hectares[base_file] = pd.read_json(base_file)
     hectare_files = [fil for fil in hectare_files if "base" not in fil]
     summary = {}
     for hectare_file in hectare_files:
@@ -543,10 +566,14 @@ if __name__ == "__main__":
         try:
             file_time = hectare_file.split(".filter_")[1].split("_PT")[0]
             base_hectare = base_hectares[base_files[0]] if len(base_files) > 0 else False
+            base_geo_hectare = base_geo_hectares[base_files[0]] if len(base_files) > 0 else False
             for bf, bh in base_hectares.items():
                 if file_time in bf:
                     base_hectare = bh
             hectares, nb = load_and_update_hectare(hectare_file, base_hectare)
+            pd_hectares = pd.DataFrame(hectares)
+            # gpd_hectares = update_geo_hectare(pd.read_json(hectare_file), base_geo_hectare)
+
         except Exception as e:
             print(f"File {hectare_file} has bad format : {e}", file=sys.stderr)
             continue
@@ -603,6 +630,9 @@ if __name__ == "__main__":
                                 f.write(lines)
 
                     if generate_img:
+                        base = geojson_background.plot(zorder=1)
+                        gpd_hectares = pd.merge(geodata, pd_hectares, on="reli")
+                        # gpd_hectares = pd.merge(gpd_hectares, geojson_background, on="fid")
                         m = geodata.explore(
                             column="reli",
                             scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
@@ -611,15 +641,27 @@ if __name__ == "__main__":
                         folium.TileLayer("CartoDB positron", show=False).add_to(
                             m
                         )
-                        m
+                        gpd_hectares.plot(
+                            ax=base,
+                            #scheme='quantiles',
+                            scheme='JenksCaspall',
+                            legend=True, cmap='viridis',
+                            column=attribute, zorder=2, vmin=0)
+                        # plt.show()
+                        plt.savefig(img_filename)
+                        plt.close()
+                        """
                         if not Path(img_filename).exists() or getmtime(img_filename) < data_modified_time:
                             generate_img_from_hectare(hectares, region_map, attribute,
                                                       img_filename)
+                            print(f"Image {img_filename} written")
                         if generate_img > 1:
                             # attribute = "area_" + str(i + 1) + "_" + base
                             add_img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
                             if not Path(add_img_filename).exists() or getmtime(add_img_filename) < data_modified_time:
                                 generate_img_from_hectare(hectares, region_map, attribute, add_img_filename)
+                                print(f"Image {add_img_filename} written")
+                        """
 
     if compute_summary:
         print("Start writing summary")
