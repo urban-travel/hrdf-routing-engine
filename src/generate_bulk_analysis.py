@@ -109,14 +109,14 @@ import datetime
 
 # Function to convert string to datetime
 def convert(date_time):
-    format = '%b %d %Y %I:%M%p'
-    datetime_str = datetime.datetime.strptime(date_time, format)
+    dt_format = '%b %d %Y %I:%M%p'
+    return datetime.datetime.strptime(date_time, dt_format)
 
 
 def format_percentage(fs_obj, measure, att):
     att_unit = "%" if "pop" not in att else ""
     if "glob" not in att:
-        return " (" + str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att) * 100, 2)) + f"{att_unit})"
+        return " (" + str(round(fs_obj[0][base_metric].__getattribute__(measure).__getattribute__(att) * 100, 2)) + f"{att_unit})"
     else:
         return ""
 
@@ -124,27 +124,27 @@ def format_percentage(fs_obj, measure, att):
 def format_percentage_list(fs_obj, i, measure, att):
     att_unit = "%" if "pop" not in att else ""
     if "glob" not in att:
-        return " (" + str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att)[i] * 100, 2)) + f"{att_unit})"
+        return " (" + str(round(fs_obj[0][base_metric].__getattribute__(measure).__getattribute__(att)[i] * 100, 2)) + f"{att_unit})"
     else:
         return ""
 
 
 def create_display_dict(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_files: list[str]):
-    days_from = [datetime.datetime.fromisoformat(fn.split("_")[-2]) for fn in out_files]
-    days_to = [datetime.datetime.fromisoformat(fn.split("__")[1].split("_")[0]) for fn in out_files]
+    # days_from = [datetime.datetime.fromisoformat(fn.split("_")[-2]) for fn in out_files]
+    # days_to = [datetime.datetime.fromisoformat(fn.split("__")[1].split("_")[0]) for fn in out_files]
     filters = [fn.split("__")[0].split("_", 1)[1] for fn in out_files]
     dates_analysed = {fn.split("__")[1].split("_")[0] for fn in out_files}
     resulting_dict = {}
 
-    for base_ix, base in enumerate(["max", "mid", "min"]):
+    for i, base in enumerate(["max", "mid", "min"]):
         resulting_dict[base] = {}
         for date in dates_analysed:
             resulting_dict[base][date] = {}
-            for filter in filters:
+            for filter_name in filters:
                 for file, values_dict in files_stats.items():
-                    if date not in file or filter not in file:
+                    if date not in file or filter_name not in file:
                         continue
-                    resulting_dict[base][date][filter] = values_dict[base_ix][base]
+                    resulting_dict[base][date][filter_name] = values_dict[i][base]
     return resulting_dict
 
 
@@ -214,7 +214,30 @@ def get_line_color(filter):
               'xkcd:dark peach', 'xkcd:light lavender', 'xkcd:electric green', 'xkcd:slate grey', 'xkcd:teal green',
               'xkcd:barney purple', 'xkcd:bright orange', 'xkcd:bluegreen', 'xkcd:blush', 'xkcd:lemon', 'xkcd:forest',
               'xkcd:medium purple', 'xkcd:vermillion', 'xkcd:watermelon']
+    line_colors = {
+        "1": "#5A1E82", "2": "#D2DB4A", "3": "#B82F89", "5": "#00ACE7",
+        "6": "#008CBE", "7": "#00A828", "8": "#84471C", "9": "#E2001D",
+        "10": "#006E3D", "11": "#82419E",
+
+        "12": "#F5A300", "14": "#5A1E82", "15": "#84471C", "17": "#00ACE7", "18": "#B82F89",
+
+        "19": "#A05909", "20": "#00A828", "21": "#78003C", "22": "#5A1E82", "23": "#B82F89",
+        "25": "#A05909", "28": "#82419E", "31": "#00B0A4", "32": "#89CBBE", "33": "#00B0A4",
+        "34": "#89CBBE", "37": "#005F61", "38": "#005F61", "39": "#00B0A4", "40": "#89CBBE",
+        "41": "#00B0A4", "42": "#00B0A4", "43": "#89CBBE", "44": "#00B0A4", "45": "#89CBBE",
+        "46": "#00B0A4", "47": "#00B0A4", "48": "#89CBBE", "50": "#00B0A4", "51": "#00B0A4",
+        "52": "#89CBBE", "53": "#89CBBE", "54": "#89CBBE", "55": "#005F61", "57": "#89CBBE",
+        "58": "#00B0A4", "59": "#005F61", "60": "#EC619F", "61": "#F5B5D2", "64": "#EC619F",
+        "66": "#F5B5D2", "67": "#F5B5D2", "68": "#EC619F", "69": "#F5B5D2", "70": "#00B0A4",
+        "71": "#005F61", "72": "#89CBBE", "73": "#005F61", "74": "#89CBBE", "75": "#005F61",
+        "78": "#005F61", "80": "#F5B5D2", "82": "#EC619F", "83": "#EC619F", "84": "#F5B5D2",
+        "91": "#005F61", "92": "#89CBBE",
+        "A": "#FF7E00", "E": "#FF7E00", "G": "#FF9BAA", "L": "#FF7E00",
+    }
     line_name = filter.split("/")[-1].split(".")[0].split("_")[-1].split('l')[-1]
+
+    if line_name in line_colors:
+        return line_colors[line_name]
     total_value = 0
     factor = 128
     for char in line_name:
@@ -385,10 +408,10 @@ def old_write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], o
     last_time = last_datetime.time()
     first_day = first_datetime.date()
     last_day = last_datetime.date()
-    lines: list[str] = []
-    lines += [
+    lines_to_print: list[str] = []
+    lines_to_print += [
         f"Summary of analysis from the {first_day.strftime(format_with_weekday)} at {first_time} to the {last_day.strftime(format_with_weekday)} at {last_time}"]
-    lines += ['Résultat des comparaisons sur une semaine, entre les horaires 2024 et 2025.',
+    lines_to_print += ['Résultat des comparaisons sur une semaine, entre les horaires 2024 et 2025.',
               "Nous comparons les surfaces de l'isochrone minimal, le médian et le maximal.",
               "Pour chacune de ces comparaisons, nous affichons pour chaque jour les valeurs calculées.",
               "",
@@ -405,46 +428,46 @@ def old_write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], o
               "inhabitant_nb: Le nombre d'habitants total pour tous les hectares considérés",
               "hectares_nb: Le nombre total d'hectares considérés",
               ]
-    lines += [""]
+    lines_to_print += [""]
     for num, base in zip(["First", "Second", "Third", "Fourth, Fifth"], bases):
         for date in dates_analysed:
 
-            lines += [f"{num} array giving values for {base} comparisons for the {date}:"]
-            lines += [""]
+            lines_to_print += [f"{num} array giving values for {base} comparisons for the {date}:"]
+            lines_to_print += [""]
             # todo: Change header and array orientation
-            lines += [" | ".join(
+            lines_to_print += [" | ".join(
                 ["Statistic".center(column_width)] + [dt.date().strftime(format_with_weekday).center(column_width) for dt in
                                                       days_to])]
-            lines += ["_" * len(lines[-1])]
+            lines_to_print += ["_" * len(lines_to_print[-1])]
             for measure in files_stats[out_files[0]][0][base].__dict__.keys():
                 att_unit = "%" if "pop" not in measure else ""
                 if isinstance(measure, MeasureStat):
                     for att in files_stats[out_files[0]][0][base].__getattribute__(measure).__dict__.keys():
                         if type(files_stats[out_files[0]][0][base].__getattribute__(measure).__getattribute__(att)) != list:
-                            lines += [" | ".join(
+                            lines_to_print += [" | ".join(
                                 [att.center(column_width)] + [(str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att), 3)) + format_percentage(fs_obj, measure, att)).center(column_width)
                                                               for fs_obj in files_stats.values()])]
                         else:
                             lists = [fs_obj[0][base].__getattribute__(measure).__getattribute__(att) for fs_obj in files_stats.values()]
-                            for i in range(len(lists[0])):
-                                lines += [" | ".join([(att if i == 0 else "").center((column_width * 2) // 3)] + [
-                                    (str(i * 100 // len(lists[0])) + "%").center(column_width // 3 - 3)] + [
-                                                         (str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att)[i], 3)) + format_percentage_list(fs_obj, i, measure, att)).center(column_width) for
+                            for col_ix in range(len(lists[0])):
+                                lines_to_print += [" | ".join([(att if col_ix == 0 else "").center((column_width * 2) // 3)] + [
+                                    (str(col_ix * 100 // len(lists[0])) + "%").center(column_width // 3 - 3)] + [
+                                                         (str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att)[col_ix], 3)) + format_percentage_list(fs_obj, col_ix, measure, att)).center(column_width) for
                                                          fs_obj in files_stats.values()])]
-                        lines += ["-" * len(lines[-1])]
-            lines += ["Comments:"]
-            lines += [""]
-            lines += [""]
-            lines += ["=" * len(lines[-1])]
-            lines += [""]
-        lines += ["*" * len(lines[-1])]
-        lines += ["*" * len(lines[-1])]
+                        lines_to_print += ["-" * len(lines_to_print[-1])]
+            lines_to_print += ["Comments:"]
+            lines_to_print += [""]
+            lines_to_print += [""]
+            lines_to_print += ["=" * len(lines_to_print[-1])]
+            lines_to_print += [""]
+        lines_to_print += ["*" * len(lines_to_print[-1])]
+        lines_to_print += ["*" * len(lines_to_print[-1])]
 
     if print_result:
-        print("\n".join(lines))
+        print("\n".join(lines_to_print))
     if write_on_disk:
-        with open("summary_" + first_datetime.isoformat() + "_" + last_datetime.isoformat() + ".stat", "w") as f:
-            f.write("\n".join(lines))
+        with open("summary_" + first_datetime.isoformat() + "_" + last_datetime.isoformat() + ".stat", "w") as summary_file:
+            summary_file.write("\n".join(lines_to_print))
 
 
 def compute_stats(hectares_info: list[dict], attribute_to_analyse, nb_wanted_percentiles, lines_to_print: str, factor) -> tuple[MeasureStat, MeasureStat, str]:
@@ -581,10 +604,10 @@ if __name__ == "__main__":
         summary[hectare_file] = {}
         available_attributes = [key for key in hectares[0].keys() if "-" in key]
 
-        for i, attribute in enumerate(available_attributes):
+        for att_ix, attribute in enumerate(available_attributes):
             # for i in range(nb):
-                summary[hectare_file][i] = {}
-                for base_ix, base in enumerate(["max", "mid", "min"]):
+                summary[hectare_file][att_ix] = {}
+                for base_ix, base_metric in enumerate(["max", "mid", "min"]):
                     # attribute = attribute.split("_")[0] + "_diff_" + base + "_" + str(i)
                     stat_filename = hectare_file.split(".json")[0] + "_" + attribute + ".stat"
                     img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
@@ -601,27 +624,27 @@ if __name__ == "__main__":
 
                         # Now computing the same values but in percentage
                         per_total_stat, per_filtered_stats, per_lines = compute_stats(
-                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0/x[f"ref_{base}"])
+                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0/x[f"ref_{base_metric}"])
 
                         # Now computing the same values but weighted by concerned population
                         perpop_total_stat, perpop_filtered_stats, perpop_lines = compute_stats(
-                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0*x["population"]/(total_inhabitant*x[f"ref_{base}"]))
+                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0*x["population"]/(total_inhabitant * x[f"ref_{base_metric}"]))
 
                         if print_stat:
                             print(lines)
 
                         # todo: add global analysis with comparison between lines
-                        summary[hectare_file][i][base] = FileStats(base_metrics=total_stat,
-                                                                   filtered_base_metrics=filtered_stats,
-                                                                   pop_metrics=pop_total_stat,
-                                                                   filtered_pop_metrics=pop_filtered_stats,
-                                                                   percentage_metrics=per_total_stat,
-                                                                   filtered_percentage_metrics=per_filtered_stats,
-                                                                   percentage_pop_metrics=perpop_total_stat,
-                                                                   filtered_percentage_pop_metrics=perpop_filtered_stats,
-                                                                   glob_inhabitant_nb=total_inhabitant,
-                                                                   glob_hectares_nb=total_hectares,
-                                                                   )
+                        summary[hectare_file][att_ix][base_metric] = FileStats(base_metrics=total_stat,
+                                                                               filtered_base_metrics=filtered_stats,
+                                                                               pop_metrics=pop_total_stat,
+                                                                               filtered_pop_metrics=pop_filtered_stats,
+                                                                               percentage_metrics=per_total_stat,
+                                                                               filtered_percentage_metrics=per_filtered_stats,
+                                                                               percentage_pop_metrics=perpop_total_stat,
+                                                                               filtered_percentage_pop_metrics=perpop_filtered_stats,
+                                                                               glob_inhabitant_nb=total_inhabitant,
+                                                                               glob_hectares_nb=total_hectares,
+                                                                               )
 
                         if generate_stats and (not Path(stat_filename).exists() or getmtime(stat_filename) < data_modified_time):
                             with open(
@@ -630,7 +653,7 @@ if __name__ == "__main__":
                                 f.write(lines)
 
                     if generate_img:
-                        base = geojson_background.plot(zorder=1)
+                        base_metric = geojson_background.plot(zorder=1)
                         gpd_hectares = pd.merge(geodata, pd_hectares, on="reli")
                         # gpd_hectares = pd.merge(gpd_hectares, geojson_background, on="fid")
                         m = geodata.explore(
@@ -642,7 +665,7 @@ if __name__ == "__main__":
                             m
                         )
                         gpd_hectares.plot(
-                            ax=base,
+                            ax=base_metric,
                             #scheme='quantiles',
                             scheme='JenksCaspall',
                             legend=True, cmap='viridis',
