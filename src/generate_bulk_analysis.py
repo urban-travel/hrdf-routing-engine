@@ -1,7 +1,9 @@
+import itertools
 import json
 import os
 
 import geopandas as gpd
+import pandas as pd
 import folium
 import glob
 import sys
@@ -13,20 +15,20 @@ from pathlib import Path
 
 import numpy as np
 from kaleido._utils import fig_tools
-from pandas.core.interchange import column
 
 from choropleth_generator import generate_img_from_hectare
-from compute_hectare_display_values import load_and_update_hectare
+from compute_hectare_display_values import load_and_update_hectare, update_hectares, update_geo_hectare
 
 import matplotlib.pyplot as plt
 
-IMG_PREFIX = "img/tpg"
+IMG_PREFIX = "tmp"
 
 @dataclass
 class MeasureStat:
     max_decrease: float
     max_increase: float
     median: float
+    median_surface_for_pop: float
     average: float
     winning_nb: float
     losing_nb: float
@@ -107,14 +109,14 @@ import datetime
 
 # Function to convert string to datetime
 def convert(date_time):
-    format = '%b %d %Y %I:%M%p'
-    datetime_str = datetime.datetime.strptime(date_time, format)
+    dt_format = '%b %d %Y %I:%M%p'
+    return datetime.datetime.strptime(date_time, dt_format)
 
 
 def format_percentage(fs_obj, measure, att):
     att_unit = "%" if "pop" not in att else ""
     if "glob" not in att:
-        return " (" + str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att) * 100, 2)) + f"{att_unit})"
+        return " (" + str(round(fs_obj[0][base_metric].__getattribute__(measure).__getattribute__(att) * 100, 2)) + f"{att_unit})"
     else:
         return ""
 
@@ -122,27 +124,27 @@ def format_percentage(fs_obj, measure, att):
 def format_percentage_list(fs_obj, i, measure, att):
     att_unit = "%" if "pop" not in att else ""
     if "glob" not in att:
-        return " (" + str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att)[i] * 100, 2)) + f"{att_unit})"
+        return " (" + str(round(fs_obj[0][base_metric].__getattribute__(measure).__getattribute__(att)[i] * 100, 2)) + f"{att_unit})"
     else:
         return ""
 
 
 def create_display_dict(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_files: list[str]):
-    days_from = [datetime.datetime.fromisoformat(fn.split("_")[-2]) for fn in out_files]
-    days_to = [datetime.datetime.fromisoformat(fn.split("__")[1].split("_")[0]) for fn in out_files]
+    # days_from = [datetime.datetime.fromisoformat(fn.split("_")[-2]) for fn in out_files]
+    # days_to = [datetime.datetime.fromisoformat(fn.split("__")[1].split("_")[0]) for fn in out_files]
     filters = [fn.split("__")[0].split("_", 1)[1] for fn in out_files]
     dates_analysed = {fn.split("__")[1].split("_")[0] for fn in out_files}
     resulting_dict = {}
 
-    for base_ix, base in enumerate(["max", "mid", "min"]):
+    for i, base in enumerate(["max", "mid", "min"]):
         resulting_dict[base] = {}
         for date in dates_analysed:
             resulting_dict[base][date] = {}
-            for filter in filters:
+            for filter_name in filters:
                 for file, values_dict in files_stats.items():
-                    if date not in file or filter not in file:
+                    if date not in file or filter_name not in file:
                         continue
-                    resulting_dict[base][date][filter] = values_dict[base_ix][base]
+                    resulting_dict[base][date][filter_name] = values_dict[i][base]
     return resulting_dict
 
 
@@ -212,7 +214,30 @@ def get_line_color(filter):
               'xkcd:dark peach', 'xkcd:light lavender', 'xkcd:electric green', 'xkcd:slate grey', 'xkcd:teal green',
               'xkcd:barney purple', 'xkcd:bright orange', 'xkcd:bluegreen', 'xkcd:blush', 'xkcd:lemon', 'xkcd:forest',
               'xkcd:medium purple', 'xkcd:vermillion', 'xkcd:watermelon']
+    line_colors = {
+        "1": "#5A1E82", "2": "#D2DB4A", "3": "#B82F89", "5": "#00ACE7",
+        "6": "#008CBE", "7": "#00A828", "8": "#84471C", "9": "#E2001D",
+        "10": "#006E3D", "11": "#82419E",
+
+        "12": "#F5A300", "14": "#5A1E82", "15": "#84471C", "17": "#00ACE7", "18": "#B82F89",
+
+        "19": "#A05909", "20": "#00A828", "21": "#78003C", "22": "#5A1E82", "23": "#B82F89",
+        "25": "#A05909", "28": "#82419E", "31": "#00B0A4", "32": "#89CBBE", "33": "#00B0A4",
+        "34": "#89CBBE", "37": "#005F61", "38": "#005F61", "39": "#00B0A4", "40": "#89CBBE",
+        "41": "#00B0A4", "42": "#00B0A4", "43": "#89CBBE", "44": "#00B0A4", "45": "#89CBBE",
+        "46": "#00B0A4", "47": "#00B0A4", "48": "#89CBBE", "50": "#00B0A4", "51": "#00B0A4",
+        "52": "#89CBBE", "53": "#89CBBE", "54": "#89CBBE", "55": "#005F61", "57": "#89CBBE",
+        "58": "#00B0A4", "59": "#005F61", "60": "#EC619F", "61": "#F5B5D2", "64": "#EC619F",
+        "66": "#F5B5D2", "67": "#F5B5D2", "68": "#EC619F", "69": "#F5B5D2", "70": "#00B0A4",
+        "71": "#005F61", "72": "#89CBBE", "73": "#005F61", "74": "#89CBBE", "75": "#005F61",
+        "78": "#005F61", "80": "#F5B5D2", "82": "#EC619F", "83": "#EC619F", "84": "#F5B5D2",
+        "91": "#005F61", "92": "#89CBBE",
+        "A": "#FF7E00", "E": "#FF7E00", "G": "#FF9BAA", "L": "#FF7E00",
+    }
     line_name = filter.split("/")[-1].split(".")[0].split("_")[-1].split('l')[-1]
+
+    if line_name in line_colors:
+        return line_colors[line_name]
     total_value = 0
     factor = 128
     for char in line_name:
@@ -359,9 +384,6 @@ def write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_f
                 fn = f"{folder_name}/detailed_hist_{date}"
                 if not Path(fn).exists() or True:
                     display_superposed_hist(interesting_ones, f"Most impactful lines for {folder_name} {date}", wanted_hist, fn, hist_display_nb, True, False, True)
-                fn = f"{folder_name}/detailed_hist_inv_{date}"
-                if not Path(fn).exists() or True:
-                    display_detailed_hist(interesting_ones, "surface modified", wanted_hist, fn, hist_display_nb, True, True)
                 interesting_ones = []
     if print_result:
         print("\n".join(lines))
@@ -386,10 +408,10 @@ def old_write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], o
     last_time = last_datetime.time()
     first_day = first_datetime.date()
     last_day = last_datetime.date()
-    lines: list[str] = []
-    lines += [
+    lines_to_print: list[str] = []
+    lines_to_print += [
         f"Summary of analysis from the {first_day.strftime(format_with_weekday)} at {first_time} to the {last_day.strftime(format_with_weekday)} at {last_time}"]
-    lines += ['Résultat des comparaisons sur une semaine, entre les horaires 2024 et 2025.',
+    lines_to_print += ['Résultat des comparaisons sur une semaine, entre les horaires 2024 et 2025.',
               "Nous comparons les surfaces de l'isochrone minimal, le médian et le maximal.",
               "Pour chacune de ces comparaisons, nous affichons pour chaque jour les valeurs calculées.",
               "",
@@ -406,111 +428,133 @@ def old_write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], o
               "inhabitant_nb: Le nombre d'habitants total pour tous les hectares considérés",
               "hectares_nb: Le nombre total d'hectares considérés",
               ]
-    lines += [""]
+    lines_to_print += [""]
     for num, base in zip(["First", "Second", "Third", "Fourth, Fifth"], bases):
         for date in dates_analysed:
 
-            lines += [f"{num} array giving values for {base} comparisons for the {date}:"]
-            lines += [""]
+            lines_to_print += [f"{num} array giving values for {base} comparisons for the {date}:"]
+            lines_to_print += [""]
             # todo: Change header and array orientation
-            lines += [" | ".join(
+            lines_to_print += [" | ".join(
                 ["Statistic".center(column_width)] + [dt.date().strftime(format_with_weekday).center(column_width) for dt in
                                                       days_to])]
-            lines += ["_" * len(lines[-1])]
+            lines_to_print += ["_" * len(lines_to_print[-1])]
             for measure in files_stats[out_files[0]][0][base].__dict__.keys():
                 att_unit = "%" if "pop" not in measure else ""
                 if isinstance(measure, MeasureStat):
                     for att in files_stats[out_files[0]][0][base].__getattribute__(measure).__dict__.keys():
                         if type(files_stats[out_files[0]][0][base].__getattribute__(measure).__getattribute__(att)) != list:
-                            lines += [" | ".join(
+                            lines_to_print += [" | ".join(
                                 [att.center(column_width)] + [(str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att), 3)) + format_percentage(fs_obj, measure, att)).center(column_width)
                                                               for fs_obj in files_stats.values()])]
                         else:
                             lists = [fs_obj[0][base].__getattribute__(measure).__getattribute__(att) for fs_obj in files_stats.values()]
-                            for i in range(len(lists[0])):
-                                lines += [" | ".join([(att if i == 0 else "").center((column_width * 2) // 3)] + [
-                                    (str(i * 100 // len(lists[0])) + "%").center(column_width // 3 - 3)] + [
-                                                         (str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att)[i], 3)) + format_percentage_list(fs_obj, i, measure, att)).center(column_width) for
+                            for col_ix in range(len(lists[0])):
+                                lines_to_print += [" | ".join([(att if col_ix == 0 else "").center((column_width * 2) // 3)] + [
+                                    (str(col_ix * 100 // len(lists[0])) + "%").center(column_width // 3 - 3)] + [
+                                                         (str(round(fs_obj[0][base].__getattribute__(measure).__getattribute__(att)[col_ix], 3)) + format_percentage_list(fs_obj, col_ix, measure, att)).center(column_width) for
                                                          fs_obj in files_stats.values()])]
-                        lines += ["-" * len(lines[-1])]
-            lines += ["Comments:"]
-            lines += [""]
-            lines += [""]
-            lines += ["=" * len(lines[-1])]
-            lines += [""]
-        lines += ["*" * len(lines[-1])]
-        lines += ["*" * len(lines[-1])]
+                        lines_to_print += ["-" * len(lines_to_print[-1])]
+            lines_to_print += ["Comments:"]
+            lines_to_print += [""]
+            lines_to_print += [""]
+            lines_to_print += ["=" * len(lines_to_print[-1])]
+            lines_to_print += [""]
+        lines_to_print += ["*" * len(lines_to_print[-1])]
+        lines_to_print += ["*" * len(lines_to_print[-1])]
 
     if print_result:
-        print("\n".join(lines))
+        print("\n".join(lines_to_print))
     if write_on_disk:
-        with open("summary_" + first_datetime.isoformat() + "_" + last_datetime.isoformat() + ".stat", "w") as f:
-            f.write("\n".join(lines))
+        with open("summary_" + first_datetime.isoformat() + "_" + last_datetime.isoformat() + ".stat", "w") as summary_file:
+            summary_file.write("\n".join(lines_to_print))
 
 
-def compute_stats(hectares: list[dict], attribute, wanted_percentiles, lines, factor) -> tuple[MeasureStat, MeasureStat, str]:
-    hectares.sort(key=lambda v: v[attribute] * factor(v))
-    max_decrease = hectares[0][attribute] * factor(hectares[0])
-    max_increase = hectares[-1][attribute] * factor(hectares[-1])
-    median = hectares[total_hectares // 2][attribute] * factor(hectares[total_hectares // 2])
-    avg = sum(v[attribute] * factor(v) for v in hectares) / total_hectares
-    winning_nb = sum(1 for v in hectares if v[attribute] > 0)
-    losing_nb = sum(1 for v in hectares if v[attribute] < 0)
-    total_surface = sum(factor(v) * v[attribute] for v in hectares)
+def compute_stats(hectares_info: list[dict], attribute_to_analyse, nb_wanted_percentiles, lines_to_print: str, factor) -> tuple[MeasureStat, MeasureStat, str]:
+    hectares_info.sort(key=lambda v: v[attribute_to_analyse] * factor(v))
+    max_decrease = hectares_info[0][attribute_to_analyse] * factor(hectares_info[0])
+    max_increase = hectares_info[-1][attribute_to_analyse] * factor(hectares_info[-1])
+    median = hectares_info[total_hectares // 2][attribute_to_analyse] * factor(hectares_info[total_hectares // 2])
+    avg = sum(v[attribute_to_analyse] * factor(v) for v in hectares_info) / total_hectares
+    winning_nb = sum(1 for v in hectares_info if v[attribute_to_analyse] > 0)
+    losing_nb = sum(1 for v in hectares_info if v[attribute_to_analyse] < 0)
+    total_surface = sum(factor(v) * v[attribute_to_analyse] for v in hectares_info)
     percentiles = []
-    lines += f"Highest loss : {max_decrease}\n"
-    lines += f"Highest increase : {max_increase}\n"
-    lines += f"Median : {median}\n"
-    lines += f"Average: {avg}\n"
-    lines += f"Winning hectares: {winning_nb}\n"
-    lines += f"Losing hectares: {losing_nb}\n"
-    lines += f"For the percentile | we have at most won | m²\n"
-    lines += f"_____________________________________________\n"
-    for p in range(wanted_percentiles):
-        concerned_hectare = hectares[(total_hectares * p) // wanted_percentiles]
-        percentile = concerned_hectare[attribute] * factor(concerned_hectare)
+    lines_to_print += f"Highest loss : {max_decrease}\n"
+    lines_to_print += f"Highest increase : {max_increase}\n"
+    lines_to_print += f"Median : {median}\n"
+    lines_to_print += f"Average: {avg}\n"
+    lines_to_print += f"Winning hectares: {winning_nb}\n"
+    lines_to_print += f"Losing hectares: {losing_nb}\n"
+    lines_to_print += f"For the percentile | we have at most won | m²\n"
+    lines_to_print += f"_____________________________________________\n"
+    for p in range(nb_wanted_percentiles):
+        concerned_hectare = hectares_info[(total_hectares * p) // nb_wanted_percentiles]
+        percentile = concerned_hectare[attribute_to_analyse] * factor(concerned_hectare)
         percentiles.append(percentile)
-        p_line = f"{p * 100 / wanted_percentiles}% | {percentile} m²\n"
-        lines += p_line
-    total_stats = MeasureStat(max_decrease, max_increase, median, avg, winning_nb, losing_nb, percentiles, total_surface, total_hectares)
+        p_line = f"{p * 100 / nb_wanted_percentiles}% | {percentile} m²\n"
+        lines_to_print += p_line
+
+    median_ref_attr = "population"
+    median_attr = "area"
+    # hectares.sort(key=lambda v: v[median_attr])
+    cumulated_pop = list(itertools.accumulate([h[median_ref_attr] for h in hectares_info]))
+    max_attr_val = cumulated_pop[-1]
+    median_surface = next(h[median_attr] for h, a in zip(hectares_info, cumulated_pop) if a >= max_attr_val // 2)
+    total_stats = MeasureStat(max_decrease=max_decrease,
+                              max_increase=max_increase, median=median, median_surface_for_pop=median_surface,
+                              average=avg, winning_nb=winning_nb, losing_nb=losing_nb, percentiles=percentiles,
+                              total_surface=total_surface, hectare_nb=total_hectares)
     # todo: evaluate and compute distance of the modification metric
     
     # add stats for only modified hectares
     validity_threshold: int = 1
-    tmp_hectares = [h for h in hectares if abs(h[attribute]) > validity_threshold]
+    tmp_hectares = [h for h in hectares_info if abs(h[attribute_to_analyse]) > validity_threshold]
+    tmp_hectares.sort(key=lambda v: v[attribute_to_analyse] * factor(v))
     hectares_nb = len(tmp_hectares)
     if hectares_nb > 0:
-        max_decrease = tmp_hectares[0][attribute] * factor(tmp_hectares[0])
-        max_increase = tmp_hectares[-1][attribute] * factor(tmp_hectares[-1])
-        median = tmp_hectares[hectares_nb // 2][attribute] * factor(tmp_hectares[hectares_nb // 2])
-        avg = sum(v[attribute] * factor(v) for v in tmp_hectares) / hectares_nb
-        winning_nb = sum(1 for v in tmp_hectares if v[attribute] > 0)
-        losing_nb = sum(1 for v in tmp_hectares if v[attribute] < 0)
-        total_surface = sum(factor(v) * v[attribute] for v in tmp_hectares)
+        max_decrease = tmp_hectares[0][attribute_to_analyse] * factor(tmp_hectares[0])
+        max_increase = tmp_hectares[-1][attribute_to_analyse] * factor(tmp_hectares[-1])
+        median = tmp_hectares[hectares_nb // 2][attribute_to_analyse] * factor(tmp_hectares[hectares_nb // 2])
+        avg = sum(v[attribute_to_analyse] * factor(v) for v in tmp_hectares) / hectares_nb
+        winning_nb = sum(1 for v in tmp_hectares if v[attribute_to_analyse] > 0)
+        losing_nb = sum(1 for v in tmp_hectares if v[attribute_to_analyse] < 0)
+        total_surface = sum(factor(v) * v[attribute_to_analyse] for v in tmp_hectares)
         percentiles = []
-        lines += f"#############################################\n"
-        lines += f"Statistics only for hectares having a modification of at least {validity_threshold}\n"
-        lines += f"Number of impacted hectared : {hectares_nb}\n"
-        lines += f"Highest loss : {max_decrease}\n"
-        lines += f"Highest increase : {max_increase}\n"
-        lines += f"Median : {median}\n"
-        lines += f"Average: {avg}\n"
-        lines += f"Winning hectares: {winning_nb}\n"
-        lines += f"Losing hectares: {losing_nb}\n"
-        lines += f"For the percentile | we have at most won | m²\n"
-        lines += f"_____________________________________________\n"
-        for p in range(wanted_percentiles):
-            concerned_hectare = tmp_hectares[(hectares_nb * p) // wanted_percentiles]
-            percentile = concerned_hectare[attribute] * factor(concerned_hectare)
+        lines_to_print += f"#############################################\n"
+        lines_to_print += f"Statistics only for hectares having a modification of at least {validity_threshold}\n"
+        lines_to_print += f"Number of impacted hectared : {hectares_nb}\n"
+        lines_to_print += f"Highest loss : {max_decrease}\n"
+        lines_to_print += f"Highest increase : {max_increase}\n"
+        lines_to_print += f"Median : {median}\n"
+        lines_to_print += f"Average: {avg}\n"
+        lines_to_print += f"Winning hectares: {winning_nb}\n"
+        lines_to_print += f"Losing hectares: {losing_nb}\n"
+        lines_to_print += f"For the percentile | we have at most won | m²\n"
+        lines_to_print += f"_____________________________________________\n"
+        for p in range(nb_wanted_percentiles):
+            concerned_hectare = tmp_hectares[(hectares_nb * p) // nb_wanted_percentiles]
+            percentile = concerned_hectare[attribute_to_analyse] * factor(concerned_hectare)
             percentiles.append(percentile)
-            p_line = f"{p * 100 / wanted_percentiles}% | {percentile} m²\n"
-            lines += p_line
-    filter_stats = MeasureStat(max_decrease, max_increase, median, avg, winning_nb, losing_nb, percentiles, total_surface, hectares_nb)
-    return total_stats, filter_stats, lines
+            p_line = f"{p * 100 / nb_wanted_percentiles}% | {percentile} m²\n"
+            lines_to_print += p_line
+
+        median_ref_attr = "population"
+        median_attr = "area"
+        # tmp_hectares.sort(key=lambda v: v[median_attr])
+        cumulated_pop = list(itertools.accumulate([h[median_ref_attr] for h in tmp_hectares]))
+        max_attr_val = cumulated_pop[-1]
+        median_surface = next(h[median_attr] for h, a in zip(tmp_hectares, cumulated_pop) if a >= max_attr_val//2)
+
+    filter_stats = MeasureStat(max_decrease=max_decrease,
+                               max_increase=max_increase, median=median, median_surface_for_pop=median_surface,
+                               average=avg, winning_nb=winning_nb, losing_nb=losing_nb, percentiles=percentiles,
+                               total_surface=total_surface, hectare_nb=hectares_nb)
+    return total_stats, filter_stats, lines_to_print
 
 
 if __name__ == "__main__":
-    generate_img = 0
+    generate_img = 1
     generate_stats = True
     print_stat = False
     compute_summary = True
@@ -522,19 +566,21 @@ if __name__ == "__main__":
     else:
         hectare_files = glob.glob("hectare_resources/hectare_*.json")
 
+    geojson_background_fn = "geo_ressources/geo_communes_geneva_wgs84.geojson"
+    geojson_background = gpd.read_file(geojson_background_fn)
+
     geojson_filename = "geo_ressources/geo_grid_swiss_wgs84_combined_filtered"
     with open(geojson_filename + '.geojson') as geo_file:
         # with open('geo_ressources/geo_romandie_wgs84_PROD_v1.json') as geo_file:
         region_map = json.load(geo_file)
         geodata = gpd.read_file(geojson_filename + '.geojson')
-        geodata.plot()
-        # plt.show()
-        plt.close()
 
     base_files = [fil for fil in hectare_files if "base" in fil]
     base_hectares = {}
+    base_geo_hectares = {}
     for base_file in base_files:
         base_hectares[base_file] = load_and_update_hectare(base_file, False)
+        base_geo_hectares[base_file] = pd.read_json(base_file)
     hectare_files = [fil for fil in hectare_files if "base" not in fil]
     summary = {}
     for hectare_file in hectare_files:
@@ -543,10 +589,14 @@ if __name__ == "__main__":
         try:
             file_time = hectare_file.split(".filter_")[1].split("_PT")[0]
             base_hectare = base_hectares[base_files[0]] if len(base_files) > 0 else False
+            base_geo_hectare = base_geo_hectares[base_files[0]] if len(base_files) > 0 else False
             for bf, bh in base_hectares.items():
                 if file_time in bf:
                     base_hectare = bh
             hectares, nb = load_and_update_hectare(hectare_file, base_hectare)
+            pd_hectares = pd.DataFrame(hectares)
+            # gpd_hectares = update_geo_hectare(pd.read_json(hectare_file), base_geo_hectare)
+
         except Exception as e:
             print(f"File {hectare_file} has bad format : {e}", file=sys.stderr)
             continue
@@ -554,10 +604,10 @@ if __name__ == "__main__":
         summary[hectare_file] = {}
         available_attributes = [key for key in hectares[0].keys() if "-" in key]
 
-        for i, attribute in enumerate(available_attributes):
+        for att_ix, attribute in enumerate(available_attributes):
             # for i in range(nb):
-                summary[hectare_file][i] = {}
-                for base_ix, base in enumerate(["max", "mid", "min"]):
+                summary[hectare_file][att_ix] = {}
+                for base_ix, base_metric in enumerate(["max", "mid", "min"]):
                     # attribute = attribute.split("_")[0] + "_diff_" + base + "_" + str(i)
                     stat_filename = hectare_file.split(".json")[0] + "_" + attribute + ".stat"
                     img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
@@ -574,27 +624,27 @@ if __name__ == "__main__":
 
                         # Now computing the same values but in percentage
                         per_total_stat, per_filtered_stats, per_lines = compute_stats(
-                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0/x[f"ref_{base}"])
+                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0/x[f"ref_{base_metric}"])
 
                         # Now computing the same values but weighted by concerned population
                         perpop_total_stat, perpop_filtered_stats, perpop_lines = compute_stats(
-                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0*x["population"]/(total_inhabitant*x[f"ref_{base}"]))
+                            hectares, attribute, wanted_percentiles, "", lambda x: 100.0*x["population"]/(total_inhabitant * x[f"ref_{base_metric}"]))
 
                         if print_stat:
                             print(lines)
 
                         # todo: add global analysis with comparison between lines
-                        summary[hectare_file][i][base] = FileStats(base_metrics=total_stat,
-                                                                   filtered_base_metrics=filtered_stats,
-                                                                   pop_metrics=pop_total_stat,
-                                                                   filtered_pop_metrics=pop_filtered_stats,
-                                                                   percentage_metrics=per_total_stat,
-                                                                   filtered_percentage_metrics=per_filtered_stats,
-                                                                   percentage_pop_metrics=perpop_total_stat,
-                                                                   filtered_percentage_pop_metrics=perpop_filtered_stats,
-                                                                   glob_inhabitant_nb=total_inhabitant,
-                                                                   glob_hectares_nb=total_hectares,
-                                                                   )
+                        summary[hectare_file][att_ix][base_metric] = FileStats(base_metrics=total_stat,
+                                                                               filtered_base_metrics=filtered_stats,
+                                                                               pop_metrics=pop_total_stat,
+                                                                               filtered_pop_metrics=pop_filtered_stats,
+                                                                               percentage_metrics=per_total_stat,
+                                                                               filtered_percentage_metrics=per_filtered_stats,
+                                                                               percentage_pop_metrics=perpop_total_stat,
+                                                                               filtered_percentage_pop_metrics=perpop_filtered_stats,
+                                                                               glob_inhabitant_nb=total_inhabitant,
+                                                                               glob_hectares_nb=total_hectares,
+                                                                               )
 
                         if generate_stats and (not Path(stat_filename).exists() or getmtime(stat_filename) < data_modified_time):
                             with open(
@@ -603,6 +653,9 @@ if __name__ == "__main__":
                                 f.write(lines)
 
                     if generate_img:
+                        base_metric = geojson_background.plot(zorder=1)
+                        gpd_hectares = pd.merge(geodata, pd_hectares, on="reli")
+                        # gpd_hectares = pd.merge(gpd_hectares, geojson_background, on="fid")
                         m = geodata.explore(
                             column="reli",
                             scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
@@ -611,15 +664,27 @@ if __name__ == "__main__":
                         folium.TileLayer("CartoDB positron", show=False).add_to(
                             m
                         )
-                        m
+                        gpd_hectares.plot(
+                            ax=base_metric,
+                            #scheme='quantiles',
+                            scheme='JenksCaspall',
+                            legend=True, cmap='viridis',
+                            column=attribute, zorder=2, vmin=0)
+                        # plt.show()
+                        plt.savefig(img_filename)
+                        plt.close()
+                        """
                         if not Path(img_filename).exists() or getmtime(img_filename) < data_modified_time:
                             generate_img_from_hectare(hectares, region_map, attribute,
                                                       img_filename)
+                            print(f"Image {img_filename} written")
                         if generate_img > 1:
                             # attribute = "area_" + str(i + 1) + "_" + base
                             add_img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
                             if not Path(add_img_filename).exists() or getmtime(add_img_filename) < data_modified_time:
                                 generate_img_from_hectare(hectares, region_map, attribute, add_img_filename)
+                                print(f"Image {add_img_filename} written")
+                        """
 
     if compute_summary:
         print("Start writing summary")
