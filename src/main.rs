@@ -258,6 +258,42 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let mut f = File::create(&fname).expect("Unable to create file");
             f.write_all(data.as_bytes()).expect("Unable to write data");
         }
+
+        Mode::ExportCSV {
+            isochrone_args,
+            delta_time,
+            url,
+        } => {
+            use hrdf_routing_engine::IsochroneDisplayMode;
+
+            let isochrone_args = isochrone_args.finalize()?;
+
+            let filters: Vec<HrdfFilter> = match &isochrone_args.filter_fn {
+                None => { vec![] }
+                Some(filter_fn) => {
+                    let data_content = &fs::read_to_string(&filter_fn).expect(&*(filter_fn.to_owned() + " Should be able to read file"));
+                    serde_json::from_str(data_content).expect("Should be able to read file")
+                }
+            };
+            let hectare = HectareData::new(
+                &url,
+                cli.force_rebuild,
+                cli.cache_prefix.clone(),
+                isochrone_args.center_longitude,
+                isochrone_args.center_latitude,
+                isochrone_args.center_area,
+            )
+                .await?;
+
+            let mut req_hrdf: Vec<Hrdf> = vec![];
+            for dep in &isochrone_args.departure_at {
+                let hrdf_2026 =
+                    Hrdf::try_from_date(dep.date(), cli.force_rebuild, cli.cache_prefix.clone())
+                        .await?;
+                req_hrdf.push(hrdf_2026);
+            }
+            req_hrdf.iter().map(| hrdf| hrdf.export_csv_time_graph())
+        }
     }
 
     Ok(())
