@@ -59,11 +59,13 @@ def update_hectares(base_dict: dict[Any, Any] | bool, hectares, standalone_file:
                         for (filtered_val, base_val, metric) in zip(filtered, base, ["max", "mid", "min"]):
                             h[filter_base_name + "-" + key + "_diff_" + metric + "_" + str(i)] = base_val - filtered_val
                             h[f'ref_{metric}'] = base_val
+                            h[f'self_{metric}'] = filtered_val
             else:
                 for i, (filtered, base) in enumerate(zip(value, base_dict[0][hectare_index]['area'][0][1])):
                     for (filtered_val, base_val, metric) in zip(filtered, base, ["max", "mid", "min"]):
                         h[filter_base_name + "-" + key + "_diff_" + metric + "_" + str(i)] = base_val - filtered_val
                         h[f'ref_{metric}'] = base_val
+                        h[f'self_{metric}'] = filtered_val
 
     return hectares, highest_cmp - 1
 

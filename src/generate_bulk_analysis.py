@@ -554,8 +554,51 @@ def compute_stats(hectares_info: list[dict], attribute_to_analyse, nb_wanted_per
     return total_stats, filter_stats, lines_to_print
 
 
+def generate_img_from_gpd(gpd_background, grid_gpd_data, pd_hectares_data, image_filename, attribute_to_plot):
+    gpd_hectares = pd.merge(grid_gpd_data, pd_hectares_data, on="reli")  # .to_crs(epsg=4326)
+    # gpd_hectares = pd.merge(gpd_hectares, geojson_background, on="fid")
+    '''m = geodata.explore(
+        column="reli",
+        scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
+        legend=True,  # show legend
+    )
+    folium.TileLayer("CartoDB positron", show=False).add_to(
+        m
+    )'''
+
+    base_plot = (gpd_background.plot(
+        figsize=(100, 100), alpha=0.2,
+        edgecolor="k", zorder=1
+    ))
+    minx, miny, maxx, maxy = gpd_hectares.total_bounds
+    base_plot.set_xlim(minx, maxx)
+    base_plot.set_ylim(miny, maxy)
+
+    gpd_hectares.plot(
+        ax=base_plot,
+        # scheme='quantiles',
+        # scheme='EqualInterval',
+        legend=True, cmap='viridis',
+        column=attribute_to_plot, zorder=2, vmin=0,
+        missing_kwds={
+            "color": "lightgrey",
+            "edgecolor": "red",
+            "hatch": "///",
+            "label": "Missing values",
+        },
+    )
+    cx.add_basemap(base_plot, source=cx.providers.OpenStreetMap.CH, zoom=13, crs=gpd_background.crs)
+    # plt.show()
+    plt.savefig(
+        image_filename,
+        # dpi=300,
+        bbox_inches='tight'
+    )
+    plt.close()
+
+
 if __name__ == "__main__":
-    generate_img = 1
+    generate_img = 2
     generate_stats = True
     print_stat = False
     compute_summary = True
@@ -605,6 +648,13 @@ if __name__ == "__main__":
         summary[hectare_file] = {}
         available_attributes = [key for key in hectares[0].keys() if "-" in key]
 
+        if generate_img > 1:
+            attribute = 'self_max'
+            add_img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
+            # geojson_background.to_crs(epsg=4326)
+            generate_img_from_gpd(geojson_background, geodata, pd_hectares, add_img_filename, attribute)
+            print(f"{add_img_filename} printed")
+
         for att_ix, attribute in enumerate(available_attributes):
             # for i in range(nb):
                 summary[hectare_file][att_ix] = {}
@@ -653,61 +703,24 @@ if __name__ == "__main__":
                                     "w") as f:
                                 f.write(lines)
 
-                    if generate_img:
-                        add_img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
+                if generate_img:
+                    add_img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
+                    if not Path(add_img_filename).exists() or getmtime(add_img_filename) < data_modified_time or generate_img > 1:
                         # geojson_background.to_crs(epsg=4326)
-                        gpd_hectares = pd.merge(geodata, pd_hectares, on="reli")# .to_crs(epsg=4326)
-
-                        base_metric = (geojson_background.plot(
-                            figsize=(100, 100), alpha=0.2,
-                            edgecolor="k", zorder=1
-                        ))
-                        minx, miny, maxx, maxy = gpd_hectares.total_bounds
-                        base_metric.set_xlim(minx, maxx)
-                        base_metric.set_ylim(miny, maxy)
-                        # gpd_hectares = pd.merge(gpd_hectares, geojson_background, on="fid")
-                        '''m = geodata.explore(
-                            column="reli",
-                            scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
-                            legend=True,  # show legend
-                        )
-                        folium.TileLayer("CartoDB positron", show=False).add_to(
-                            m
-                        )'''
-                        gpd_hectares.plot(
-                            ax=base_metric,
-                            # scheme='quantiles',
-                            #scheme='EqualInterval',
-                            legend=True, cmap='viridis',
-                            column=attribute, zorder=2, vmin=0,
-                            missing_kwds={
-                                "color": "lightgrey",
-                                "edgecolor": "red",
-                                "hatch": "///",
-                                "label": "Missing values",
-                            },
-                        )
-                        cx.add_basemap(base_metric, source=cx.providers.OpenStreetMap.CH, zoom=13, crs=geojson_background.crs)
-                        # plt.show()
-                        plt.savefig(
-                            add_img_filename,
-                            # dpi=300,
-                            bbox_inches='tight'
-                        )
-                        plt.close()
+                        generate_img_from_gpd(geojson_background, geodata, pd_hectares, add_img_filename, attribute)
                         print(f"{add_img_filename} printed")
-                        """
-                        if not Path(img_filename).exists() or getmtime(img_filename) < data_modified_time:
-                            generate_img_from_hectare(hectares, region_map, attribute,
-                                                      img_filename)
-                            print(f"Image {img_filename} written")
-                        if generate_img > 1:
-                            # attribute = "area_" + str(i + 1) + "_" + base
-                            add_img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
-                            if not Path(add_img_filename).exists() or getmtime(add_img_filename) < data_modified_time:
-                                generate_img_from_hectare(hectares, region_map, attribute, add_img_filename)
-                                print(f"Image {add_img_filename} written")
-                        """
+                    """
+                    if not Path(img_filename).exists() or getmtime(img_filename) < data_modified_time:
+                        generate_img_from_hectare(hectares, region_map, attribute,
+                                                  img_filename)
+                        print(f"Image {img_filename} written")
+                    if generate_img > 1:
+                        # attribute = "area_" + str(i + 1) + "_" + base
+                        add_img_filename = f"{IMG_PREFIX}/{hectare_file.split("/")[-1].split(".json")[0]}_{attribute}.svg"
+                        if not Path(add_img_filename).exists() or getmtime(add_img_filename) < data_modified_time:
+                            generate_img_from_hectare(hectares, region_map, attribute, add_img_filename)
+                            print(f"Image {add_img_filename} written")
+                    """
 
     if compute_summary:
         print("Start writing summary")
