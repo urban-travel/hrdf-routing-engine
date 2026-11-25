@@ -149,7 +149,18 @@ def create_display_dict(files_stats: dict[str, dict[int, dict[str, FileStats]]],
     return resulting_dict
 
 
-def display_hist(values: list[int | float], keys: list[str], metric_name: str, save_img: str | None, save_only: bool):
+def display_hist(values: list[int | float], keys: list[str], metric_name: str, save_img: str | None, save_only: bool, sort: bool = True, limit_nb: int = 6):
+    # Handle the values
+    combined_values = [(k, v, get_line_color(k)) for (k,v) in zip(keys, values)]
+    if sort:
+        combined_values.sort(key=lambda v: v[1], reverse=True)
+    if limit_nb > 0:
+        combined_values = combined_values[:limit_nb]
+    keys = ["Line " + v[0].split("_")[-1] for v in combined_values]
+    values = [v[1] for v in combined_values]
+    colors = [v[2] for v in combined_values]
+
+    # Then do the plot
     fig = plt.figure(layout="constrained", figsize=(40, 24))
     layout = "a"
     axs = fig.subplot_mosaic(layout)
@@ -159,9 +170,11 @@ def display_hist(values: list[int | float], keys: list[str], metric_name: str, s
     y_axis_label = f"{metric_name}"
     axs[x].set_ylabel(y_axis_label, fontsize=45)
 
-    plot = axs[x].bar(keys, values)
-    axs[x].bar_label(plot, rotation=0, padding=0)
-    plt.xticks(rotation=45, ha='right')
+    plot = axs[x].bar(keys, values, color = colors)
+    if limit_nb > 0:
+        axs[x].bar_label(plot, rotation=0, padding=0, label_type='center', fontsize=150/limit_nb)
+    plt.xticks(rotation="vertical", ha='center', fontsize=25)
+    plt.yticks(rotation="horizontal", ha='center', fontsize=0)
 
     if not save_only:
         plt.show()
