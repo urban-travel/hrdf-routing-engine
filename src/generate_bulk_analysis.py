@@ -387,9 +387,14 @@ def write_summary(files_stats: dict[str, dict[int, dict[str, FileStats]]], out_f
                     folder_name = f"{IMG_PREFIX}/{measure_name}_{base}"
                     if not Path(folder_name).exists():
                         os.makedirs(folder_name)
-                    fn = f"{folder_name}/hist_{hist_attr}_{date}"
+                    pad = 1 if "filter" in measure_name else 0
+                    tag = ("f" if "filter" in folder_name else "") + ("" if "base" in folder_name else measure_name.split()[pad][:3]) + ("pop" if ("per" in folder_name and "pop" in folder_name) else "")
+                    fn = f"{folder_name}/{tag}_part_hist_{hist_attr}_{date}"
                     if not Path(fn).exists():
                         display_hist(values_to_display, keys, hist_attr, fn, True)
+                    fn = f"{folder_name}/{tag}_all_hist_{hist_attr}_{date}"
+                    if not Path(fn).exists():
+                        display_hist(values_to_display, keys, hist_attr, fn, True, limit_nb=-1)
 
                 interesting_ones = {key: [val.get_measure_dict()[0][measure_name].__getattribute__(hist_attr) for hist_attr in wanted_hist]
                                         for (key, val) in interesting_ones}
