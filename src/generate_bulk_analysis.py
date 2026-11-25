@@ -572,7 +572,7 @@ def compute_stats(hectares_info: list[dict], attribute_to_analyse, nb_wanted_per
     return total_stats, filter_stats, lines_to_print
 
 
-def generate_img_from_gpd(gpd_background, grid_gpd_data, pd_hectares_data, image_filename, attribute_to_plot):
+def generate_img_from_gpd(gpd_background, grid_gpd_data, pd_hectares_data, image_filename, current_line: None|str, attribute_to_plot):
     gpd_hectares = pd.merge(grid_gpd_data, pd_hectares_data, on="reli")  # .to_crs(epsg=4326)
     # gpd_hectares = pd.merge(gpd_hectares, geojson_background, on="fid")
     '''m = geodata.explore(
@@ -590,13 +590,15 @@ def generate_img_from_gpd(gpd_background, grid_gpd_data, pd_hectares_data, image
     ))
     minx, miny, maxx, maxy = gpd_hectares.total_bounds
     base_plot.set_xlim(minx, maxx)
-    base_plot.set_ylim(miny, maxy)
+    base_plot.set_ylim(miny, maxy - 0.1)
 
     gpd_hectares.plot(
         ax=base_plot,
         # scheme='quantiles',
         # scheme='EqualInterval',
-        legend=True, cmap='viridis',
+        # legend=True,
+        legend=False,
+        cmap='viridis',
         column=attribute_to_plot, zorder=2, vmin=0,
         missing_kwds={
             "color": "lightgrey",
@@ -605,7 +607,34 @@ def generate_img_from_gpd(gpd_background, grid_gpd_data, pd_hectares_data, image
             "label": "Missing values",
         },
     )
-    cx.add_basemap(base_plot, source=cx.providers.OpenStreetMap.CH, zoom=13, crs=gpd_background.crs)
+
+    # add bus stops
+    if current_line is not None:
+        fn = "montees-par-arret-par-ligne_tpg.geojson"
+        # with open(fn) as stop_file:
+        stops = gpd.read_file(fn, columns=["ligne", "arret", "geometry"])
+        filter_line = lambda stop: current_line == stop["ligne"]
+        mask = stops["ligne"] == current_line
+        stops = stops[mask]
+        stops = stops.drop_duplicates(subset=["arret"])
+        first = True
+        if len(stops) > 0:
+            stops.to_crs(gpd_background.crs).plot(ax=base_plot, marker='o', color='red', legend=False, markersize=150, zorder=3)
+            '''
+            for s in stops.to_crs(gpd_background.crs).centroid:
+                if not first:
+                    x = [old_point.x, s.x]
+                    y = [old_point.y, s.y]
+                    line = Line2D(x, y)
+                    base_plot.add_line(line)
+                else:
+                    first = False
+                old_point = s'''
+
+    cx.add_basemap(base_plot, source=cx.providers.CartoDB.PositronNoLabels(apikey="cb1_50a1_1_8fd29e9d36f3601eda9f644b"), zorder=0, zoom=13, crs=gpd_background.crs)
+    cx.add_basemap(base_plot, source=cx.providers.CartoDB.PositronOnlyLabels(apikey="cb1_50a1_1_8fd29e9d36f3601eda9f644b"), zorder=4, zoom=13, crs=gpd_background.crs)
+    # cx.add_basemap(base_plot, source=cx.providers.Stadia.StamenTonerLabels(apiKey="bfaeb56c-6c56-4036-87de-d69f8aabed63"), zorder=3, zoom=13, crs=gpd_background.crs)
+
     # plt.show()
     plt.savefig(
         image_filename,
