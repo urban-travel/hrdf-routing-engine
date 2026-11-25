@@ -1,6 +1,7 @@
 import itertools
 import json
 import os
+import time
 
 import geopandas as gpd
 import pandas as pd
@@ -675,7 +676,9 @@ if __name__ == "__main__":
     hectare_files = [fil for fil in hectare_files if "base" not in fil]
     summary = {}
     complete_hectares = []
-    completed_columns = []
+    completed_columns: list[str] = []
+    completed_refs_columns: list[str] = []
+    completed_prop_columns: list[str] = []
     min_data_modified_time = getmtime(hectare_files[0])
     first = True
     for hectare_file in hectare_files:
@@ -789,41 +792,35 @@ if __name__ == "__main__":
             first = False
 
         col_name = "line_max_area__" + hectare_file.split(".filter")[0].split("/")[-1].split("_l")[-1]
+        col_ref_name = "line_max_area_ref__" + hectare_file.split(".filter")[0].split("/")[-1].split("_l")[-1]
+        col_prop_name = "line_prop_area__" + hectare_file.split(".filter")[0].split("/")[-1].split("_l")[-1]
         completed_columns.append(col_name)
+        completed_refs_columns.append(col_ref_name)
+        completed_prop_columns.append(col_prop_name)
         hectare_specific_column = [h["area"][0][1][0][0] for h in hectares]
         complete_hectares[col_name] = hectare_specific_column
-        # for i, h in enumerate(hectares):
-        #    if i not in complete_hectares:
-        #        complete_hectares.append(h)
-        #    else:
-        #        complete_hectares[i]["area"] += h["area"]
-    pd_hectares = pd.DataFrame(complete_hectares)
+        hectare_ref_specific_column = [h["ref_max"] for h in hectares]
+        complete_hectares[col_ref_name] = hectare_ref_specific_column
+        hectare_prop_specific_column = [h["area"][0][1][0][0]/h["ref_max"] for h in hectares]
+        complete_hectares[col_prop_name] = hectare_prop_specific_column
+    # pd_hectares = pd.DataFrame(complete_hectares)
     print("Start assembling hectare info")
     before = time.time()
 
-    complete_hectares["max_line"] = complete_hectares[completed_columns].idxmax(axis=1).apply(lambda x : x.split("__")[-1])
-    complete_hectares["max_line_surface"] = complete_hectares[completed_columns].max(axis=1)
-    complete_hectares["max_line_surface_prop"] = (100*complete_hectares["max_line_surface"])//complete_hectares["ref_max"]
+    complete_hectares["max_line"] = complete_hectares[completed_prop_columns].idxmin(axis=1).apply(lambda x : x.split("__")[-1])
+    complete_hectares["max_line_surface"] = complete_hectares[completed_prop_columns].min(axis=1)
+    complete_hectares["max_line_surface_prop"] = complete_hectares.apply(
+        lambda h: 100-(100 *  h["max_line_surface"] / h["line_max_area_ref__" + h["max_line"]]),
+        axis=1)
+                                                  # ((100*complete_hectares["max_line_surface"])//complete_hectares[completed_refs_columns])
 
-    """
-    for h in complete_hectares:
-        first = True
-        surface = 0
-        line = "None"
-        for a in h["area"]:
-            if a[1][0][0] > surface or first:
-                line, surface = a[0].split()[-1], a[1][0][0]
-        h["max_line"] = line
-        h["max_line_surface"] = surface
-        h["max_line_surface_prop"] = (100*surface)//h["ref_max"]
-    """
     print(f"Done assembling hectare info in {time.time() - before}")
 
     if generate_img:
         add_img_filename = f"{IMG_PREFIX}/global_fragility.svg"
-        if not Path(add_img_filename).exists() or getmtime(add_img_filename) < min_data_modified_time or generate_img > 1:
+        if not Path(add_img_filename).exists() or getmtime(add_img_filename) < min_data_modified_time or generate_img > 0:
             # geojson_background.to_crs(epsg=4326)
-            generate_img_from_gpd(geojson_background, geodata, pd_hectares, add_img_filename, None, "max_line_surface_prop")
+            generate_img_from_gpd(geojson_background, geodata, complete_hectares, add_img_filename, None, "max_line_surface")
             print(f"{add_img_filename} printed")
 
     if compute_summary:
